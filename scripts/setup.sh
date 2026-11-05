@@ -60,6 +60,9 @@ if [ -n "${GITHUB_ACTIONS:-}" ] && { [ -z "${NURA_ABUILD_KEY:-}" ] || [ -z "${NU
 fi
 if [ -n "${NURA_ABUILD_KEY:-}" ] && [ -n "${NURA_ABUILD_KEY_NAME:-}" ]; then
 	keys="$NURA_WORK/config_abuild"
+	# The work dir belongs to the user (pmbootstrap writes its log there), config_abuild to
+	# pmbootstrap's build user (12345), as pmbootstrap sets them up itself
+	mkdir -p "$NURA_WORK"
 	sudo mkdir -p "$keys"
 	printf '%s\n' "$NURA_ABUILD_KEY" | sudo tee "$keys/$NURA_ABUILD_KEY_NAME" >/dev/null
 	sudo openssl rsa -in "$keys/$NURA_ABUILD_KEY_NAME" -pubout -out "$keys/$NURA_ABUILD_KEY_NAME.pub" 2>/dev/null
