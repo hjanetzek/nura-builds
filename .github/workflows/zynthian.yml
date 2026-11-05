@@ -49,10 +49,15 @@ jobs:
     uses: ./.github/workflows/stage.yml
     with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.qt3.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
     secrets: inherit
-  zynthian:
+  plugins:
     needs: [refs, pyside]
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: zynthian, previous: pyside, previous-key: "${{ needs.pyside.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    with: { target: zynthian, stage: plugins, previous: pyside, previous-key: "${{ needs.pyside.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    secrets: inherit
+  zynthian:
+    needs: [refs, plugins]
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, stage: zynthian, previous: plugins, previous-key: "${{ needs.plugins.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
     secrets: inherit
 
   image:

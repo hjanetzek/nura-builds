@@ -11,11 +11,15 @@ zyncoder    https://github.com/hjanetzek/zyncoder    nura -
 # @<repo> stands for the checkout of a repository (for --src builds). The Qt stages are separate
 # because the recipes ask for the other Qt modules without a version: Alpine's Qt 6.11 would
 # satisfy that, so the 6.12 packages of a stage must be in the local repository before the next.
-STAGES="qt1 qt2 qt3 pyside zynthian"
+STAGES="qt1 qt2 qt3 pyside plugins zynthian"
 STAGE_qt1="qt6-qtbase qt6-qtshadertools qt6-qtsvg qt6-qtlanguageserver"
 STAGE_qt2="qt6-qtdeclarative"
 STAGE_qt3="qt6-qtwayland"
 STAGE_pyside="pyside6"
+# Engines and plugins the kiosk package depends on, and zynthian's jalv (zynthian-ui depends on it,
+# and the --src build of zynthian-ui doesn't build missing dependencies). The meta packages pull in
+# the LV2 plugins and Pure Data externals of nura/lv2 and nura/pd.
+STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree"
 # zynthian-ui and zyncoder are built from their checkouts (--src skips $source and doesn't build
 # missing dependencies, hence the order); seed-distfiles.sh puts the bundled Python packages into
 # the distfiles cache first
@@ -28,6 +32,7 @@ INPUTS_qt1="aports/qt6/qt6-qtbase aports/qt6/qt6-qtshadertools aports/qt6/qt6-qt
 INPUTS_qt2="aports/qt6/qt6-qtdeclarative"
 INPUTS_qt3="aports/qt6/qt6-qtwayland"
 INPUTS_pyside="@zynthian-ui/nura/pyside6"
+INPUTS_plugins="@zynthian-ui/nura/zynthian-jalv @zynthian-ui/nura/lv2 @zynthian-ui/nura/pd @zynthian-ui/nura/engines"
 INPUTS_zynthian=""   # always rebuilt: built from the checkouts
 
 # Images: pmbootstrap UI and the devices (pmaports device names)
