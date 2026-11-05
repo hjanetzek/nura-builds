@@ -92,4 +92,7 @@ echo "$REPOS" | while read -r name url branch recipes; do
 	ln -sfn "$NURA_SRC/$name/$recipes" "$aports/$name"
 done
 
+# Device packages (kernel, ...) at the versions postmarketOS has built, not newer recipes
+"$here/scripts/pin-binary.sh"
+
 restore_packages

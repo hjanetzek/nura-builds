@@ -17,6 +17,11 @@ Targets so far:
   copied from Zrythm's `tools/nura/qt6`, see `aports/qt6/README.md`).
 - `scripts/setup.sh` installs pmbootstrap, writes its config (edge, systemd, PipeWire), initialises
   the work dir, links the recipes, installs the signing key and restores built packages.
+- `scripts/pin-binary.sh` (run by setup.sh) pins the devices' packages (device package, kernel,
+  SoC and firmware packages) to the versions in postmarketOS's binary repository: when pmaports
+  already has a newer recipe than the published package, pmbootstrap would build it (the Duet's
+  kernel: a full clang/Rust build); instead the recipe is checked out at the newest pmaports commit
+  with the published version.
 - `scripts/build.sh STAGE` builds one stage and saves the local package repository
   (`$NURA_OUT/packages.tar`); `scripts/image.sh DEVICE` writes an image
   (`$NURA_OUT/<target>-<device>.img.zst`).
