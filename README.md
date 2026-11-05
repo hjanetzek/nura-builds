@@ -40,6 +40,26 @@ their meta packages, zynaddsubfx, setBfree), `zynthian`
 rebuilt). The Qt modules are separate stages because their recipes ask for the other modules
 without a version, which Alpine's 6.11 would satisfy.
 
+## Downloads
+
+Builds on `main` are published as releases of this repository (`scripts/publish.sh`):
+
+- **Images**: release [`zynthian-latest`](../../releases/tag/zynthian-latest), replaced by each build
+  (e.g. `zynthian-google-kukui.img.zst`; write with `zstd -d < FILE | sudo dd of=/dev/sdX bs=4M`).
+- **Package repository**: release [`aarch64`](../../releases/tag/aarch64) is an apk repository at
+  `https://github.com/hjanetzek/nura-builds/releases/download` (apk asks for
+  `<repository>/aarch64/APKINDEX.tar.gz`, and the release's files are at `.../download/aarch64/`).
+  Signed with [`keys/nura-builds-ci.rsa.pub`](keys/nura-builds-ci.rsa.pub); images built here
+  trust it already. On another device:
+
+  ```sh
+  wget -O /etc/apk/keys/nura-builds-ci.rsa.pub https://raw.githubusercontent.com/hjanetzek/nura-builds/main/keys/nura-builds-ci.rsa.pub
+  echo https://github.com/hjanetzek/nura-builds/releases/download >> /etc/apk/repositories
+  apk update && apk upgrade
+  ```
+
+Workflow artifacts (packages per stage, images) stay for a few days for debugging.
+
 ## Secrets
 
 | Secret | Purpose |

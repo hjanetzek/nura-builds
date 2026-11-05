@@ -113,3 +113,28 @@ jobs:
       - name: Build log
         if: failure()
         run: sudo tail -n 200 "$NURA_WORK/log.txt" || true
+
+  # Releases (main only): the package repository (release "aarch64") and the images
+  # (release "zynthian-latest"), see scripts/publish.sh
+  publish:
+    needs: [zynthian, image]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages-zynthian-zynthian
+          path: out
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: zynthian-*
+          path: out/images
+          merge-multiple: true
+      - name: Publish
+        run: scripts/publish.sh zynthian out/packages.tar out/images/*.img.zst
+
