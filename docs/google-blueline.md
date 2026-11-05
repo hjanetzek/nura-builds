@@ -24,6 +24,20 @@ Status on the wiki (testing category, packaged, boots):
 |---|---|---|
 | screen, touch, 3D, flashing, eMMC, battery, Wi-Fi (with `rmtfs pd-mapper tqftpserv`), Bluetooth, USB networking, FDE, XWayland | audio (speaker output fixed by pmaports MR 5686), GPS | **USB OTG**, accelerometer, camera, calls, SMS, mobile data |
 
+Tried on our Pixel 3 (2026-11-06, Nura edge, systemd, the original kernel 7.1.0-rc1, `ui = weston`,
+config `~/.config/pmbootstrap-pixel3.cfg`): weston on the GPU (Adreno 630, freedreno, GLES 3.2,
+Mesa 26.2.6), touch (stmfts), Wi-Fi (ath10k_snoc, WCN3990; random MAC), USB networking, the speaker
+(CS35L36 amplifier, UCM profile `Google/blueline/blueline.conf` from `alsa-ucm-conf-sdm845`; PipeWire
+sees "Built-in Audio Speakers Stereo Output", no microphone in the profile). Notes:
+
+- Wi-Fi needs only `rmtfs tqftpserv`: `pd-mapper` (named on the wiki) no longer exists as a package;
+  the kernel's `QCOM_PD_MAPPER` replaces it.
+- `postmarketos-ui-weston` registers no tinydm session: tinydm fails with "no session configured!"
+  until `tinydm-set-session -f -s /usr/share/wayland-sessions/weston.desktop`. (zynthian's kiosk
+  package sets its own session.)
+- plymouthd crashes at boot (SIGSEGV, memory maps on screen; harmless); `systemd-firstboot` fails
+  (no console; harmless).
+
 For zynthian the gaps that matter are USB host mode (MIDI controllers, USB audio interfaces,
 headphone adapters) and audio; telephony and camera don't.
 
@@ -66,8 +80,7 @@ bus-powered devices (most MIDI controllers, headphone adapters) series 2 as well
    `targets/zynthian.sh` and to the image job's matrix. The zynthian packages are the Duet's
    (aarch64), only the image differs. `scripts/image.sh` writes the rootfs image only: fastboot
    devices also need the boot image (`pmbootstrap export`, or from the rootfs); add that. Wi-Fi
-   needs `rmtfs pd-mapper tqftpserv` in the image (wiki); check whether the device package or
-   `soc-qcom` already pulls them in.
+   needs `rmtfs tqftpserv` (`tqftpserv` comes with `soc-qcom`).
 2. **Kiosk on a phone.** The panel is portrait (1080×2160) without a DRM panel orientation, so the
    kiosk script has to rotate the output explicitly (`wlr-randr --transform 90`) for zynthian's
    landscape layout; at scale 1.5 that is 1440×720 logical pixels, a 2:1 screen (the Duet: 1280×800,
