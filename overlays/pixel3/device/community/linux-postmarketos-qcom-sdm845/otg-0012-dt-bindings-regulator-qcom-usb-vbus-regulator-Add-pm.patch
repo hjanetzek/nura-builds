@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Heidelberg <david@ixit.cz>
+Date: Sat, 31 Oct 2026 16:05:00 +0100
+Subject: [PATCH 12/15] dt-bindings: regulator: qcom,usb-vbus-regulator: Add
+ pmi8998 and pm660
+
+The VBUS register block on the PMI8998 and PM660 PMIC shares the design
+with the PM8150B one. Define corresponding compatible string, having the
+qcom,pm8150b-vbus-reg as a fallback.
+
+Signed-off-by: David Heidelberg <david@ixit.cz>
+
+[nura-builds: adapted to the sdm845-7.1-rc1 tree]
+---
+ .../devicetree/bindings/regulator/qcom,usb-vbus-regulator.yaml  | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/regulator/qcom,usb-vbus-regulator.yaml b/Documentation/devicetree/bindings/regulator/qcom,usb-vbus-regulator.yaml
+index fcefc722e..1f4f717e6 100644
+--- a/Documentation/devicetree/bindings/regulator/qcom,usb-vbus-regulator.yaml
++++ b/Documentation/devicetree/bindings/regulator/qcom,usb-vbus-regulator.yaml
+@@ -25,9 +25,11 @@ properties:
+       - items:
+           - enum:
+               - qcom,pm4125-vbus-reg
++              - qcom,pm660-vbus-reg
+               - qcom,pm6150-vbus-reg
+               - qcom,pm7250b-vbus-reg
+               - qcom,pmi632-vbus-reg
++              - qcom,pmi8998-vbus-reg
+           - const: qcom,pm8150b-vbus-reg
+ 
+   reg:

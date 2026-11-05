@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Heidelberg <david@ixit.cz>
+Date: Sat, 31 Oct 2026 16:04:58 +0100
+Subject: [PATCH 10/15] regulator: qcom_usb_vbus: Fix the MODULE_LICENSE()
+ string
+
+Replace the bogus "GPL v2" with "GPL" as MODULE_LICNSE() string. The
+value does not declare the module's exact license, but only lets the
+module loader test whether the module is Free Software or not.
+
+See commit bf7fbeeae6db ("module: Cure the MODULE_LICENSE "GPL" vs.
+"GPL v2" bogosity") in the details of the issue. The fix is to use
+"GPL" for all modules under any variant of the GPL.
+
+Signed-off-by: David Heidelberg <david@ixit.cz>
+---
+ drivers/regulator/qcom_usb_vbus-regulator.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/regulator/qcom_usb_vbus-regulator.c b/drivers/regulator/qcom_usb_vbus-regulator.c
+index cd94ed676..63b71ca7b 100644
+--- a/drivers/regulator/qcom_usb_vbus-regulator.c
++++ b/drivers/regulator/qcom_usb_vbus-regulator.c
+@@ -107,4 +107,4 @@ static struct platform_driver qcom_usb_vbus_regulator_driver = {
+ module_platform_driver(qcom_usb_vbus_regulator_driver);
+ 
+ MODULE_DESCRIPTION("Qualcomm USB vbus regulator driver");
+-MODULE_LICENSE("GPL v2");
++MODULE_LICENSE("GPL");

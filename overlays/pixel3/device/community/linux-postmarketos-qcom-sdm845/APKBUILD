@@ -43,11 +43,30 @@ makedepends="
 _tag="sdm845-7.1-rc1-r0"
 
 # Source
+# nura-builds: otg-*.patch, USB OTG for the Pixel 3 (docs/google-blueline.md): the qcom PMIC Type-C
+# driver backported from v7.4-rc1, David Heidelberg's "Qualcomm Type-C support for 1st generation"
+# RFC and "Enable Qualcomm VBUS block on PMI8998 and PM660" (the Pixel 3 parts; some adapted to this
+# tree, marked in their messages), and the dual power role with VBUS for the Pixel 3 (ours)
 source="
 	linux-$_tag.tar.gz::https://gitlab.com/sdm845-mainline/linux/-/archive/$_tag/linux-$_tag.tar.gz
 	config-postmarketos-qcom-sdm845.aarch64
 	libbpf-Fix-UAF-in-strset__add_str.patch
 	enable-dynamic-ftrace.patch
+	otg-0001-usb-typec-tcpm-qcom-backport-the-driver-from-v7.4-rc.patch
+	otg-0002-usb-typec-tcpm-qcom-Release-the-connector-fwnode-ref.patch
+	otg-0003-dt-bindings-usb-qcom-pmic-typec-Update-example-with-.patch
+	otg-0004-dt-bindings-usb-Add-Qualcomm-1st-gen-PMIC-Type-C.patch
+	otg-0005-usb-typec-qcom-Make-PMIC-port-probe-selectable.patch
+	otg-0006-usb-typec-qcom-Make-typec_port-accept-also-different.patch
+	otg-0007-usb-typec-qcom-Add-gen1-Type-C-port-support.patch
+	otg-0008-arm64-dts-qcom-pmi8998-Add-USB-Type-C-port-controlle.patch
+	otg-0009-arm64-dts-qcom-sdm845-google-common-Enable-USB-Type-.patch
+	otg-0010-regulator-qcom_usb_vbus-Fix-the-MODULE_LICENSE-strin.patch
+	otg-0011-power-supply-qcom_smbx-Do-not-interfere-with-vbus-dr.patch
+	otg-0012-dt-bindings-regulator-qcom-usb-vbus-regulator-Add-pm.patch
+	otg-0013-arm64-dts-qcom-pmi8998-Add-node-for-PMIC-VBUS-booste.patch
+	otg-0014-arm64-dts-qcom-sdm845-google-Enable-vbus-support.patch
+	otg-0015-arm64-dts-qcom-sdm845-google-common-dual-power-role-.patch
 "
 builddir="$srcdir/linux-$_tag"
 
@@ -100,4 +119,19 @@ sha512sums="
 0da9864ae972e81db443b58e990f62bb84bcd721f073c0b947725a7d7c1e630bde1395fa9108ce8264e6b88a6c92f3f52b551b0cd373e6bde54ea56a13a48e9b  config-postmarketos-qcom-sdm845.aarch64
 e2555390d48cbbdc32a7d3f0c27599ff88f2fe3e786d1d0086caaa5b092cc3edcb6e95e2fb07034edb3793f6dc954da0662c723202eb7e2c4956c99b50919b12  libbpf-Fix-UAF-in-strset__add_str.patch
 e8b595f3e076896dc38f249c8908d58e2e6a858eaa77fe1e680f27db0e76d3d74c0b5dfebb7a4c57d546fee0b0f6eb81a38b20dfd72f985c9d02f28d79a5eceb  enable-dynamic-ftrace.patch
+61cab4885bf46d6b06b87948d1f8a40712095b9613fe3061f9721967f868355f83cafd4629d0cc1d2b2b5f73086958fca81eb52a2c56c94b5d272ac361cc7784  otg-0001-usb-typec-tcpm-qcom-backport-the-driver-from-v7.4-rc.patch
+21a36157d8a7244863163d6e0a3a9fb4a0358a633cf7b72a02428709f9bbd44712aed2679ee3b848f5ed02e88384aa3205be4375f3e713a3d9d29c2a82d376bc  otg-0002-usb-typec-tcpm-qcom-Release-the-connector-fwnode-ref.patch
+78fe536dd9d0d613ec49a66ee9afb48030d80443fb5898895193df5e6e3cdb87e79965161208786e1986aeae857d658327b330159bf1e593d3a87e9a1ae3d111  otg-0003-dt-bindings-usb-qcom-pmic-typec-Update-example-with-.patch
+2c821be667e77987dc7d318032c4c849aada39c38d831e13293b397fe13d1a87f757642d36f7dfed5cf186a6631b02b5370e0cd550c8bd53dd0dff6e3b3d1d80  otg-0004-dt-bindings-usb-Add-Qualcomm-1st-gen-PMIC-Type-C.patch
+d7dff00a556c33bea03b6e97d4b4544fff813b75d57100300c995bd9f9b712fb49867cef80af0ce852e2ac650b2ce6a662f2c6babaa9807092456d66dd53a0d6  otg-0005-usb-typec-qcom-Make-PMIC-port-probe-selectable.patch
+f2efa091d035cfa840be85d3f7e32e9d54342f1944b3e79f88ba9651c878781d521744f19668f053f124124d27d539023463cfe9283b5fc6365653cce56ccdf6  otg-0006-usb-typec-qcom-Make-typec_port-accept-also-different.patch
+7d7b802b364acfa975ff7d8a42f40e340324ed3e572057bae56dfe137c370d032da53e49d11ee178205a70296a25d1c9c339e936249932ea8d7a6e3c4f1d92c9  otg-0007-usb-typec-qcom-Add-gen1-Type-C-port-support.patch
+4b44f8cce8e358e184e9de3140bb5a6e547a8e05c13f308eefcab3347475b2f33142c2a664a18323f59b7cb5d820ca4b95d17cd1ca79cee85d82693326967d4d  otg-0008-arm64-dts-qcom-pmi8998-Add-USB-Type-C-port-controlle.patch
+57e141f2dd9176b1e6426580a5b9763204d5559ea38462a83cd16c5ec733020bd1a8f720e58266e4cd7df44b6616e43a6dc4d06b78433272b04ef668847c4233  otg-0009-arm64-dts-qcom-sdm845-google-common-Enable-USB-Type-.patch
+2e022f75aad60042bac2cd9c6af39e19f4d04bad71a088234fe4b52b9c8b001c63b7b6ecd9c7cc44c64da0bd44d9728b117b220dda074d8776c4ff76a2b29836  otg-0010-regulator-qcom_usb_vbus-Fix-the-MODULE_LICENSE-strin.patch
+65d67bbcd0ad9b081576ae27c48923424daee71809e95af3aac051ea73e607b6e319fc40645678f0fa5c1366422f89d5a0cedb9c93cbffe5842feabba575ad4e  otg-0011-power-supply-qcom_smbx-Do-not-interfere-with-vbus-dr.patch
+29f8d0c2b17b9ffeea6eb7e56bdb8fcc88f4d9b158189334a738ac8ea1619f206c047e44287c66393c9b4a9d62993d3bd8e46de95a4c73cdbc290931cfe47a3c  otg-0012-dt-bindings-regulator-qcom-usb-vbus-regulator-Add-pm.patch
+0222c5e71f4c18ca8ea486f794b8869be803d9d4adf81f6cb4f9c96392d68d935b02633b67200c4e91ea98f937c2c92a039e469f76c6b1b061fbc36d4ecd06ec  otg-0013-arm64-dts-qcom-pmi8998-Add-node-for-PMIC-VBUS-booste.patch
+5ccb85559d0b9567463d0ec3b1252706c006f9322f9429ea5abf126ce90bfea54f36bd6f5a9dcd2c820979c9e1d0bb6181ff11406a2eee5c081b8ff54178b702  otg-0014-arm64-dts-qcom-sdm845-google-Enable-vbus-support.patch
+5b93d2df6b7345004899e3d7f7f9a8aff63f801e49efcb8f653ed4e702bcd6dba6fa452b13c67dd4635250281c8b28d56fc6c84b0af6d49a912718a3783d1cd9  otg-0015-arm64-dts-qcom-sdm845-google-common-dual-power-role-.patch
 "

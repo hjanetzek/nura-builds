@@ -1,6 +1,6 @@
-# Target: Google Pixel 3 (google-blueline), see docs/google-blueline.md. For now the SDM845 kernel,
-# from an overlay of pmaports' recipe (planned: the USB Type-C/VBUS series for USB OTG). Sourced by
-# scripts/*.sh; built by .github/workflows/pixel3.yml on pushes to pixel3-* branches.
+# Target: Google Pixel 3 (google-blueline), see docs/google-blueline.md. For now the SDM845 kernel
+# with USB OTG (the Type-C and VBUS series, otg-*.patch), from an overlay of pmaports' recipe.
+# Sourced by scripts/*.sh; built by .github/workflows/pixel3.yml on pushes to pixel3-* branches.
 
 # No source repositories of our own yet
 REPOS=""

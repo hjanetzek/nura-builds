@@ -1,0 +1,132 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Heidelberg <david@ixit.cz>
+Date: Sat, 26 Sep 2026 14:40:29 +0200
+Subject: [PATCH 09/15] arm64: dts: qcom: sdm845-google-common: Enable USB
+ Type-C port controller
+
+Enable the PMI8998 Type-C port controller with a USB-C connector
+description for the Google Pixel 3 (blueline) and Pixel 3 XL
+(crosshatch), which share the same USB-C hardware via this common dtsi.
+
+The connector is configured as:
+  - Sink-only power role with a 5V/3A sink PDO
+  - Operating sink power 7.6W (matching downstream configuration)
+  - Dual-role data with USB role switching
+
+The VBUS output of the charger is not supported yet, so the port can't
+act as a power source. Describe it as sink-only until VBUS support lands,
+USB host mode is still reachable through a PD data role swap. Higher
+voltage PDOs are left out until the charger driver programs the allowed
+USBIN adapter voltage.
+
+DisplayPort Alt Mode is not advertised as Google disabled DP output in
+the Pixel 3 hardware design (downstream explicitly sets sde_dp to
+disabled and excludes it from the MDSS connector list).
+
+Wire the USB-C connector port graph:
+  - port@0: DWC3 HS endpoint for USB role switching
+  - port@1: QMP combo PHY for USB SS orientation switching
+
+Switch the DWC3 controller from peripheral-only to OTG mode with
+usb-role-switch to allow the TCPM framework to control USB host/device
+role based on CC pin detection.
+
+Assisted-by: LLM
+Signed-off-by: David Heidelberg <david@ixit.cz>
+
+[nura-builds: adapted to the sdm845-7.1-rc1 tree]
+---
+ .../boot/dts/qcom/sdm845-google-common.dtsi   | 59 ++++++++++++++++++-
+ 1 file changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi b/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
+index c7dae34aa..d4a0c6051 100644
+--- a/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
+@@ -9,6 +9,7 @@
+ #include <dt-bindings/leds/common.h>
+ #include <dt-bindings/media/video-interfaces.h>
+ #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
++#include <dt-bindings/usb/pd.h>
+ #include <dt-bindings/sound/qcom,q6afe.h>
+ #include <dt-bindings/sound/qcom,q6asm.h>
+ 
+@@ -661,6 +662,53 @@ &pmi8998_charger {
+ 	status = "okay";
+ };
+ 
++&pmi8998_typec {
++	status = "okay";
++
++	vdd-pdphy-supply = <&vreg_l24a_3p075>;
++
++	connector {
++		compatible = "usb-c-connector";
++
++		/*
++		 * Sink only for now, as the PMI8998 charger doesn't provide
++		 * the VBUS output yet. Switch to the dual power role with
++		 * source PDOs, try-power-role and vbus-supply once it is
++		 * supported.
++		 *
++		 * Higher voltage sink PDOs will be added once the charger
++		 * driver programs the allowed USBIN adapter voltage.
++		 */
++		power-role = "sink";
++		data-role = "dual";
++		self-powered;
++
++		sink-pdos = <PDO_FIXED(5000, 3000,
++				       PDO_FIXED_USB_COMM |
++				       PDO_FIXED_DATA_SWAP)>;
++		op-sink-microwatt = <7600000>;
++
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port@0 {
++				reg = <0>;
++				pmi8998_hs_in: endpoint {
++					remote-endpoint = <&usb_1_dwc3_hs>;
++				};
++			};
++
++			port@1 {
++				reg = <1>;
++				pmi8998_typec_mux_in: endpoint {
++					remote-endpoint = <&usb_1_qmpphy_out>;
++				};
++			};
++		};
++	};
++};
++
+ &pmi8998_fg {
+ 	monitored-battery = <&battery>;
+ 	power-supplies = <&pmi8998_charger>;
+@@ -884,7 +932,12 @@ &usb_1 {
+ };
+ 
+ &usb_1_dwc3 {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
++	usb-role-switch;
++};
++
++&usb_1_dwc3_hs {
++	remote-endpoint = <&pmi8998_hs_in>;
+ };
+ 
+ &usb_1_hsphy {
+@@ -907,6 +960,10 @@ &usb_1_qmpphy {
+ 	status = "okay";
+ };
+ 
++&usb_1_qmpphy_out {
++	remote-endpoint = <&pmi8998_typec_mux_in>;
++};
++
+ &venus {
+ 	firmware-name = "qcom/sdm845/Google/blueline/venus.mbn";
+ 

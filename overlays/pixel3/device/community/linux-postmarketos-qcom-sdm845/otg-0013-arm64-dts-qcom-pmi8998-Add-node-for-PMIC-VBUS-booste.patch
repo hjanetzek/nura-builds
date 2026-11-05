@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Heidelberg <david@ixit.cz>
+Date: Sat, 31 Oct 2026 16:05:01 +0100
+Subject: [PATCH 13/15] arm64: dts: qcom: pmi8998: Add node for PMIC VBUS
+ booster
+
+Add the required DTS node for the USB VBUS output regulator, which is
+available on PMI8998. This will provide the VBUS source to connected
+peripherals.
+
+Signed-off-by: David Heidelberg <david@ixit.cz>
+
+[nura-builds: adapted to the Type-C node of the Type-C RFC, applied before]
+---
+ arch/arm64/boot/dts/qcom/pmi8998.dtsi | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/pmi8998.dtsi b/arch/arm64/boot/dts/qcom/pmi8998.dtsi
+index bc30702f1..d4c0b5da6 100644
+--- a/arch/arm64/boot/dts/qcom/pmi8998.dtsi
++++ b/arch/arm64/boot/dts/qcom/pmi8998.dtsi
+@@ -30,6 +30,13 @@ pmi8998_charger: charger@1000 {
+ 			status = "disabled";
+ 		};
+ 
++		pmi8998_vbus: usb-vbus-regulator@1100 {
++			compatible = "qcom,pmi8998-vbus-reg", "qcom,pm8150b-vbus-reg";
++			reg = <0x1100>;
++
++			status = "disabled";
++		};
++
+ 		pmi8998_typec: typec@1300 {
+ 			compatible = "qcom,pmi8998-typec";
+ 			reg = <0x1300>,

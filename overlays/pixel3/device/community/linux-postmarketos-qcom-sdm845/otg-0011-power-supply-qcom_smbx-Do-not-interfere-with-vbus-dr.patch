@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Heidelberg <david@ixit.cz>
+Date: Sat, 31 Oct 2026 16:04:59 +0100
+Subject: [PATCH 11/15] power: supply: qcom_smbx: Do not interfere with vbus
+ driver
+
+Charger should not touch bits handled by OTG block handled by the vbus
+driver.
+
+Signed-off-by: David Heidelberg <david@ixit.cz>
+
+[nura-builds: adapted to the sdm845-7.1-rc1 tree, which has separate SMB2 and SMB5
+init sequences: removed from the SMB2 one (PMI8998, PM660) only; the OTG_CFG definitions stay
+for SMB5]
+---
+ drivers/power/supply/qcom_smbx.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/power/supply/qcom_smbx.c b/drivers/power/supply/qcom_smbx.c
+index 9386adfb7..876f27ff2 100644
+--- a/drivers/power/supply/qcom_smbx.c
++++ b/drivers/power/supply/qcom_smbx.c
+@@ -823,8 +823,6 @@ static const struct smb_init_register smb2_init_seq[] = {
+ 	{ .addr = TYPE_C_CFG,
+ 	  .mask = FACTORY_MODE_DETECTION_EN_BIT | VCONN_OC_CFG_BIT,
+ 	  .val = 0 },
+-	/* Configure VBUS for software control */
+-	{ .addr = OTG_CFG, .mask = OTG_EN_SRC_CFG_BIT, .val = 0 },
+ 	/*
+ 	 * Use VBAT to determine the recharge threshold when battery is full
+ 	 * rather than the state of charge.

@@ -75,13 +75,22 @@ bus-powered devices (most MIDI controllers, headphone adapters) series 2 as well
 3. **Audio.** Speaker output works (wiki: partly); check PipeWire with the SDM845 UCM profile,
    latency at a 256-frame quantum, and the speaker's quality for monitoring. Real use needs USB audio
    (step 4) or Bluetooth.
-4. **Kernel with OTG.** Build the SDM845 kernel with both series applied (`b4 am` the two message
-   ids), e.g. as a nura-builds recipe deriving from pmaports' `linux-postmarketos-qcom-sdm845`
-   (patch files added to its sources), or as patches applied to the pmaports recipe before the
-   build. `scripts/pin-binary.sh` pins device kernels to the published binary: it must leave a kernel
-   with our patches alone (exclude it, or give the recipe its own pkgrel suffix). Change
-   `dr_mode` to `otg` if the series doesn't. Test with a powered hub first (series 1), then
-   bus-powered MIDI controllers and a USB-C headphone adapter (series 2).
+4. **Kernel with OTG** (branch `pixel3-otg-kernel`, `overlays/pixel3`): pmaports' SDM845 kernel
+   recipe (7.1_rc1, `pkgrel` 104) with 15 patches (`otg-*.patch`):
+   - the qcom PMIC Type-C driver files at their v7.4-rc1 state (the series' base: VBUS regulator
+     from the connector node, cancelling work on stop, include cleanups);
+   - the Type-C RFC without the other phones' patches (1–6, 8, 10) and the VBUS series' Pixel 3
+     parts (1–4, 6); the binding documents, the PMI8998 VBUS node, the Pixel 3 device tree and the
+     charger patch adapted to the 7.1 tree (marked in their messages; the charger keeps SMB5 there,
+     so the OTG_CFG write is dropped from the SMB2 init sequence only);
+   - ours: the Pixel 3 connector in the dual power role with the VBUS booster as `vbus-supply` and a
+     5 V / 1.5 A source PDO (the RFC leaves it sink-only until VBUS is supported).
+   Checked locally: all patches apply in abuild's order; the Type-C module, charger and VBUS
+   regulator cross-compile (clang, pmaports' config) without warnings; the 24 device trees using
+   `pmi8998.dtsi` build, and the Pixel 3's has `dr_mode = "otg"`, the Type-C node and VBUS enabled.
+   No kernel config changes (the gen1 driver is part of `TYPEC_QCOM_PMIC`). To test on the device:
+   role switching with a powered hub, then bus-powered MIDI controllers and a USB-C headphone
+   adapter; charging still works (sink role).
 5. **Follow upstream.** Track the two series (v2, merge); drop the patches once the sdm845-mainline
    tree has them.
 

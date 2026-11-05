@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: nura-builds <nura@builds>
+Date: Thu, 5 Nov 2026 23:54:26 +0100
+Subject: [PATCH 15/15] arm64: dts: qcom: sdm845-google-common: dual power role
+ with VBUS
+
+nura-builds, experimental: the step the Type-C RFC leaves for when the
+PMI8998 VBUS output is supported, which the VBUS series adds: the
+connector in the dual power role (trying sink first), with the VBUS
+booster as vbus-supply and a 5 V / 1.5 A source PDO, so the phone powers
+USB devices (OTG).
+---
+ arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi b/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
+index b0eafb7d4..5b6eda712 100644
+--- a/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
+@@ -671,18 +671,22 @@ connector {
+ 		compatible = "usb-c-connector";
+ 
+ 		/*
+-		 * Sink only for now, as the PMI8998 charger doesn't provide
+-		 * the VBUS output yet. Switch to the dual power role with
+-		 * source PDOs, try-power-role and vbus-supply once it is
+-		 * supported.
++		 * Dual power role with the PMI8998 VBUS booster (pmi8998_vbus):
++		 * powers USB devices (OTG) at 5 V, up to 1.5 A.
+ 		 *
+ 		 * Higher voltage sink PDOs will be added once the charger
+ 		 * driver programs the allowed USBIN adapter voltage.
+ 		 */
+-		power-role = "sink";
++		power-role = "dual";
++		try-power-role = "sink";
+ 		data-role = "dual";
+ 		self-powered;
+ 
++		vbus-supply = <&pmi8998_vbus>;
++
++		source-pdos = <PDO_FIXED(5000, 1500,
++					 PDO_FIXED_USB_COMM |
++					 PDO_FIXED_DATA_SWAP)>;
+ 		sink-pdos = <PDO_FIXED(5000, 3000,
+ 				       PDO_FIXED_USB_COMM |
+ 				       PDO_FIXED_DATA_SWAP)>;

@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Heidelberg <david@ixit.cz>
+Date: Sat, 31 Oct 2026 16:05:03 +0100
+Subject: [PATCH 14/15] arm64: dts: qcom: sdm845-google: Enable vbus support
+
+On this device, vbus was setup and switched off by the charger driver.
+Enable proper driver.
+
+Signed-off-by: David Heidelberg <david@ixit.cz>
+
+[nura-builds: adapted to the sdm845-7.1-rc1 tree, after the Type-C node of the Type-C RFC]
+---
+ arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi b/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
+index d4a0c6051..b0eafb7d4 100644
+--- a/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/sdm845-google-common.dtsi
+@@ -709,6 +709,13 @@ pmi8998_typec_mux_in: endpoint {
+ 	};
+ };
+ 
++&pmi8998_vbus {
++	regulator-min-microamp = <500000>;
++	regulator-max-microamp = <1500000>;
++
++	status = "okay";
++};
++
+ &pmi8998_fg {
+ 	monitored-battery = <&battery>;
+ 	power-supplies = <&pmi8998_charger>;
