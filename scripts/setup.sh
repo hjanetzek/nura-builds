@@ -3,7 +3,7 @@
 # config, initialise the work dir (non-interactively), link the recipe directories into pmaports,
 # install the package signing key and restore built packages from $NURA_OUT/packages.tar.
 #
-# Signing key (optional): NURA_ABUILD_KEY (the private key, PEM) and NURA_ABUILD_KEY_NAME (its
+# Signing key (required in CI): NURA_ABUILD_KEY (the private key, PEM) and NURA_ABUILD_KEY_NAME (its
 # file name, e.g. pmos@local-6ae1d406.rsa). Without them pmbootstrap creates a key per work dir:
 # packages from different runs then don't trust each other, and the package cache is useless.
 . "$(dirname "$0")/common.sh"
@@ -52,6 +52,23 @@ postmarketos-base-ui-audio-backend = postmarketos-base-ui-audio-backend-pipewire
 [mirrors]
 EOF
 
+# Signing key, before pmbootstrap init: the build chroots trust the keys in config_abuild. In CI it
+# is required: every runner would make its own key, and the next job would not trust the packages.
+if [ -n "${GITHUB_ACTIONS:-}" ] && { [ -z "${NURA_ABUILD_KEY:-}" ] || [ -z "${NURA_ABUILD_KEY_NAME:-}" ]; }; then
+	echo "::error::NURA_ABUILD_KEY and NURA_ABUILD_KEY_NAME secrets are not set (see README: Secrets)"
+	exit 1
+fi
+if [ -n "${NURA_ABUILD_KEY:-}" ] && [ -n "${NURA_ABUILD_KEY_NAME:-}" ]; then
+	keys="$NURA_WORK/config_abuild"
+	sudo mkdir -p "$keys"
+	printf '%s\n' "$NURA_ABUILD_KEY" | sudo tee "$keys/$NURA_ABUILD_KEY_NAME" >/dev/null
+	sudo openssl rsa -in "$keys/$NURA_ABUILD_KEY_NAME" -pubout -out "$keys/$NURA_ABUILD_KEY_NAME.pub" 2>/dev/null
+	echo "PACKAGER_PRIVKEY=\"/home/pmos/.abuild/$NURA_ABUILD_KEY_NAME\"" | sudo tee "$keys/abuild.conf" >/dev/null
+	sudo chown -R 12345:12345 "$keys"
+	sudo chmod 600 "$keys/$NURA_ABUILD_KEY_NAME"
+	echo "signing key: $NURA_ABUILD_KEY_NAME"
+fi
+
 # Initialise: every question answered with the default from the config
 if [ ! -f "$NURA_WORK/version" ]; then
 	yes "" | pmbootstrap -c "$CFG" init || true
@@ -65,17 +82,5 @@ echo "$REPOS" | while read -r name url branch recipes; do
 	[ -n "$name" ] && [ "$recipes" != "-" ] || continue
 	ln -sfn "$NURA_SRC/$name/$recipes" "$aports/$name"
 done
-
-# Signing key
-if [ -n "${NURA_ABUILD_KEY:-}" ] && [ -n "${NURA_ABUILD_KEY_NAME:-}" ]; then
-	keys="$NURA_WORK/config_abuild"
-	sudo mkdir -p "$keys"
-	printf '%s\n' "$NURA_ABUILD_KEY" | sudo tee "$keys/$NURA_ABUILD_KEY_NAME" >/dev/null
-	sudo openssl rsa -in "$keys/$NURA_ABUILD_KEY_NAME" -pubout -out "$keys/$NURA_ABUILD_KEY_NAME.pub" 2>/dev/null
-	echo "PACKAGER_PRIVKEY=\"/home/pmos/.abuild/$NURA_ABUILD_KEY_NAME\"" | sudo tee "$keys/abuild.conf" >/dev/null
-	sudo chown -R 12345:12345 "$keys"
-	sudo chmod 600 "$keys/$NURA_ABUILD_KEY_NAME"
-	echo "signing key: $NURA_ABUILD_KEY_NAME"
-fi
 
 restore_packages
