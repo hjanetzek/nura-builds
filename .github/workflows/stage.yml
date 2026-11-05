@@ -58,7 +58,9 @@ jobs:
           if grep -q "^INPUTS_${{ inputs.stage }}=\"..*\"" targets/$TARGET.sh; then
             h=$(scripts/build.sh --hash ${{ inputs.stage }})
             prev=$(echo "${{ inputs.previous-key }}" | sha256sum | cut -c1-8)
-            echo "key=packages-$TARGET-${{ inputs.stage }}-$h-$prev" >> "$GITHUB_OUTPUT"
+            # The signing key's public half: packages signed with another key are untrusted
+            kfp=$(printf '%s\n' "$NURA_ABUILD_KEY" | openssl rsa -pubout 2>/dev/null | sha256sum | cut -c1-8)
+            echo "key=packages-$TARGET-${{ inputs.stage }}-$h-$prev-$kfp" >> "$GITHUB_OUTPUT"
           else
             echo "key=" >> "$GITHUB_OUTPUT"
           fi
