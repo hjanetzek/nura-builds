@@ -74,10 +74,10 @@ jobs:
       NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
       NURA_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Free disk space
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: packages-zynthian-zynthian
           path: /home/runner/nura-out
@@ -89,7 +89,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           scripts/image.sh ${{ matrix.device }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: zynthian-${{ matrix.device }}
           path: /home/runner/nura-out/zynthian-${{ matrix.device }}.img.zst
