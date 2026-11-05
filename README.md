@@ -9,6 +9,9 @@ Targets so far:
 |---|---|---|
 | `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
 
+Next: the Google Pixel 3 (`google-blueline`), see [docs/google-blueline.md](docs/google-blueline.md):
+device status, USB OTG (missing on all SDM845 phones; patches on the kernel lists), plan.
+
 ## How it works
 
 - `targets/<target>.sh` names the source repositories (cloned into `$NURA_SRC`, recipe directories
