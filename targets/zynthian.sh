@@ -1,0 +1,36 @@
+# Target: zynthian (Qt Quick UI) for Nura on aarch64 devices. Sourced by scripts/*.sh.
+
+# Source repositories: name, URL, branch (override with <NAME>_REF in the environment, e.g.
+# ZYNTHIAN_UI_REF=my-branch), recipe directory linked into pmaports ("-": none, sources only)
+REPOS="
+zynthian-ui https://github.com/hjanetzek/zynthian-ui nura nura
+zyncoder    https://github.com/hjanetzek/zyncoder    nura -
+"
+
+# Stages, built in this order; each one a list of pmbootstrap build arguments, separated by ";".
+# @<repo> stands for the checkout of a repository (for --src builds). The Qt stages are separate
+# because the recipes ask for the other Qt modules without a version: Alpine's Qt 6.11 would
+# satisfy that, so the 6.12 packages of a stage must be in the local repository before the next.
+STAGES="qt1 qt2 qt3 pyside zynthian"
+STAGE_qt1="qt6-qtbase qt6-qtshadertools qt6-qtsvg qt6-qtlanguageserver"
+STAGE_qt2="qt6-qtdeclarative"
+STAGE_qt3="qt6-qtwayland"
+STAGE_pyside="pyside6"
+# zynthian-ui and zyncoder are built from their checkouts (--src skips $source and doesn't build
+# missing dependencies, hence the order); seed-distfiles.sh puts the bundled Python packages into
+# the distfiles cache first
+STAGE_zynthian="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; postmarketos-ui-zynthian"
+SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
+
+# Recipe directories whose contents decide whether a stage's cached packages are still valid
+# (paths below the nura-builds checkout, or @<repo>/<path>)
+INPUTS_qt1="aports/qt6/qt6-qtbase aports/qt6/qt6-qtshadertools aports/qt6/qt6-qtsvg aports/qt6/qt6-qtlanguageserver"
+INPUTS_qt2="aports/qt6/qt6-qtdeclarative"
+INPUTS_qt3="aports/qt6/qt6-qtwayland"
+INPUTS_pyside="@zynthian-ui/nura/pyside6"
+INPUTS_zynthian=""   # always rebuilt: built from the checkouts
+
+# Images: pmbootstrap UI and the devices (pmaports device names)
+UI=zynthian
+DEVICES="google-kukui"
+# raspberry-pi4 is in pmaports' "downstream" category; add it here once tested

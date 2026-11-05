@@ -1,0 +1,110 @@
+# zynthian (Qt Quick UI) for Nura: Qt 6.12, PySide6, the zynthian packages, and images for the
+# devices in targets/zynthian.sh. Run by hand (Actions > zynthian > Run workflow) or on pushes to
+# this repository.
+name: zynthian
+
+on:
+  workflow_dispatch:
+    inputs:
+      zynthian-ui-ref: { description: "zynthian-ui branch", default: nura }
+      zyncoder-ref: { description: "zyncoder branch", default: nura }
+      release: { description: "publish the images as a release", type: boolean, default: false }
+  push:
+    branches: [main]
+    paths: ["aports/**", "scripts/**", "targets/zynthian.sh", ".github/workflows/zynthian.yml", ".github/workflows/stage.yml"]
+
+concurrency:
+  group: zynthian-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REFS: ZYNTHIAN_UI_REF=${{ inputs.zynthian-ui-ref || 'nura' }} ZYNCODER_REF=${{ inputs.zyncoder-ref || 'nura' }}
+
+jobs:
+  refs:
+    runs-on: ubuntu-latest
+    outputs:
+      refs: ${{ steps.r.outputs.refs }}
+    steps:
+      - id: r
+        run: echo "refs=$REFS" >> "$GITHUB_OUTPUT"
+
+  qt1:
+    needs: refs
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, stage: qt1, refs: "${{ needs.refs.outputs.refs }}" }
+    secrets: inherit
+  qt2:
+    needs: [refs, qt1]
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.qt1.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    secrets: inherit
+  qt3:
+    needs: [refs, qt2]
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.qt2.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    secrets: inherit
+  pyside:
+    needs: [refs, qt3]
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.qt3.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    secrets: inherit
+  zynthian:
+    needs: [refs, pyside]
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, stage: zynthian, previous: pyside, previous-key: "${{ needs.pyside.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    secrets: inherit
+
+  image:
+    needs: [refs, zynthian]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [google-kukui]   # as DEVICES in targets/zynthian.sh
+    permissions:
+      contents: write
+    env:
+      TARGET: zynthian
+      NURA_WORK: /home/runner/nura-work
+      NURA_SRC: /home/runner/nura-src
+      NURA_OUT: /home/runner/nura-out
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      NURA_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-zynthian-zynthian
+          path: /home/runner/nura-out
+      - name: Set up pmbootstrap
+        run: |
+          export ${{ needs.refs.outputs.refs }}
+          scripts/setup.sh
+      - name: Image for ${{ matrix.device }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/image.sh ${{ matrix.device }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zynthian-${{ matrix.device }}
+          path: /home/runner/nura-out/zynthian-${{ matrix.device }}.img.zst
+          retention-days: 7
+          compression-level: 0
+      - name: Release
+        if: inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=zynthian-$(date +%Y%m%d)-${{ github.run_number }}
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --prerelease --title "zynthian $(date +%Y-%m-%d)" \
+                 --notes "zynthian (Qt UI) for Nura, built from zynthian-ui ${{ inputs.zynthian-ui-ref }}, zyncoder ${{ inputs.zyncoder-ref }}"
+          gh release upload "$tag" "$NURA_OUT/zynthian-${{ matrix.device }}.img.zst" --clobber
+      - name: Build log
+        if: failure()
+        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true

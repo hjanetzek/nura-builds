@@ -1,0 +1,56 @@
+# The group tag is just to easily find this APKBUILD by some scripts for automation
+# group=qt6
+maintainer="Bart Ribbers <bribbers@disroot.org>"
+pkgname=qt6-qtsvg
+pkgver=6.12.0
+pkgrel=0
+# zrythm: local build of aports MR !107047, see ../README.md
+pkgdesc="Classes for displaying the contents of SVG files"
+url="https://qt.io/"
+arch="all"
+license="LGPL-2.1-only AND LGPL-3.0-only AND GPL-3.0-only AND Qt-GPL-exception-1.0"
+depends_dev="vulkan-headers"
+makedepends="$depends_dev
+	cmake
+	perl
+	qt6-qtbase-dev
+	qt6-qtbase-private-dev
+	samurai
+	"
+subpackages="$pkgname-dev"
+options="!check" # No tests
+builddir="$srcdir/qtsvg-everywhere-src-${pkgver/_/-}"
+
+case $pkgver in
+	*_alpha*|*_beta*|*_rc*) _rel=development_releases;;
+	*) _rel=official_releases;;
+esac
+source="https://download.qt.io/$_rel/qt/${pkgver%.*}/${pkgver/_/-}/submodules/qtsvg-everywhere-src-${pkgver/_/-}.tar.xz"
+
+# secfixes:
+#   6.5.0-r1:
+#     - CVE-2023-32573
+
+build() {
+	# zrythm: built without LTO and without debug info (Release, no -dbg
+	# subpackage), to keep the build chroot small and the build fast under
+	# pmbootstrap (LTO code generation would run under qemu).
+	cmake -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+dev() {
+	default_dev
+
+	amove usr/lib/qt6/sbom
+}
+
+sha512sums="
+4dce34a40a679def261aefbd87c85e8d1efa9ae6aaa8a98e5b948043734d8a7eb735c53fc238eb9cb18a50508a019fd8ee4307530487b02e5595e531fe9fa5f2  qtsvg-everywhere-src-6.12.0.tar.xz
+"

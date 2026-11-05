@@ -1,0 +1,53 @@
+# The group tag is just to easily find this APKBUILD by some scripts for automation
+# group=qt6
+maintainer="Bart Ribbers <bribbers@disroot.org>"
+pkgname=qt6-qtlanguageserver
+pkgver=6.12.0
+pkgrel=0
+# zrythm: local build of aports MR !107047, see ../README.md
+pkgdesc="Qt implementation of the Language Server Protocol"
+url="https://qt.io/"
+arch="all"
+license="LGPL-2.1-only AND LGPL-3.0-only AND GPL-3.0-only AND Qt-GPL-exception-1.0"
+depends_dev="
+	qt6-qtbase-dev
+	qt6-qtbase-private-dev
+	"
+makedepends="
+	$depends_dev
+	cmake
+	samurai
+	"
+subpackages="$pkgname-dev"
+options="!check" # No tests
+builddir="$srcdir/qtlanguageserver-everywhere-src-${pkgver/_/-}"
+
+case $pkgver in
+	*_alpha*|*_beta*|*_rc*) _rel=development_releases;;
+	*) _rel=official_releases;;
+esac
+source="https://download.qt.io/$_rel/qt/${pkgver%.*}/${pkgver/_/-}/submodules/qtlanguageserver-everywhere-src-${pkgver/_/-}.tar.xz"
+
+build() {
+	# zrythm: built without LTO and without debug info (Release, no -dbg
+	# subpackage), to keep the build chroot small and the build fast under
+	# pmbootstrap (LTO code generation would run under qemu).
+	cmake -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+dev() {
+	default_dev
+
+	amove usr/lib/qt6/sbom
+}
+
+sha512sums="
+b6f221246a0db192d5f310bec715cde8c94ccb6d5fc9c7d41cdb7d7b80dc67db02adc0a9d5832b20162740d5069a7ff2227f81545111c90059899c2360a33333  qtlanguageserver-everywhere-src-6.12.0.tar.xz
+"

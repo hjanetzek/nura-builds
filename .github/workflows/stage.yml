@@ -1,0 +1,96 @@
+# One build stage of a target (targets/<target>.sh), on a native arm64 runner: restore the
+# packages of the previous stage, build this stage (or take its packages from the cache if its
+# recipes and all earlier stages are unchanged), pass the package repository on as an artifact.
+name: stage
+
+on:
+  workflow_call:
+    inputs:
+      target: { type: string, required: true }
+      stage: { type: string, required: true }
+      previous: { type: string, default: "" }       # previous stage (its artifact), "" for the first
+      previous-key: { type: string, default: "" }   # previous stage's cache key
+      refs: { type: string, default: "" }           # e.g. "ZYNTHIAN_UI_REF=nura ZYNCODER_REF=nura"
+    outputs:
+      key:
+        description: cache key of this stage's packages (empty if not cacheable)
+        value: ${{ jobs.build.outputs.key }}
+    secrets:
+      NURA_ABUILD_KEY: { required: false }
+      NURA_ABUILD_KEY_NAME: { required: false }
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 350
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    env:
+      TARGET: ${{ inputs.target }}
+      NURA_WORK: /home/runner/nura-work
+      NURA_SRC: /home/runner/nura-src
+      NURA_OUT: /home/runner/nura-out
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost || true
+          df -h /
+
+      - name: Packages of the previous stage
+        if: inputs.previous != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: packages-${{ inputs.target }}-${{ inputs.previous }}
+          path: /home/runner/nura-out
+
+      - name: Set up pmbootstrap
+        run: |
+          export ${{ inputs.refs }}
+          scripts/setup.sh
+
+      - name: Cache key
+        id: key
+        run: |
+          if grep -q "^INPUTS_${{ inputs.stage }}=\"..*\"" targets/$TARGET.sh; then
+            h=$(scripts/build.sh --hash ${{ inputs.stage }})
+            prev=$(echo "${{ inputs.previous-key }}" | sha256sum | cut -c1-8)
+            echo "key=packages-$TARGET-${{ inputs.stage }}-$h-$prev" >> "$GITHUB_OUTPUT"
+          else
+            echo "key=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cached packages
+        id: cache
+        if: steps.key.outputs.key != ''
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ steps.key.outputs.key }}
+          path: /home/runner/nura-out/packages.tar
+
+      - name: Build ${{ inputs.stage }}
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          export PATH="$HOME/.local/bin:$PATH" ${{ inputs.refs }}
+          scripts/build.sh ${{ inputs.stage }}
+
+      - name: Save packages in the cache
+        if: steps.key.outputs.key != '' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ steps.key.outputs.key }}
+          path: /home/runner/nura-out/packages.tar
+
+      - name: Pass the packages on
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ inputs.target }}-${{ inputs.stage }}
+          path: /home/runner/nura-out/packages.tar
+          retention-days: 3
+
+      - name: Build log
+        if: failure()
+        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true

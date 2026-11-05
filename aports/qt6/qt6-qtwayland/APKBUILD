@@ -1,0 +1,91 @@
+# The group tag is just to easily find this APKBUILD by some scripts for automation
+# group=qt6
+maintainer="Bart Ribbers <bribbers@disroot.org>"
+pkgname=qt6-qtwayland
+pkgver=6.12.0
+pkgrel=1
+# zrythm: local build of aports MR !107047, see ../README.md
+pkgdesc="Provides APIs for Wayland"
+url="https://qt.io/"
+arch="all"
+license="LGPL-2.1-only AND LGPL-3.0-only AND GPL-3.0-only AND Qt-GPL-exception-1.0"
+depends_dev="
+	$pkgname-private-dev
+	vulkan-headers
+	"
+# zrythm: without $depends_dev, which names this package's own -private-dev:
+# abuild leaves it out, but pmbootstrap would install aports' older one
+makedepends="
+	vulkan-headers
+	cmake
+	perl
+	qt6-qtbase-dev
+	qt6-qtbase-private-dev
+	samurai
+	"
+case "$CARCH" in
+	armhf) ;;
+	*)
+		makedepends="$makedepends
+			qt6-qtdeclarative-dev
+			qt6-qtdeclarative-private-dev
+			"
+		;;
+esac
+
+subpackages="
+	$pkgname-private-dev:private_dev
+	$pkgname-dev
+	"
+options="!check" # No tests
+builddir="$srcdir/qtwayland-everywhere-src-${pkgver/_/-}"
+
+# Make sure this package is installed when a Qt application is installed and a
+# Wayland session is available on the system
+install_if="wayland-libs-server qt6-qtbase-x11"
+
+case $pkgver in
+	*_alpha*|*_beta*|*_rc*) _rel=development_releases;;
+	*) _rel=official_releases;;
+esac
+source="https://download.qt.io/$_rel/qt/${pkgver%.*}/${pkgver/_/-}/submodules/qtwayland-everywhere-src-${pkgver/_/-}.tar.xz"
+
+build() {
+	# zrythm: built without LTO and without debug info (Release, no -dbg
+	# subpackage), to keep the build chroot small and the build fast under
+	# pmbootstrap (LTO code generation would run under qemu).
+	cmake -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+dev() {
+	default_dev
+
+	amove usr/lib/qt6/sbom
+}
+
+private_dev() {
+	depends="qt6-qtbase-private-dev"
+	case "$CARCH" in
+		armhf) ;;
+		*) depends="$depends qt6-qtdeclarative-private-dev" ;;
+	esac
+
+
+	local file; find "$pkgdir"/usr/include -type d -name private | while read -r file; do
+		amove "${file#"$pkgdir"}"
+	done
+
+	amove usr/lib/cmake/*Private
+	amove usr/lib/qt6/modules/*Private.json
+}
+
+sha512sums="
+ec0c926e530e4d5015e60f133e4a84d01309eb8071e604480968d4a17ac06dd7dc1e4d35ce685f56beb824d8a804f07e535b0e074ae469570e61b912822e4473  qtwayland-everywhere-src-6.12.0.tar.xz
+"
