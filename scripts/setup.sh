@@ -69,6 +69,12 @@ if [ -n "${NURA_ABUILD_KEY:-}" ] && [ -n "${NURA_ABUILD_KEY_NAME:-}" ]; then
 	echo "PACKAGER_PRIVKEY=\"/home/pmos/.abuild/$NURA_ABUILD_KEY_NAME\"" | sudo tee "$keys/abuild.conf" >/dev/null
 	sudo chown -R 12345:12345 "$keys"
 	sudo chmod 600 "$keys/$NURA_ABUILD_KEY_NAME"
+	# Trusted in the chroots: config_apk_keys is mounted as their /etc/apk/keys. pmbootstrap only
+	# copies a key there when it generates one itself (no abuild.conf yet); root-owned like the
+	# repository keys it adds
+	sudo mkdir -p "$NURA_WORK/config_apk_keys"
+	sudo cp "$keys/$NURA_ABUILD_KEY_NAME.pub" "$NURA_WORK/config_apk_keys/"
+	sudo chown root:root "$NURA_WORK/config_apk_keys/$NURA_ABUILD_KEY_NAME.pub"
 	echo "signing key: $NURA_ABUILD_KEY_NAME"
 fi
 
