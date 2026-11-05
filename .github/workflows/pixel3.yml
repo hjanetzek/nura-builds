@@ -1,0 +1,19 @@
+# Google Pixel 3 (targets/pixel3.sh, docs/google-blueline.md): the SDM845 kernel from the overlay
+# of pmaports' recipe, as an .apk artifact (apks-pixel3-kernel). Runs on pushes to pixel3-*
+# branches and by hand; the zynthian workflow only runs for main.
+name: pixel3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["pixel3-*"]
+
+concurrency:
+  group: pixel3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kernel:
+    uses: ./.github/workflows/stage.yml
+    with: { target: pixel3, stage: kernel }
+    secrets: inherit

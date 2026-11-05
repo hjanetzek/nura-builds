@@ -92,6 +92,20 @@ echo "$REPOS" | while read -r name url branch recipes; do
 	ln -sfn "$NURA_SRC/$name/$recipes" "$aports/$name"
 done
 
+# Overlays: the target's recipe directories (with an APKBUILD) copied over the same path in
+# pmaports; their list goes to $NURA_WORK/nura-overlays for pin-binary.sh
+: > "$NURA_WORK/nura-overlays"
+if [ -n "${OVERLAY:-}" ]; then
+	(cd "$here/$OVERLAY" && find . -name APKBUILD | sed 's|^\./||; s|/APKBUILD$||') |
+	while read -r dir; do
+		rm -rf "${aports:?}/$dir"
+		mkdir -p "$aports/$(dirname "$dir")"
+		cp -r "$here/$OVERLAY/$dir" "$aports/$dir"
+		echo "$dir" >> "$NURA_WORK/nura-overlays"
+		echo "overlay: $dir"
+	done
+fi
+
 # Device packages (kernel, ...) at the versions postmarketOS has built, not newer recipes
 "$here/scripts/pin-binary.sh"
 

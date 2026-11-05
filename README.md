@@ -40,6 +40,25 @@ their meta packages, zynaddsubfx, setBfree), `zynthian`
 rebuilt). The Qt modules are separate stages because their recipes ask for the other modules
 without a version, which Alpine's 6.11 would satisfy.
 
+## Branches and workflows
+
+| Workflow | Runs on | Builds |
+|---|---|---|
+| `zynthian.yml` | pushes to `main` (recipes, scripts, its target), by hand | zynthian packages and the Duet image |
+| `pixel3.yml` | pushes to `pixel3-*` branches, by hand | the Pixel 3's SDM845 kernel from `overlays/pixel3` (artifact `apks-pixel3-kernel`) |
+
+Work on a target happens on branches with its prefix; `main` gets what is ready.
+
+## Overlays
+
+A target can replace pmaports recipes: `OVERLAY=overlays/<target>` in its target file, with recipe
+directories at the same path as in pmaports (e.g.
+`overlays/pixel3/device/community/linux-postmarketos-qcom-sdm845`). `setup.sh` copies them over
+pmaports' recipes, `pin-binary.sh` leaves them alone. An overlay of a package postmarketOS also
+publishes needs a higher `pkgrel` than the published one (the Pixel 3 kernel: pmaports' + 100), or
+pmbootstrap installs the published package. Keep the overlay in step with pmaports' recipe
+(version, config) when updating.
+
 ## Secrets
 
 | Secret | Purpose |
