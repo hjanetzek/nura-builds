@@ -94,5 +94,18 @@ Write `targets/<name>.sh` (repositories, stages, inputs, devices) and a workflow
 
 ## Status
 
-Draft, not run on GitHub yet: expect fixes on the first runs (non-interactive `pmbootstrap init`,
-disk space on the runners, cache sizes).
+As of 2026-11-05:
+
+- **zynthian** builds completely on GitHub: Qt 6.12, PySide6, the plugins stage (jalv, LV2 plugins,
+  Pure Data, engines), the zynthian packages and the Duet image (first successful run 2026-11-05).
+  With the stages cached, a run takes about 25 minutes (Qt and PySide restored from the cache in a
+  minute each, plugins about 10 minutes when rebuilt, zynthian 4, image 5); the device kernel comes
+  from postmarketOS's binary repository (`pin-binary.sh`), not built.
+- **Publishing** as releases (`zynthian-latest`, the `aarch64` package repository) is new. To check:
+  the CI image on the Duet, and `apk update`/`upgrade` from the releases repository (apk following
+  GitHub's download redirect).
+- **Pixel 3**: work on `pixel3-*` branches (see [docs/google-blueline.md](docs/google-blueline.md)):
+  the SDM845 kernel built from an overlay of pmaports' recipe; the USB OTG patch series don't apply
+  to its 7.1-rc1 base yet.
+- The Qt 6.12 recipes in `aports/qt6/` are a copy of Zrythm's (`tools/nura/qt6`): keep them in step,
+  and link only one of them into a local pmaports checkout.
