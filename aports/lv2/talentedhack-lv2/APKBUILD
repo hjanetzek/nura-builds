@@ -1,0 +1,28 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# TalentedHack, an autotuner (URI urn:jeremy.salwen:plugins:talentedhack; zynthian's recipe
+# install_talentedhack.sh).
+pkgname=talentedhack-lv2
+_commit=1b4c2e9dbd83948ab0273efa64b348a72697b8e3
+pkgver=1.92_git20220214
+pkgrel=0
+pkgdesc="TalentedHack autotuner LV2 plugin"
+url="https://github.com/jeremysalwen/TalentedHack"
+arch="all"
+license="GPL-3.0-or-later"
+makedepends="fftw-dev lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/jeremysalwen/TalentedHack/archive/$_commit.tar.gz"
+builddir="$srcdir/TalentedHack-$_commit"
+options="!check" # no tests
+
+build() {
+	# without -g (DEBUG) and with the distribution's flags
+	make DEBUG= CFLAGS="$CFLAGS --std=c99 -Wall -fPIC $(pkg-config --cflags fftw3f)"
+}
+
+package() {
+	install -Dm755 talentedhack.so "$pkgdir"/usr/lib/lv2/talentedhack.lv2/talentedhack.so
+	install -m644 manifest.ttl talentedhack.ttl "$pkgdir"/usr/lib/lv2/talentedhack.lv2/
+}
+sha512sums="
+4e69328108efd694864151e61f4c7134b007a89c1e61c06823463c7c24afada273191ce97b6c2cf465c79001dbb929a97103f1af6298c98e47c4039d5f984ae4  talentedhack-lv2-1b4c2e9dbd83948ab0273efa64b348a72697b8e3.tar.gz
+"

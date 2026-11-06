@@ -1,0 +1,29 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Punk Console, an Atari Punk Console synth (URI http://witryk.be/punk-console; zynthian's recipe
+# install_punk_console.sh). One C file.
+pkgname=punk-console-lv2
+_commit=4836cd1e43d7c8268983fe5f46e73853f8f16ad6
+pkgver=0_git20170321
+pkgrel=0
+pkgdesc="Punk Console: Atari Punk Console LV2 synth"
+url="https://github.com/switryk/punk-console.lv2"
+arch="all"
+license="GPL-3.0-or-later"
+makedepends="lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/switryk/punk-console.lv2/archive/$_commit.tar.gz"
+builddir="$srcdir/punk-console.lv2-$_commit"
+options="!check" # no tests
+
+build() {
+	# the Makefile calls gcc without the distribution's flags
+	${CC:-cc} $CFLAGS $LDFLAGS punkconsole.c -o punkconsole.so -shared -fPIC -DPIC -lm
+	make punkconsole.lv2
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r punkconsole.lv2 "$pkgdir"/usr/lib/lv2/
+}
+sha512sums="
+bdf31b06ccc87650c94593e8d18f654d3d098f06af9c07a486dfa55d405c3c87681bbf3e1522617abf1cc58308e2a7a911828fbd49be1039ed621afe644e1795  punk-console-lv2-4836cd1e43d7c8268983fe5f46e73853f8f16ad6.tar.gz
+"

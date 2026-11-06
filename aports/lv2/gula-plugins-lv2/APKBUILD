@@ -1,0 +1,31 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# gula plugins: The Vibey (vibrato/chorus, enabled by zynthian), The Splits, The Fades, SSAP Tone,
+# Sweabed, Pequed, Peak audio to CV, LFO CV (URIs https://github.com/steveb/gula-plugins/...;
+# zynthian's recipe install_gula.sh). Faust plugins: the generated C++ is in the repository (no
+# Faust needed). The modgui images are left out.
+pkgname=gula-plugins-lv2
+_commit=edc2be7fb6b2121a216993a8b4e7f7c114ad8257
+pkgver=0_git20220207
+pkgrel=0
+pkgdesc="gula LV2 plugins (The Vibey and others, Faust)"
+url="https://github.com/steveb/gula-plugins"
+arch="all"
+license="GPL-3.0-or-later"
+makedepends="lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/steveb/gula-plugins/archive/$_commit.tar.gz"
+builddir="$srcdir/gula-plugins-$_commit"
+options="!check" # no tests
+
+build() {
+	# SSE_CFLAGS: the Makefile picks x86 flags from /proc/cpuinfo
+	make SSE_CFLAGS=
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r lv2/*.lv2 "$pkgdir"/usr/lib/lv2/
+	rm -rf "$pkgdir"/usr/lib/lv2/*/modgui
+}
+sha512sums="
+709c9f1abbe300101573f5757c0c46293837f1e72c1179a79d6b79b3a87f7b38328ec60e21f631572f806205dc5f02f15364923fd458f79f16be081a19f2e29c  gula-plugins-lv2-edc2be7fb6b2121a216993a8b4e7f7c114ad8257.tar.gz
+"
