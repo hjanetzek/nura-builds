@@ -1,0 +1,30 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Ratatouille, a neural amp modeler and impulse response loader (URI urn:brummer:ratatouille;
+# zynthian's recipe install_ratatouille.sh). The release source contains the submodules
+# (libxputty, RTNeural, NeuralAmpModelerCore with Eigen, FFTConvolver). `make mod`: the plugin
+# without its X11 GUI, with MOD's TTLs; the modgui images left out.
+pkgname=ratatouille-lv2
+pkgver=0.9.11
+pkgrel=0
+pkgdesc="Ratatouille neural amp modeler and IR loader (LV2)"
+url="https://github.com/brummer10/Ratatouille.lv2"
+arch="aarch64 x86_64"
+license="BSD-3-Clause"
+# libsndfile-dev: the link flags ask pkg-config for sndfile
+makedepends="libsndfile-dev lv2-dev"
+source="https://github.com/brummer10/Ratatouille.lv2/releases/download/v$pkgver/Ratatouille.lv2-v$pkgver-src.tar.xz"
+builddir="$srcdir/Ratatouille.lv2-v$pkgver"
+options="!check" # no tests
+
+build() {
+	make mod
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r bin/*.lv2 "$pkgdir"/usr/lib/lv2/
+	rm -rf "$pkgdir"/usr/lib/lv2/*/modgui
+}
+sha512sums="
+b108b2a8e36e21c6bc51ef61953e3ea37b438b6a3def3dd52d2de03c94efa6bb9dbf0d92cd17545b2538801f58e2aeade0ce2b934d84e8ba7bc32e2e86373c6d  Ratatouille.lv2-v0.9.11-src.tar.xz
+"
