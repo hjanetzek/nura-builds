@@ -1,0 +1,53 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Fabla, a drum sampler (URI http://www.openavproductions.com/fabla; zynthian's recipe
+# install_fabla.sh builds zynthian's fork, branch morepads, with the NTK GUI). DSP only, compiled
+# directly: the GUI (gui/, NTK, not packaged) is linked into the same fabla.so in the CMake build,
+# so the manifest's UI entry is removed. Its sources include the LV2 headers by their pre-1.18
+# paths: a symlink tree. The factory kits (presets/*.lv2) are installed as the CMake build does.
+pkgname=fabla-lv2
+_commit=4a66f82c523b048d67505f8b5eaf4af20df9860e
+pkgver=1.4.0_git20251102
+pkgrel=0
+pkgdesc="Fabla drum sampler (LV2, no GUI)"
+url="https://github.com/zynthian/openAV-Fabla"
+arch="all"
+license="GPL-2.0-or-later"
+makedepends="libsndfile-dev lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/openAV-Fabla/archive/$_commit.tar.gz"
+builddir="$srcdir/openAV-Fabla-$_commit"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	# pre-1.18 LV2 header paths (lv2/lv2plug.in/ns/{lv2core,ext/*,extensions/*})
+	local d n ns="$srcdir"/lv2compat/lv2/lv2plug.in/ns
+	mkdir -p "$ns"/ext "$ns"/extensions
+	ln -s /usr/include/lv2/core "$ns"/lv2core
+	for d in /usr/include/lv2/*/; do
+		n=$(basename "$d")
+		case $n in
+		core) ;;
+		ui|units) ln -s "$d" "$ns"/extensions/$n ;;
+		*) ln -s "$d" "$ns"/ext/$n ;;
+		esac
+	done
+	# the GUI isn't built: no UI entry
+	sed -i '/^<http:\/\/www.openavproductions.com\/fabla\/gui>/,/^$/d' dsp/manifest.ttl
+}
+
+build() {
+	${CXX:-g++} $CXXFLAGS -fPIC -fvisibility=hidden -I"$srcdir"/lv2compat -Idsp \
+		$(pkg-config --cflags sndfile) -c dsp/fabla.cxx -o fabla.o
+	${CXX:-g++} $LDFLAGS -shared -Wl,--no-undefined fabla.o -o fabla.so \
+		$(pkg-config --libs sndfile) -lm
+}
+
+package() {
+	install -Dm755 fabla.so "$pkgdir"/usr/lib/lv2/fabla.lv2/fabla.so
+	install -m644 dsp/fabla.ttl dsp/manifest.ttl "$pkgdir"/usr/lib/lv2/fabla.lv2/
+	cp -r presets/fabla808.lv2 presets/fablaHardElectro.lv2 presets/fablaSavageDrums.lv2 \
+		presets/fablaEasternHop.lv2 "$pkgdir"/usr/lib/lv2/
+}
+sha512sums="
+1dc28917162fc4937a5f5f057ced23a2fd897885de547ec865e8658b1e75fa10b9d44d75f167ae84c87386d74b00704b5e99a5d7712271532880f440d27be8f3  fabla-lv2-4a66f82c523b048d67505f8b5eaf4af20df9860e.tar.gz
+"
