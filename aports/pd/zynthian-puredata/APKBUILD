@@ -1,7 +1,7 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
 # Pure Data and the externals zynthian's puredata patches (Organelle patches in
 # zynthian-data/presets/puredata) use: with these all 116 patches load without missing objects.
-# Packages in nura/pd/; state: docs/nura-lv2-plugins.md (zynthian-ui), "Pure Data on Nura".
+# Packages in aports/pd/; state: docs/lv2-plugins.md, "Pure Data on Nura".
 pkgname=zynthian-puredata
 pkgver=1
 pkgrel=0

@@ -10,13 +10,13 @@ rest.
 
 ## How it was measured
 
-`nura/tools/lv2-coverage.py` compares the enabled plugin URIs of zynthian's default
+`tools/lv2-coverage.py` compares the enabled plugin URIs of zynthian's default
 `engine_config.json` with the plugins lilv finds on the device; `--missing` lists the missing ones by
 project, `--load` dlopens every LV2 library (unresolved symbols) and instantiates the enabled
 plugins that need no host features:
 
 ```sh
-ssh jeff@kick-duet.local python3 - --missing --load < nura/tools/lv2-coverage.py
+ssh jeff@kick-duet.local python3 - --missing --load < tools/lv2-coverage.py
 ```
 
 Plugins that need host features (`urid:map`, `options`, ...) only show they load; start them in
@@ -34,7 +34,7 @@ with zynthian's environment (`ZYNTHIAN_DIR`, `ZYNTHIAN_LIB_DIR`, `PYTHONPATH` as
 
 ## Installed: 281 of 313
 
-All pulled in by the meta package `zynthian-lv2-plugins` (`nura/lv2/`), which
+All pulled in by the meta package `zynthian-lv2-plugins` (`aports/lv2/`), which
 `postmarketos-ui-zynthian` depends on. From Alpine:
 
 | Package | Enabled zynthian plugins it provides |
@@ -49,7 +49,7 @@ zynthian enables the MOD fork's (`http://moddevices.com/plugins/mda/`), now pack
 `mod-mda-lv2` (bundles `mod-mda-*.lv2`, no conflict with drobilla's `mda.lv2`). After a rescan 18 of
 drobilla's were enabled too (why, not checked).
 
-Packaged in `nura/lv2/` (phase 1, built and tested on the Duet):
+Packaged in `aports/lv2/` (phase 1, built and tested on the Duet):
 
 | Package | Enabled zynthian plugins | Notes |
 |---|---|---|
@@ -63,7 +63,7 @@ Packaged in `nura/lv2/` (phase 1, built and tested on the Duet):
 | `shiro-lv2` | 3 | built against a newer DPF, modgui off |
 | `artyfx-lv2` | 2 | without GUI and SSE |
 | `abgate-lv2`, `bolliedelay-lv2`, `ykchorus-lv2` | 3 | DSP only |
-| `setbfree` (`nura/engines/`) | 2 | x42 Whirl (b_whirl); also zynthian's setBfree engine |
+| `setbfree` (`aports/engines/`) | 2 | x42 Whirl (b_whirl); also zynthian's setBfree engine |
 | `fluidplug-lv2` (+ `-data`) | 19 (of 23) | SoundFont instruments, zynthian's fork with the SoundFonts (284 MB in `-data`); FluidGM left out (no SoundFont in the fork); `-fpermissive`; optional |
 | `avldrums-lv2` (+ `-data`) | 5 | x42 AVL Drumkits (145 MB in `-data`), without GUI and x86 flags; optional |
 | `dpf-plugins-lv2` | 7 | DPF-Plugins 1.7, DSP only (`lv2_dsp` per plugin), without ProM/glBars |
@@ -121,12 +121,12 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
   default.
 - **Upstream where it fits.** Generic projects (SWH, Dragonfly, DPF-Plugins, Invada, Guitarix,
   avldrums, setBfree, …) belong in Alpine's aports; zynthian-specific forks (MOD MDA/CAPS/TAP,
-  FluidPlug fork) stay in `nura/`.
+  FluidPlug fork) stay in `aports/lv2`.
 
 ### Layout
 
-- One APKBUILD per upstream project in `nura/lv2/<project>/`, linked into pmaports with the
-  other `nura/` packages; normal `$source` tarballs (GitHub archives) pinned to the version or
+- One APKBUILD per upstream project in `aports/lv2/<project>/` (nura-builds; until 2026-11-06 in
+  zynthian-ui's `nura/lv2`), linked into pmaports with the other recipes of `aports/`; normal `$source` tarballs (GitHub archives) pinned to the version or
   commit the zynthian recipe uses, with checksums. These are ordinary pmbootstrap builds (no
   `--src`).
 - Package names as Alpine would name them (`swh-lv2`, `dragonfly-reverb-lv2`, `mod-mda-lv2`, …),
@@ -134,7 +134,7 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 - A meta package `zynthian-lv2-plugins` depending on all of them; `postmarketos-ui-zynthian`
   depends on the meta package. Data-heavy ones (FluidPlug soundfonts, AVL drumkits) as separate
   packages the meta package may only recommend (install_if or optional), to keep images small.
-- `nura/tools/lv2-coverage.py`: the measurement above as a tool (counts, missing by project), to
+- `tools/lv2-coverage.py`: the measurement above as a tool (counts, missing by project), to
   run after each batch.
 
 ### Phases
@@ -146,22 +146,22 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 | 3. Guitarix (**done**) | Guitarix (`--mod-lv2 --no-standalone`), GxPlugins, GxDistortionPlus, GxSwitchlessWah | 58 of 59 | half a day: needed only libsigc++ and `<cstdint>`, no Boost/glibmm for the LV2-only build |
 | 4. Instruments with data (**done**) | FluidPlug, avldrums, setBfree (also as engine) | 26 | SoundFonts in optional `-data` packages, not in images |
 | 5. EQ10Q, QMidiArp, rncbc synths (**done**) | EQ10Q, QMidiArp, padthv1/samplv1/synthv1 | ~13 | EQ10Q and QMidiArp: minutes, Debian's sources; rncbc synths with Qt 6.12's dev packages |
-| 6. JUCE (**done** but Surge XT) | DISTRHO-Ports (TAL, Vex), CHOW, Surge XT, Odin2, OB-Xd, Dexed, Helm, Monique, Vaporizer2, … | ~30 | one day on the Duet: JUCE needs the same musl/GCC 15 fixes in each (see nura-packaging-guide.md) |
+| 6. JUCE (**done** but Surge XT) | DISTRHO-Ports (TAL, Vex), CHOW, Surge XT, Odin2, OB-Xd, Dexed, Helm, Monique, Vaporizer2, … | ~30 | one day on the Duet: JUCE needs the same musl/GCC 15 fixes in each (see packaging-guide.md) |
 | 7. Neural and the rest | AIDA-X, NAM, Dusk (if sources), single plugins | ~25 | case by case |
 
 After each phase: build, install on the Duet, rescan, measure coverage, and load each new plugin
-once (`nura/tools/lv2-coverage.py --load`, and jalv for the ones that need host features) to catch
+once (`tools/lv2-coverage.py --load`, and jalv for the ones that need host features) to catch
 missing symbols and crashes; `lv2lint` for the TTL.
 
 ### Phase 1: lessons
 
 The patterns from all phases (workflow, sources, musl, GCC, testing) are collected in
-[nura-packaging-guide.md](nura-packaging-guide.md).
+[packaging-guide.md](packaging-guide.md).
 
 Built with abuild on the Duet itself (the target: aarch64, musl), which takes seconds to minutes per
 package and needs no sudo on the host; pmbootstrap builds the same APKBUILDs for images. Setup on
 the device: `sudo apk add alpine-sdk`, `sudo addgroup $USER abuild`, `abuild-keygen -a -n -i`; then
-in a copy of `nura/lv2/<pkg>`: `abuild checksum && abuild -r`, and
+in a copy of `aports/lv2/<pkg>`: `abuild checksum && abuild -r`, and
 `sudo apk add -u --repository ~/.local/share/abuild/aports <pkg>` (`-u`: `apk add` alone doesn't
 upgrade an installed package to a new pkgrel).
 
@@ -229,7 +229,7 @@ The plugin packages depend on their data, so `apk add avldrums-lv2` installs a w
   image.
 - **SooperLooper:** zynthian runs SooperLooper as its own engine (`zynthian_engine_sooperlooper`:
   the `sooperlooper` binary, controlled over OSC, with the `zynthian_widget_sooperlooper` widget),
-  not as a plugin. Packaged headless (`nura/engines/sooperlooper`: SooperLooper 1.7.9, Debian's
+  not as a plugin. Packaged headless (`aports/engines/sooperlooper`: SooperLooper 1.7.9, Debian's
   source and patches, without the wxWidgets GUI; `musl-fts` for `fts.h`), so the engine works on
   Nura as on ZynthianOS. Later perhaps better to make it work with the SooperLooper LV2 version
   (`sooperlooper.lv2`, AUR `sooperlooper.lv2-git`) through the jalv engine: one fewer separate
@@ -242,7 +242,7 @@ The plugin packages depend on their data, so `apk add avldrums-lv2` installs a w
   controllers use), hcs, ggee (ZynthianOS: Debian's `puredata` and `pd-*` packages). Alpine
   packages neither Pure Data nor these externals (its `cyclone` is a Scheme compiler), so the
   Duet has no puredata engine yet: package `pd` (vanilla) and the externals (pd-lib-builder,
-  sources on GitHub) in `nura/`, with a `/usr/lib/pd/extra` layout so the patches' absolute
+  sources on GitHub) in `aports/pd`, with a `/usr/lib/pd/extra` layout so the patches' absolute
   `declare -path` lines work. Some patches also declare
   `/zynthian/zynthian-data/puredata/organelle` (ZynthianOS path).
   On the desktop (Arch: `pd`, but no externals in the repos or the AUR) they come from Pure
@@ -255,7 +255,7 @@ The plugin packages depend on their data, so `apk add avldrums-lv2` installs a w
   only as prebuilt arm64 glibc binaries in `zynthian-data/puredata/pd-externals-arm64`: no
   x86_64 build, and on musl (Nura) they won't load either; their sources are needed. Without
   them those patches run but lose Link/MIDI clock sync.
-- **Pure Data on Nura (2026-11-05): done.** Packaged from source in `nura/pd/`, built and tested
+- **Pure Data on Nura (2026-11-05): done.** Packaged from source in `aports/pd/`, built and tested
   on the Duet; the meta package `zynthian-puredata` (a dependency of `postmarketos-ui-zynthian`)
   pulls in `puredata` 0.57.0 (`-nogui`, JACK, ALSA MIDI; Alpine only has libpd) and the externals,
   all in `/usr/lib/pd/extra`: `pd-cyclone`, `pd-iemlib`, `pd-ggee`, `pd-hcs`, `pd-osc`,
@@ -274,10 +274,10 @@ The plugin packages depend on their data, so `apk add avldrums-lv2` installs a w
   directory to the search path when zynthian-data is not in the ZynthianOS location (like the
   Organelle path). Pd's settings for the desktop (deken externals in `~/Documents/Pd/externals`)
   are described above.
-- **Engines (2026-11-05):** `nura/engines/zynaddsubfx` (3.0.6, release tarball with rtosc and the
+- **Engines (2026-11-05):** `aports/engines/zynaddsubfx` (3.0.6, release tarball with rtosc and the
   banks, no GUI; GCC 13+ needs `-include cstdint`, OSS headers from `linux-headers`; banks in
   `/usr/share/zynaddsubfx/banks`, where zynthian-data's `zynbanks` symlink points) and
-  `nura/engines/setbfree` (0.8.17, no UI, without the x86 flags; its LV2 plugins too), both
+  `aports/engines/setbfree` (0.8.17, no UI, without the x86 flags; its LV2 plugins too), both
   dependencies of `postmarketos-ui-zynthian`: zynthian's ZY and BF engines are available on Nura.
 - **CPU:** some plugins are too heavy for the Duet's A73 cores at a 256-frame quantum (neural amp
   models, Surge XT with many voices); enable them, but expect limits.

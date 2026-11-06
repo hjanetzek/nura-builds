@@ -17,7 +17,13 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
 - `targets/<target>.sh` names the source repositories (cloned into `$NURA_SRC`, recipe directories
   linked into pmbootstrap's pmaports), the build stages and the devices.
 - `aports/` holds recipes shared by several apps: Qt 6.12 (`aports/qt6/`, newer than Alpine's 6.11;
-  copied from Zrythm's `tools/nura/qt6`, see `aports/qt6/README.md`).
+  copied from Zrythm's `tools/nura/qt6`, see `aports/qt6/README.md`), PySide6 (`aports/pyside6`),
+  LV2 plugins (`aports/lv2`, with the meta package `zynthian-lv2-plugins`), Pure Data and its
+  externals (`aports/pd`), engines (`aports/engines`: ZynAddSubFX, setBfree, SooperLooper) and
+  zynthian's jalv (`aports/zynthian-jalv`). These came from zynthian-ui's `nura/` with their
+  history (2026-11-06). How to package more: [docs/packaging-guide.md](docs/packaging-guide.md);
+  zynthian's plugins on Nura: [docs/lv2-plugins.md](docs/lv2-plugins.md); upstream updates:
+  `tools/check-updates.py`.
 - `scripts/setup.sh` installs pmbootstrap, writes its config (edge, systemd, PipeWire), initialises
   the work dir, links the recipes, installs the signing key and restores built packages.
 - `scripts/pin-binary.sh` (run by setup.sh) pins the devices' packages (device package, kernel,
@@ -38,8 +44,8 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
 - `.github/workflows/packages.yml` builds single packages by name (see below).
 
 zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2` (qtdeclarative),
-`qt3` (qtwayland), `pyside` (PySide6 6.12, from zynthian-ui's `nura/pyside6`), `plugins`
-(zynthian's jalv, the LV2 plugins and Pure Data externals of `nura/lv2` and `nura/pd` through
+`qt3` (qtwayland), `pyside` (PySide6 6.12), `plugins`
+(zynthian's jalv, the LV2 plugins and Pure Data externals of `aports/lv2` and `aports/pd` through
 their meta packages, zynaddsubfx, setBfree, SooperLooper), `zynthian`
 (zyncoder and zynthian-ui from their checkouts, zynthian-data, postmarketos-ui-zynthian; always
 rebuilt). The Qt modules are separate stages because their recipes ask for the other modules
@@ -67,14 +73,14 @@ Workflow artifacts (packages per stage, images) stay for a few days for debuggin
 
 ## Building single packages
 
-`packages.yml` (by hand) builds named packages, e.g. new recipes on a branch of zynthian-ui,
-without the whole target: it starts from the newest cached packages of the `plugins` stage (Qt,
+`packages.yml` (by hand) builds named packages, e.g. new recipes on a branch, without the whole
+target: it starts from the newest cached packages of the `plugins` stage (Qt,
 PySide, the plugins) and uploads the built `.apk` files and the build log as the artifact
 `packages-<run id>`. The named packages are always rebuilt, their dependencies only when missing
 or outdated.
 
 ```sh
-gh workflow run packages.yml -f packages="dexed-lv2 eq10q-lv2" -f zynthian-ui-ref=my-branch
+gh workflow run packages.yml --ref my-branch -f packages="dexed-lv2 eq10q-lv2"
 gh run download <run id>
 ```
 

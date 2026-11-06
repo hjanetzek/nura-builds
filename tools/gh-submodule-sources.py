@@ -5,7 +5,7 @@ GitHub's archives don't contain submodules. This resolves a ref of a GitHub repo
 submodules (recursively, GitHub-hosted only) to commits, and prints the variables, `source`
 entries and `prepare()` lines that put each submodule archive in place:
 
-    nura/tools/gh-submodule-sources.py jatinchowdhury18/KlonCentaur v1.4.0
+    tools/gh-submodule-sources.py jatinchowdhury18/KlonCentaur v1.4.0
 
 Uses the GitHub API without a token (60 requests per hour); set GITHUB_TOKEN for more.
 """

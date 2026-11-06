@@ -1,6 +1,6 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
 # The LV2 plugins zynthian enables by default, as far as they are packaged: Alpine's packages and
-# the ones in nura/lv2/. State and plan: docs/nura-lv2-plugins.md (zynthian-ui). The SoundFont
+# the ones in aports/lv2/. State and plan: docs/lv2-plugins.md. The SoundFont
 # instruments (fluidplug-lv2, avldrums-lv2: about 450 MB of data) are optional, not in here.
 pkgname=zynthian-lv2-plugins
 pkgver=1

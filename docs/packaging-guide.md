@@ -1,12 +1,17 @@
 # Packaging plugins and engines for Nura: problems and patterns
 
 Status: 2026-11-06. What went wrong while packaging zynthian's LV2 plugins, Pure Data externals
-and engines for Nura (postmarketOS, aarch64, musl, GCC 15), and how the packages in `nura/lv2/`,
-`nura/pd/` and `nura/engines/` deal with it. Read this before packaging the next plugin; the
-state of the plugins themselves is in [nura-lv2-plugins.md](nura-lv2-plugins.md).
+and engines for Nura (postmarketOS, aarch64, musl, GCC 15), and how the packages in `aports/lv2/`,
+`aports/pd/` and `aports/engines/` deal with it. Read this before packaging the next plugin; the
+state of the plugins themselves is in [lv2-plugins.md](lv2-plugins.md).
 
 ## Workflow
 
+- **The recipes live in nura-builds** (`aports/lv2`, `aports/pd`, `aports/engines`; in zynthian-ui's
+  `nura/` until 2026-11-06). Pushing to `main` starts the zynthian CI (the `plugins` stage builds
+  only packages whose `pkgver-pkgrel` is new: bump `pkgrel`); try recipes first on a branch:
+  `gh workflow run packages.yml --ref <branch> -f packages="<pkg> ..."` builds just those and
+  uploads the apks and the log.
 - **Build on the Duet with abuild**, not under qemu: seconds to minutes per package, no sudo on
   the host. `abuild checksum && abuild -r` in a copy of the package directory, then
   `sudo apk add -u --repository ~/.local/share/abuild/aports <pkg>` (`-u`: `apk add` alone keeps
@@ -59,7 +64,7 @@ state of the plugins themselves is in [nura-lv2-plugins.md](nura-lv2-plugins.md)
   `device-mapper-udev` disappeared (fixed by installing it again). Run `sudo apk fix` to see the
   trigger's output, and fix the system before rebuilding.
 - **After installing plugins**, zynthian must rescan (`zynthian_lv2.py engines` with zynthian's
-  environment; see nura-lv2-plugins.md), then restart the session
+  environment; see lv2-plugins.md), then restart the session
   (`sudo systemctl --no-block restart tinydm`; without `--no-block` it dies with the ssh session).
 
 ## Sources
@@ -70,7 +75,7 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
   GxPlugins (`gxplugins_1.0_src.tar.bz2`, 43 submodules), Surge XT (`surge-src-1.3.4.tar.gz` in
   `surge-synthesizer/releases-xt`), Guitarix (`guitarix2-*.tar.xz`). Avoid "Nightly" assets: they
   are replaced.
-- **Otherwise one source per submodule**: `nura/tools/gh-submodule-sources.py OWNER/REPO REF`
+- **Otherwise one source per submodule**: `tools/gh-submodule-sources.py OWNER/REPO REF`
   resolves the submodules recursively and prints the `_vars`, the `source` entries and the
   `prepare()` moves (outer submodules first). It uses the GitHub API: 60 requests per hour without
   a token, so run it with `GITHUB_TOKEN=$(gh auth token)`. Submodules outside GitHub (Eigen on
@@ -191,7 +196,7 @@ differently:
 
 ## Testing
 
-- `nura/tools/lv2-coverage.py --missing --load` on the device: which of zynthian's enabled plugins
+- `tools/lv2-coverage.py --missing --load` on the device: which of zynthian's enabled plugins
   are installed, and a `dlopen(RTLD_NOW)` of every LV2 library (finds unresolved symbols).
 - lilv's instantiate without host features fails for every plugin that requires `urid:map` or
   `options` (most DPF, JUCE, x42 plugins): that says nothing. Start those in jalv on PipeWire:
@@ -202,7 +207,7 @@ differently:
   `get_host_display()` returns null; patched). A plugin's own crash handler can then end the
   process with SIGKILL, so ninja reports "signal 9", which looks like the OOM killer. Before
   guessing (memory, LTO), get evidence: a debug branch that runs the step alone and the helper
-  under `strace`/`gdb`, built with `packages.yml` (`-f zynthian-ui-ref=<branch>`).
+  under `strace`/`gdb`, built with `packages.yml` from a nura-builds branch (`--ref <branch>`).
 - A crash only at shutdown (jalv exits on EOF) may not show under gdb (timing); the core dump is in
   `coredumpctl`. Plugin libraries are stripped, so the trace names only the library and offset.
 - Engines that aren't plugins (SooperLooper, setBfree, ZynAddSubFX): start them as the engine does
@@ -213,7 +218,7 @@ differently:
 
 ## Keeping up with upstream
 
-`GITHUB_TOKEN=$(gh auth token) nura/tools/check-updates.py [--all]` checks each package's main
+`GITHUB_TOKEN=$(gh auth token) tools/check-updates.py [--all]` checks each package's main
 GitHub source: pinned commits against the default branch (or `_branch=` in the APKBUILD, e.g.
 MiMi-d's `zynthian` branch), tags against the latest release and newest tag. Debian, SourceForge
 and website tarballs are skipped, submodules aren't checked. Packages with updates are marked `*`.

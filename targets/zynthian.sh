@@ -18,8 +18,8 @@ STAGE_qt3="qt6-qtwayland"
 STAGE_pyside="pyside6"
 # Engines and plugins the kiosk package depends on, and zynthian's jalv (zynthian-ui depends on it,
 # and the --src build of zynthian-ui doesn't build missing dependencies). The meta packages pull in
-# the LV2 plugins and Pure Data externals of nura/lv2 and nura/pd; engines (nura/engines) are named
-# here, or the always-rebuilt zynthian stage would build them as the kiosk's dependencies.
+# the LV2 plugins and Pure Data externals of aports/lv2 and aports/pd; engines (aports/engines) are
+# named here, or the always-rebuilt zynthian stage would build them as the kiosk's dependencies.
 STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree sooperlooper"
 # zynthian-ui and zyncoder are built from their checkouts (--src skips $source and doesn't build
 # missing dependencies, hence the order); seed-distfiles.sh puts the bundled Python packages into
@@ -32,8 +32,8 @@ SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
 INPUTS_qt1="aports/qt6/qt6-qtbase aports/qt6/qt6-qtshadertools aports/qt6/qt6-qtsvg aports/qt6/qt6-qtlanguageserver"
 INPUTS_qt2="aports/qt6/qt6-qtdeclarative"
 INPUTS_qt3="aports/qt6/qt6-qtwayland"
-INPUTS_pyside="@zynthian-ui/nura/pyside6"
-INPUTS_plugins="@zynthian-ui/nura/zynthian-jalv @zynthian-ui/nura/lv2 @zynthian-ui/nura/pd @zynthian-ui/nura/engines"
+INPUTS_pyside="aports/pyside6"
+INPUTS_plugins="aports/zynthian-jalv aports/lv2 aports/pd aports/engines"
 INPUTS_zynthian=""   # always rebuilt: built from the checkouts
 
 # Images: pmbootstrap UI and the devices (pmaports device names)

@@ -4,7 +4,7 @@
 # DuskAmp (NeuralAmpModelerCore), Chord Analyzer (and MIDI), Spectrum Analyzer, against JUCE 8.0.4
 # as their CI does. The DAF ("2") versions are dusk-audio-lv2. Eigen (GitLab submodules of
 # NeuralAmpModelerCore and AudioDSPTools) are extra sources too.
-# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
+# JUCE and the other git submodules are extra sources (tools/gh-submodule-sources.py). LV2
 # only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
 # loads X11 only when the editor opens).
 pkgname=dusk-audio-juce-lv2

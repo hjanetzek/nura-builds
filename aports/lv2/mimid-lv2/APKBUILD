@@ -6,7 +6,7 @@
 pkgname=mimid-lv2
 _commit=f71fcc087a8deaeda116c9266d01d57948ae9f6b
 _dpf=4238e1c7f0351bbe488d79f0899c540543ac7583
-_branch=zynthian # the branch zynthian builds (nura/tools/check-updates.py compares against it)
+_branch=zynthian # the branch zynthian builds (tools/check-updates.py compares against it)
 pkgver=0_git20260918
 pkgrel=2
 pkgdesc="MiMi-d analog-modelling synthesizer (LV2)"

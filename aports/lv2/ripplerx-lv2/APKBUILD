@@ -1,6 +1,6 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
 # RipplerX (URI https://github.com/tiagolr/ripplerx; zynthian's recipe install_ripplerx.sh).
-# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
+# JUCE and the other git submodules are extra sources (tools/gh-submodule-sources.py). LV2
 # only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
 # loads X11 only when the editor opens).
 pkgname=ripplerx-lv2

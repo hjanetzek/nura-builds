@@ -1,7 +1,7 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
 # ChowPhaser mono and stereo phaser (URI https://github.com/jatinchowdhury18/ChowPhaserMono, ...Stereo; zynthian's recipe
 # install_CHOWPhaser.sh). JUCE (lv2-porting-project's fork) and the other git submodules are extra sources
-# (nura/tools/gh-submodule-sources.py). LV2 only. The plugin has its JUCE GUI built in, so it needs
+# (tools/gh-submodule-sources.py). LV2 only. The plugin has its JUCE GUI built in, so it needs
 # X11 and freetype headers to build (JUCE loads X11 only when the editor opens).
 pkgname=chow-phaser-lv2
 pkgver=1.1.1_git20220223

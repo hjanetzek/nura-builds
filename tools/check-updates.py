@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Check the packages in nura/ for upstream updates (GitHub sources only).
+"""Check the packages in aports/ for upstream updates (GitHub sources only).
 
-For every APKBUILD under nura/ (or the given directories), takes the first source and, when it is a
-GitHub archive or release download:
+For every APKBUILD under aports/lv2, aports/pd and aports/engines (or the given directories), takes
+the first source and, when it is a GitHub archive or release download:
 
 - pinned at a commit: how many commits the default branch (or `_branch=` in the APKBUILD) is ahead,
   and the newest tag;
@@ -11,7 +11,7 @@ GitHub archive or release download:
 Other sources (Debian, SourceForge, project websites) are listed as skipped. Submodules are not
 checked. Not exact: tag naming differs between projects, so compare by eye.
 
-    GITHUB_TOKEN=$(gh auth token) nura/tools/check-updates.py [--all] [DIR...]
+    GITHUB_TOKEN=$(gh auth token) tools/check-updates.py [--all] [DIR...]
 
 --all also lists packages that look current. Without a token the GitHub API allows 60 requests
 per hour, which isn't enough for all packages.
@@ -28,7 +28,7 @@ import urllib.error
 import urllib.request
 
 API = "https://api.github.com"
-NURA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+NURA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aports")
 
 
 def get(path):

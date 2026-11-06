@@ -3,8 +3,8 @@
 
 Runs on the device (needs py3-lilv), e.g. from the host:
 
-    ssh jeff@kick-duet.local python3 - < nura/tools/lv2-coverage.py
-    ssh jeff@kick-duet.local python3 - --missing --load < nura/tools/lv2-coverage.py
+    ssh jeff@kick-duet.local python3 - < tools/lv2-coverage.py
+    ssh jeff@kick-duet.local python3 - --missing --load < tools/lv2-coverage.py
 
 --missing   list the missing plugins, grouped by project (URI prefix), with their names
 --load      dlopen every LV2 library (catches unresolved symbols), and instantiate the enabled
@@ -13,7 +13,7 @@ Runs on the device (needs py3-lilv), e.g. from the host:
 --config    engine configuration with zynthian's defaults (default: the installed zynthian-sys
             config.json)
 
-See docs/nura-lv2-plugins.md.
+See docs/lv2-plugins.md.
 """
 
 import argparse

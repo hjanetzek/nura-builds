@@ -1,9 +1,9 @@
-# Build single packages by name, e.g. a new or changed recipe on a branch of zynthian-ui, without
-# running the whole target: starts from the newest cached packages of a stage (default: plugins,
+# Build single packages by name, e.g. new or changed recipes on a branch (of this repository, or of
+# zynthian-ui for its recipes), without running the whole target: starts from the newest cached packages of a stage (default: plugins,
 # which has Qt, PySide and the plugins), builds the named packages (forced; missing or outdated
 # dependencies too) and uploads the built .apk files and the build log as an artifact.
 #
-#   gh workflow run packages.yml -f packages="dexed-lv2 eq10q-lv2" -f zynthian-ui-ref=my-branch
+#   gh workflow run packages.yml --ref my-branch -f packages="dexed-lv2 eq10q-lv2"
 name: packages
 
 on:
