@@ -1,7 +1,8 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
 # MOD's Arpeggiator (URI http://moddevices.com/plugins/mod-devel/arpeggiator; zynthian's recipe
 # install_mod-arpeggiator.sh). A DPF plugin with DPF in the repository; DSP only (lv2_dsp) with
-# the project's static TTLs, as its Makefile installs them.
+# the project's static TTLs, as its Makefile installs them. Patched: run() copied a 150 KB buffer onto
+# the stack, more than musl's default thread stack (segfault in the host's audio thread).
 pkgname=mod-arpeggiator-lv2
 _commit=82f3d9f159ce216454656a8782362c3d5ed48bed
 pkgver=0_git20211109
@@ -11,7 +12,9 @@ url="https://github.com/mod-audio/mod-arpeggiator-lv2"
 arch="all"
 license="GPL-3.0-or-later"
 makedepends="lv2-dev"
-source="$pkgname-$_commit.tar.gz::https://github.com/mod-audio/mod-arpeggiator-lv2/archive/$_commit.tar.gz"
+source="$pkgname-$_commit.tar.gz::https://github.com/mod-audio/mod-arpeggiator-lv2/archive/$_commit.tar.gz
+	midibuffer-by-reference.patch
+	"
 builddir="$srcdir/mod-arpeggiator-lv2-$_commit"
 options="!check" # no tests
 
@@ -26,4 +29,5 @@ package() {
 }
 sha512sums="
 df5970d625bd0d017c22b13de7f6d33558115f155d7e9cd11f0e1abec508e61673f780f8927476704ed85435f97c06dcf3c42c9b4793bf5ef81a101a95dd40cc  mod-arpeggiator-lv2-82f3d9f159ce216454656a8782362c3d5ed48bed.tar.gz
+28fe89fc9681433769bd0684a9db79593707790999f00bec32716c58b617fd41bbf93f74e9d56b00fbf8bfa80d96ab039430d9f91c894525e858b1411f373a3b  midibuffer-by-reference.patch
 "
