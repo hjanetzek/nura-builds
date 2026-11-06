@@ -1,0 +1,57 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Helm, a polyphonic synthesizer by Matt Tytel (URI http://tytel.org/helm; zynthian's recipe
+# install_helm.sh: make lv2). Its own (old) JUCE is in the repository, with the musl compat of the
+# other JUCE packages. The LV2 plugin has its JUCE GUI built in (X11, OpenGL); the patches go to
+# /usr/share/helm/patches, where it looks for them.
+pkgname=helm-lv2
+pkgver=0.9.0
+_commit=927d2ed27f71a735c3ff2a1226ce3129d1544e7e
+pkgrel=0
+pkgdesc="Helm polyphonic synthesizer (LV2)"
+url="https://github.com/mtytel/helm"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+# the libraries its Makefile asks pkg-config for (alsa freetype2 libcurl x11 xext xinerama), -lGL
+makedepends="
+	alsa-lib-dev
+	curl-dev
+	freetype-dev
+	libx11-dev
+	libxext-dev
+	libxinerama-dev
+	mesa-dev
+	"
+source="$pkgname-$_commit.tar.gz::https://github.com/mtytel/helm/archive/$_commit.tar.gz"
+builddir="$srcdir/helm-$_commit"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF
+}
+
+build() {
+	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
+	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "");
+	# <utility> for std::exchange, which older JUCE gets indirectly from glibc's libstdc++ headers
+	# -Wno-template-body: GCC 15 errors in templates that are never instantiated (chowdsp_utils)
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -include utility -Wno-template-body \
+		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
+		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	# SIMDFLAGS: the Makefile tunes for Cortex-A53
+	make lv2 CONFIG=Release SIMDFLAGS=
+}
+
+package() {
+	make install_lv2 DESTDIR="$pkgdir" LIBDIR=/usr/lib CONFIG=Release SIMDFLAGS=
+}
+sha512sums="
+e2e917f66df3e2745db35c5cdf4f7a83280514a4acc48393610695af5f12c7a44225f511ef79c6ee28f5eee50a9b063442ab65d7d049be6c4115008e18d32b52  helm-lv2-927d2ed27f71a735c3ff2a1226ce3129d1544e7e.tar.gz
+"
