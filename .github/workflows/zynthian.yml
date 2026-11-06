@@ -28,55 +28,90 @@ env:
   REFS: ZYNTHIAN_UI_REF=${{ inputs.zynthian-ui-ref || 'nura' }} ZYNCODER_REF=${{ inputs.zyncoder-ref || 'nura' }}
 
 jobs:
-  # Job inputs of the stages (the env context isn't available in a reusable workflow's "with")
-  refs:
+  # Which stages have to run (scripts/plan.sh): a stage whose packages are cached under its exact
+  # key is skipped altogether, the next stage takes them from the cache. Also the inputs of the
+  # stages (the env context isn't available in a reusable workflow's "with").
+  plan:
     runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
     outputs:
-      refs: ${{ steps.r.outputs.refs }}
-      rebuild: ${{ steps.r.outputs.rebuild }}
+      refs: ${{ steps.refs.outputs.refs }}
+      key_qt1: ${{ steps.plan.outputs.key_qt1 }}
+      run_qt1: ${{ steps.plan.outputs.run_qt1 }}
+      rebuild_qt1: ${{ steps.plan.outputs.rebuild_qt1 }}
+      key_qt2: ${{ steps.plan.outputs.key_qt2 }}
+      run_qt2: ${{ steps.plan.outputs.run_qt2 }}
+      rebuild_qt2: ${{ steps.plan.outputs.rebuild_qt2 }}
+      key_qt3: ${{ steps.plan.outputs.key_qt3 }}
+      run_qt3: ${{ steps.plan.outputs.run_qt3 }}
+      rebuild_qt3: ${{ steps.plan.outputs.rebuild_qt3 }}
+      key_pyside: ${{ steps.plan.outputs.key_pyside }}
+      run_pyside: ${{ steps.plan.outputs.run_pyside }}
+      rebuild_pyside: ${{ steps.plan.outputs.rebuild_pyside }}
+      key_plugins: ${{ steps.plan.outputs.key_plugins }}
+      run_plugins: ${{ steps.plan.outputs.run_plugins }}
+      rebuild_plugins: ${{ steps.plan.outputs.rebuild_plugins }}
+      key_zynthian: ${{ steps.plan.outputs.key_zynthian }}
+      run_zynthian: ${{ steps.plan.outputs.run_zynthian }}
+      rebuild_zynthian: ${{ steps.plan.outputs.rebuild_zynthian }}
     steps:
-      - id: r
-        run: |
-          echo "refs=$REFS" >> "$GITHUB_OUTPUT"
-          echo "rebuild=$REBUILD" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+      - id: refs
+        run: echo "refs=$REFS" >> "$GITHUB_OUTPUT"
+      - id: plan
+        env:
+          NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: TARGET=zynthian scripts/plan.sh
 
   qt1:
-    needs: refs
+    needs: plan
+    # runs after a skipped stage too (!failure() instead of the default success())
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt1 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt1, refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
+    with: { target: zynthian, stage: qt1, key: "${{ needs.plan.outputs.key_qt1 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt1 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   qt2:
-    needs: [refs, qt1]
+    needs: [plan, qt1]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt2 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.qt1.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
+    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.plan.outputs.key_qt1 }}", key: "${{ needs.plan.outputs.key_qt2 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt2 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   qt3:
-    needs: [refs, qt2]
+    needs: [plan, qt2]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt3 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.qt2.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
+    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.plan.outputs.key_qt2 }}", key: "${{ needs.plan.outputs.key_qt3 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt3 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   pyside:
-    needs: [refs, qt3]
+    needs: [plan, qt3]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_pyside == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.qt3.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
+    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.plan.outputs.key_qt3 }}", key: "${{ needs.plan.outputs.key_pyside }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_pyside == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   plugins:
-    needs: [refs, pyside]
+    needs: [plan, pyside]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_plugins == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: plugins, previous: pyside, previous-key: "${{ needs.pyside.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    with: { target: zynthian, stage: plugins, previous: pyside, previous-key: "${{ needs.plan.outputs.key_pyside }}", key: "${{ needs.plan.outputs.key_plugins }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_plugins == 'true' }}" }
     secrets: inherit
+    permissions: { contents: read, actions: write }
   zynthian:
-    needs: [refs, plugins]
+    needs: [plan, plugins]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_zynthian == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: zynthian, previous: plugins, previous-key: "${{ needs.plugins.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    with: { target: zynthian, stage: zynthian, previous: plugins, previous-key: "${{ needs.plan.outputs.key_plugins }}", key: "${{ needs.plan.outputs.key_zynthian }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_zynthian == 'true' }}" }
     secrets: inherit
+    permissions: { contents: read, actions: write }
 
   image:
-    needs: [refs, zynthian]
+    needs: [plan, zynthian]
+    if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     strategy:
@@ -105,7 +140,7 @@ jobs:
 
       - name: Set up pmbootstrap
         run: |
-          export ${{ needs.refs.outputs.refs }}
+          export ${{ needs.plan.outputs.refs }}
           scripts/setup.sh
       - name: Image for ${{ matrix.device }}
         run: |
@@ -135,7 +170,7 @@ jobs:
   # (release "zynthian-latest"), see scripts/publish.sh
   publish:
     needs: [zynthian, image]
-    if: github.ref == 'refs/heads/main'
+    if: ${{ !cancelled() && !failure() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

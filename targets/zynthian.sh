@@ -39,6 +39,11 @@ INPUTS_pyside="aports/pyside6"
 INPUTS_plugins="aports/zynthian-jalv aports/lv2 aports/pd aports/engines"
 INPUTS_zynthian=""   # always rebuilt: built from the checkouts
 
+# Stages the weekly run (and the dispatch input "rebuild") builds from scratch: Qt and PySide
+# replace Alpine's versions and link against its libraries, so an soname change there breaks them
+# without a change to their recipes
+REBUILD_STAGES="qt1 qt2 qt3 pyside"
+
 # Images: pmbootstrap UI and the devices (pmaports device names)
 UI=zynthian
 DEVICES="google-kukui"

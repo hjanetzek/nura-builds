@@ -1,6 +1,7 @@
 # One build stage of a target (targets/<target>.sh), on a native arm64 runner: restore the
 # packages of the previous stage, build this stage (or take its packages from the cache if its
 # recipes and all earlier stages are unchanged), pass the package repository on as an artifact.
+# The caller skips the job altogether when the plan (scripts/plan.sh) finds it cached.
 name: stage
 
 on:
@@ -10,6 +11,7 @@ on:
       stage: { type: string, required: true }
       previous: { type: string, default: "" }       # previous stage (its artifact), "" for the first
       previous-key: { type: string, default: "" }   # previous stage's cache key
+      key: { type: string, default: "" }            # this stage's cache key (scripts/plan.sh)
       refs: { type: string, default: "" }           # e.g. "ZYNTHIAN_UI_REF=nura ZYNCODER_REF=nura"
       # Build from scratch, ignoring this stage's cache, and replace the cached packages under the
       # same key (the weekly rebuild: our packages against the current versions of Alpine's
@@ -45,12 +47,24 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost || true
           df -h /
 
+      # From the previous job's artifact, or, when that job was skipped (its packages were cached,
+      # scripts/plan.sh), from the cache
       - name: Packages of the previous stage
+        id: previous
         if: inputs.previous != ''
+        continue-on-error: true
         uses: actions/download-artifact@v8
         with:
           name: packages-${{ inputs.target }}-${{ inputs.previous }}
           path: /home/runner/nura-out
+
+      - name: Packages of the previous stage, from the cache
+        if: inputs.previous != '' && steps.previous.outcome == 'failure'
+        uses: actions/cache/restore@v6
+        with:
+          key: ${{ inputs.previous-key }}
+          path: /home/runner/nura-out/packages.tar
+          fail-on-cache-miss: true
 
       - uses: ./.github/actions/pmaports
 
@@ -65,7 +79,11 @@ jobs:
           # packages-<target>-<stage>-<signing key>-<previous stage>-<this stage's inputs>: the
           # first part is the prefix of a partial match (restore-keys below), so a stage whose
           # recipes changed starts from its last packages and builds only what is out of date
-          if grep -q "^INPUTS_${{ inputs.stage }}=\"..*\"" targets/$TARGET.sh; then
+          if [ -n "${{ inputs.key }}" ]; then
+            echo "key=${{ inputs.key }}" >> "$GITHUB_OUTPUT"
+            k="${{ inputs.key }}"
+            echo "partial=${k%-*}-" >> "$GITHUB_OUTPUT"
+          elif grep -q "^INPUTS_${{ inputs.stage }}=\"..*\"" targets/$TARGET.sh; then
             h=$(scripts/build.sh --hash ${{ inputs.stage }})
             prev=$(echo "${{ inputs.previous-key }}" | sha256sum | cut -c1-8)
             # The signing key's public half: packages signed with another key are untrusted
