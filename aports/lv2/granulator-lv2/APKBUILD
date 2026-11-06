@@ -1,0 +1,36 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Granulator, a granular delay in Faust by Mayank Sanganeria (URI
+# https://faustlv2.bitbucket.io/granulator; zynthian's recipe install_faust_lv2.sh builds it with
+# faust2lv2 from e7mac's faust-code). faust2lv2 and Faust's LV2 architecture come from Alpine's
+# faust and faust-tools.
+pkgname=granulator-lv2
+_commit=a2316752ce9b59e9fd4a47cfa76c2be49a4ba8c3
+pkgver=1.0_git20121217
+pkgrel=0
+pkgdesc="Granulator granular delay (Faust, LV2)"
+url="https://github.com/e7mac/faust-code"
+arch="all"
+license="custom" # the repository states no licence
+# boost-dev: Faust's LV2 architecture includes boost/circular_buffer.hpp
+makedepends="bash boost-dev faust faust-tools lv2-dev"
+source="granulator-$_commit.dsp::https://raw.githubusercontent.com/e7mac/faust-code/$_commit/granulator.dsp"
+builddir="$srcdir/build"
+options="!check" # no tests
+
+prepare() {
+	mkdir -p "$builddir"
+	cp "$srcdir"/granulator-$_commit.dsp "$builddir"/granulator.dsp
+	default_prepare
+}
+
+build() {
+	faust2lv2 granulator.dsp
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r granulator.lv2 "$pkgdir"/usr/lib/lv2/
+}
+sha512sums="
+cf23c558af079f8d34e300d32b00eb23468cba76641776e10bcafaa1eb12ea81ef8815c731681badfc6301b3b7a0801aa77b5314f68377c38c86c4e63f9a7a28  granulator-a2316752ce9b59e9fd4a47cfa76c2be49a4ba8c3.dsp
+"

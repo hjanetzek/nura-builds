@@ -1,0 +1,49 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# AMS LV2 plugins (blablack's port of Alsa Modular Synth modules; ZynthianOS has KXStudio's ams-lv2,
+# zynthian enables only Bitgrinder, URI http://github.com/blablack/ams-lv2/bitgrinder). Only
+# Bitgrinder, compiled directly: the waf build requires gtkmm 2 for the GUIs and lvtk 1, which
+# isn't packaged; lvtk 1.2.0's headers and its one-file plugin library (as for Dexed) are a second
+# source. The bundle gets a manifest with only Bitgrinder; its GTK UI (in bitgrinder.ttl) isn't
+# built, which hosts skip.
+pkgname=ams-lv2
+pkgver=1.2.2
+_lvtk=1.2.0
+pkgrel=0
+pkgdesc="AMS LV2 plugins: Bitgrinder (no GUI)"
+url="https://github.com/blablack/ams-lv2"
+arch="all"
+license="GPL-2.0-or-later"
+makedepends="lv2-dev"
+source="$pkgname-$pkgver.tar.gz::https://github.com/blablack/ams-lv2/archive/v$pkgver.tar.gz
+	lvtk-$_lvtk.tar.gz::https://github.com/lvtk/lvtk/archive/$_lvtk.tar.gz"
+builddir="$srcdir/ams-lv2-$pkgver"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	# the sources include <lvtk-1/lvtk/...>
+	mkdir -p "$srcdir"/inc/lvtk-1
+	ln -s "$srcdir"/lvtk-$_lvtk/lvtk "$srcdir"/inc/lvtk-1/lvtk
+}
+
+build() {
+	local inc="-I$srcdir/inc -I$srcdir/lvtk-$_lvtk -I. -Isrc"
+	${CXX:-g++} $CXXFLAGS -fPIC $inc -c "$srcdir"/lvtk-$_lvtk/src/plugin.cpp -o lvtk_plugin.o
+	${CXX:-g++} $CXXFLAGS -fPIC $inc -c src/bitgrinder.cpp -o bitgrinder.o
+	${CXX:-g++} $LDFLAGS -shared bitgrinder.o lvtk_plugin.o -o bitgrinder.so -lm
+	# the manifest's prefixes and Bitgrinder's entry only
+	{
+		grep '^@prefix' ams.lv2/manifest.ttl
+		echo
+		sed -n '/^<http:\/\/github.com\/blablack\/ams-lv2\/bitgrinder>/,/^$/p' ams.lv2/manifest.ttl
+	} > manifest.ttl
+}
+
+package() {
+	install -Dm755 bitgrinder.so "$pkgdir"/usr/lib/lv2/ams.lv2/bitgrinder.so
+	install -m644 manifest.ttl ams.lv2/bitgrinder.ttl "$pkgdir"/usr/lib/lv2/ams.lv2/
+}
+sha512sums="
+6c1c6f3179a851f67e162d225a761c38678159d9f178d9bfa3991b84b84ea557f5a44882ea710626204f158c40ae18f0e87f24faec0a0bd6aa64e18eeb81c45f  ams-lv2-1.2.2.tar.gz
+f193ec28103cb2f6353ff0f96f8790041baf1ae99472c5d04017c23b42d0179b1f5e1de6722e17080410311d0e7e1de4ca0ae9ab76fb3bf8a02d9dc1451d8db7  lvtk-1.2.0.tar.gz
+"
