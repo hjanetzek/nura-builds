@@ -1,0 +1,38 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Aether, an algorithmic reverb (URI http://github.com/Dougal-s/Aether; zynthian has a prebuilt
+# binary, install_aether_reverb_prebuilt.sh). DSP only: the UI library (pugl, NanoVG, OpenGL; git
+# submodules) is removed from CMakeLists.txt, so no submodules are needed; the TTL still names
+# the UI, which hosts skip when its binary is missing. Without the DSP target's -Werror.
+pkgname=aether-lv2
+pkgver=1.2.1
+pkgrel=0
+pkgdesc="Aether algorithmic reverb (LV2, no GUI)"
+url="https://github.com/Dougal-s/Aether"
+arch="all"
+license="MIT"
+makedepends="cmake lv2-dev samurai"
+source="$pkgname-$pkgver.tar.gz::https://github.com/Dougal-s/Aether/archive/v$pkgver.tar.gz"
+builddir="$srcdir/Aether-$pkgver"
+options="!check" # tests not built
+
+prepare() {
+	default_prepare
+	# the UI library and what it needs (glad, pugl, NanoVG), the fonts it uses; DSP without -Werror
+	sed -i '/^add_library(aether_ui MODULE/,/^target_link_libraries(aether_ui PRIVATE nanovg)/d;
+		s/^set_target_properties(aether_dsp aether_ui/set_target_properties(aether_dsp/;
+		/^add_custom_target(copy_fonts ALL/,/aether.lv2\/fonts)/d;
+		s/ -Werror / /' CMakeLists.txt
+}
+
+build() {
+	cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+	cmake --build build --target aether_dsp
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r build/aether.lv2 "$pkgdir"/usr/lib/lv2/
+}
+sha512sums="
+83500a19167e82d34bd49caed38e63d73b6a965b66d8c8fcf155b81e6c0f4ef1bce0fe340312748c8b944b2f9f804824d34e85b0be84cc57af02ba04d28d7bd9  aether-lv2-1.2.1.tar.gz
+"
