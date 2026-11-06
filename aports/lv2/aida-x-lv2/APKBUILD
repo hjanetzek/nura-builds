@@ -1,0 +1,31 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# AIDA-X, an amp model player (RTNeural; URI http://aidadsp.cc/plugins/aidadsp-bundle/rt-neural-loader;
+# zynthian installs the prebuilt glibc binary, install_aidax.sh). The release source contains the
+# submodules (DPF, RTNeural, ...). DPF's CMake requires OpenGL and X11 for the UI, which the LV2
+# bundle has as a separate binary. Models are separate (zynthian-data's files/Neural Models).
+pkgname=aida-x-lv2
+pkgver=1.1.0
+pkgrel=0
+pkgdesc="AIDA-X amp model player (LV2)"
+url="https://github.com/AidaDSP/AIDA-X"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+# libx11-dev, mesa-dev: DPF's CMake (UI_TYPE opengl) requires X11 and OpenGL
+makedepends="cmake libx11-dev lv2-dev mesa-dev samurai"
+source="https://github.com/AidaDSP/AIDA-X/releases/download/$pkgver/AIDA-X-$pkgver-src.tar.xz"
+builddir="$srcdir/AIDA-X-$pkgver"
+options="!check" # no tests
+
+build() {
+	# CMake 4: some (sub)projects declare cmake_minimum_required < 3.5
+	cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+	cmake --build build --target AIDA-X-lv2
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r build/bin/AIDA-X.lv2 "$pkgdir"/usr/lib/lv2/
+}
+sha512sums="
+6725501a9335bac0829550289509d2ef22bcc8f70fb65ba5ac845c430c4bfef47000e47162427ff0699a28468f1988fdc6cf0bc6a8ffbe7f53daaaead8433478  AIDA-X-1.1.0-src.tar.xz
+"
