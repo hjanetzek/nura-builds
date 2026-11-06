@@ -14,10 +14,17 @@ source="$pkgname-$_commit.tar.gz::https://github.com/jeremysalwen/TalentedHack/a
 builddir="$srcdir/TalentedHack-$_commit"
 options="!check" # no tests
 
+prepare() {
+	default_prepare
+	# plain C99 "inline" helpers without an external definition: with -Os not every call is
+	# inlined (SendPitchBend undefined at load); -fgnu89-inline instead defines quantizer.h's
+	# positive_mod in every file. static inline: one private copy where needed
+	sed -i 's/^inline /static inline /' midi.c talentedhack.c quantizer.h
+}
+
 build() {
-	# without -g (DEBUG) and with the distribution's flags; -fgnu89-inline: midi.c's helpers are
-	# "inline" with GNU89 meaning, and with -Os C99 inline leaves SendPitchBend undefined
-	make DEBUG= CFLAGS="$CFLAGS --std=c99 -fgnu89-inline -Wall -fPIC $(pkg-config --cflags fftw3f)"
+	# without -g (DEBUG) and with the distribution's flags
+	make DEBUG= CFLAGS="$CFLAGS --std=c99 -Wall -fPIC $(pkg-config --cflags fftw3f)"
 }
 
 package() {
