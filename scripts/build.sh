@@ -1,6 +1,8 @@
 #!/bin/sh
 # Build one stage of the target (targets/<target>.sh: STAGE_<name>), then save the local package
 # repository to $NURA_OUT/packages.tar and remove the build chroots (disk space on CI runners).
+# The packages are saved also when a build fails (exit status 1): CI caches them as a partial
+# result, so the next attempt builds only what is still missing.
 #
 # Usage: build.sh STAGE      (scripts/setup.sh first)
 #        build.sh --hash STAGE   print the hash of the stage's inputs (cache key)
@@ -21,6 +23,7 @@ if [ -n "$seed" ]; then
 	"$(resolve "$seed")" "$CFG"
 fi
 
+status=0
 echo "$builds" | tr ';' '\n' | while read -r args; do
 	[ -n "$args" ] || continue
 	set --
@@ -31,10 +34,11 @@ echo "$builds" | tr ';' '\n' | while read -r args; do
 		esac
 	done
 	echo "::group::pmbootstrap build $*"
-	pmb build --arch "$ARCH" "$@"
+	pmb build --arch "$ARCH" "$@" || exit 1
 	echo "::endgroup::"
-done
+done || status=1
 
 save_packages
 # The build chroots and the HTTP cache, not the packages or distfiles
 pmb zap -hc || true
+exit $status

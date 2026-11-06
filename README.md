@@ -32,8 +32,9 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   stages stay under the 6 h job limit, and a stage whose recipes (and all earlier stages) are
   unchanged takes its packages from the Actions cache. A stage whose recipes changed starts from
   its last cached packages (same earlier stages) and builds only the packages whose
-  `pkgver-pkgrel` isn't there yet: bump `pkgrel` with a recipe change. Then one image job per
-  device.
+  `pkgver-pkgrel` isn't there yet: bump `pkgrel` with a recipe change. A failed stage saves what
+  it built too (key `…-failed-<run>`, never an exact match), and the next run continues from
+  there. Then one image job per device.
 - `.github/workflows/packages.yml` builds single packages by name (see below).
 
 zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2` (qtdeclarative),
