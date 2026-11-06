@@ -40,7 +40,13 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   its last cached packages (same earlier stages) and builds only the packages whose
   `pkgver-pkgrel` isn't there yet: bump `pkgrel` with a recipe change. A failed stage saves what
   it built too (key `…-partial-<run>`, never an exact match), and the next run continues from
-  there. Then one image job per device.
+  there. A plan job (`scripts/plan.sh`) computes all stage keys first: a stage cached under its
+  exact key doesn't start at all (the next stage takes its packages from the cache), so a run with
+  unchanged Qt takes about 8 minutes. Then one image job per device.
+- Weekly (Sunday 01:00 UTC), and by hand with the `rebuild` input, the stages in `REBUILD_STAGES`
+  (Qt, PySide) are built from scratch and replace their cached packages: they replace Alpine's
+  versions and link against its libraries, so a soname change in Alpine would break them without
+  any change to their recipes.
 - `.github/workflows/packages.yml` builds single packages by name (see below).
 
 zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2` (qtdeclarative),

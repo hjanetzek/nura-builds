@@ -12,6 +12,7 @@ on:
       previous: { type: string, default: "" }       # previous stage (its artifact), "" for the first
       previous-key: { type: string, default: "" }   # previous stage's cache key
       key: { type: string, default: "" }            # this stage's cache key (scripts/plan.sh)
+      previous-cached: { type: boolean, default: false }  # previous job skipped: packages from the cache
       refs: { type: string, default: "" }           # e.g. "ZYNTHIAN_UI_REF=nura ZYNCODER_REF=nura"
       # Build from scratch, ignoring this stage's cache, and replace the cached packages under the
       # same key (the weekly rebuild: our packages against the current versions of Alpine's
@@ -50,16 +51,14 @@ jobs:
       # From the previous job's artifact, or, when that job was skipped (its packages were cached,
       # scripts/plan.sh), from the cache
       - name: Packages of the previous stage
-        id: previous
-        if: inputs.previous != ''
-        continue-on-error: true
+        if: inputs.previous != '' && !inputs.previous-cached
         uses: actions/download-artifact@v8
         with:
           name: packages-${{ inputs.target }}-${{ inputs.previous }}
           path: /home/runner/nura-out
 
       - name: Packages of the previous stage, from the cache
-        if: inputs.previous != '' && steps.previous.outcome == 'failure'
+        if: inputs.previous != '' && inputs.previous-cached
         uses: actions/cache/restore@v6
         with:
           key: ${{ inputs.previous-key }}

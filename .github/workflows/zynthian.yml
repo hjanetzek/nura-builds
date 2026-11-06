@@ -77,35 +77,35 @@ jobs:
     needs: [plan, qt1]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt2 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.plan.outputs.key_qt1 }}", key: "${{ needs.plan.outputs.key_qt2 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt2 == 'true' }}" }
+    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.plan.outputs.key_qt1 }}", previous-cached: "${{ needs.plan.outputs.run_qt1 != 'true' }}", key: "${{ needs.plan.outputs.key_qt2 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt2 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   qt3:
     needs: [plan, qt2]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt3 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.plan.outputs.key_qt2 }}", key: "${{ needs.plan.outputs.key_qt3 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt3 == 'true' }}" }
+    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.plan.outputs.key_qt2 }}", previous-cached: "${{ needs.plan.outputs.run_qt2 != 'true' }}", key: "${{ needs.plan.outputs.key_qt3 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt3 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   pyside:
     needs: [plan, qt3]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_pyside == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.plan.outputs.key_qt3 }}", key: "${{ needs.plan.outputs.key_pyside }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_pyside == 'true' }}" }
+    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.plan.outputs.key_qt3 }}", previous-cached: "${{ needs.plan.outputs.run_qt3 != 'true' }}", key: "${{ needs.plan.outputs.key_pyside }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_pyside == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   plugins:
     needs: [plan, pyside]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_plugins == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: plugins, previous: pyside, previous-key: "${{ needs.plan.outputs.key_pyside }}", key: "${{ needs.plan.outputs.key_plugins }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_plugins == 'true' }}" }
+    with: { target: zynthian, stage: plugins, previous: pyside, previous-key: "${{ needs.plan.outputs.key_pyside }}", previous-cached: "${{ needs.plan.outputs.run_pyside != 'true' }}", key: "${{ needs.plan.outputs.key_plugins }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_plugins == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   zynthian:
     needs: [plan, plugins]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_zynthian == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: zynthian, previous: plugins, previous-key: "${{ needs.plan.outputs.key_plugins }}", key: "${{ needs.plan.outputs.key_zynthian }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_zynthian == 'true' }}" }
+    with: { target: zynthian, stage: zynthian, previous: plugins, previous-key: "${{ needs.plan.outputs.key_plugins }}", previous-cached: "${{ needs.plan.outputs.run_plugins != 'true' }}", key: "${{ needs.plan.outputs.key_zynthian }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_zynthian == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
 
