@@ -74,7 +74,8 @@ for host in "$@"; do
 	while read -r name version; do
 		cur=$(grep -E "^$name-[0-9]" "$tmp/installed-v" | head -n 1 | sed "s/^$name-//")
 		[ -n "$cur" ] && [ "$cur" != "$version" ] || continue
-		now=$(ssh "$host" "apk info -v $name 2>/dev/null | head -n 1" | sed "s/^$name-//")
+		# shellcheck disable=SC2029
+		now=$(ssh "$host" "apk info -ev $name 2>/dev/null" | sed "s/^$name-//")
 		[ "$now" = "$version" ] || stale="$stale $name"
 	done < "$tmp/repo"
 	if [ -n "$stale" ]; then
