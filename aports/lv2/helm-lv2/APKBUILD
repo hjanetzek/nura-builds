@@ -11,12 +11,14 @@ pkgdesc="Helm polyphonic synthesizer (LV2)"
 url="https://github.com/mtytel/helm"
 arch="aarch64 x86_64"
 license="GPL-3.0-or-later"
-# the libraries its Makefile asks pkg-config for (alsa freetype2 libcurl x11 xext xinerama), -lGL
+# the libraries its Makefile asks pkg-config for (alsa freetype2 libcurl x11 xext xinerama), -lGL;
+# libxcursor-dev: JUCE includes X11/Xcursor/Xcursor.h
 makedepends="
 	alsa-lib-dev
 	curl-dev
 	freetype-dev
 	libx11-dev
+	libxcursor-dev
 	libxext-dev
 	libxinerama-dev
 	mesa-dev
@@ -50,6 +52,8 @@ build() {
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
 		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
 	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	# -fpermissive: old JUCE's FreeType code converts pointer types newer FreeType changed
+	export CXXFLAGS="$CXXFLAGS -fpermissive"
 	# SIMDFLAGS: the Makefile tunes for Cortex-A53
 	make lv2 CONFIG=Release SIMDFLAGS=
 }
