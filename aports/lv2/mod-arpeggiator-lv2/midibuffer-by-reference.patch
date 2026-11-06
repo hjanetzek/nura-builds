@@ -1,0 +1,64 @@
+MidiBuffer (about 150 KB) by reference instead of a copy on the stack in run(): musl's default
+thread stack is 128 KB (the host's audio thread), so the copy overflowed it (SIGSEGV on entry).
+
+diff -ru a/common/midiHandler.cpp b/common/midiHandler.cpp
+--- a/common/midiHandler.cpp	2026-11-06 22:41:00.132777070 +0100
++++ b/common/midiHandler.cpp	2026-11-06 22:41:00.164999887 +0100
+@@ -34,7 +34,7 @@
+ 	}
+ }
+ 
+-struct MidiBuffer MidiHandler::getMidiBuffer()
++const struct MidiBuffer& MidiHandler::getMidiBuffer()
+ {
+ 	mergeBuffers();
+ 	return buffer;
+diff -ru a/common/midiHandler.hpp b/common/midiHandler.hpp
+--- a/common/midiHandler.hpp	2026-11-06 22:41:00.132789013 +0100
++++ b/common/midiHandler.hpp	2026-11-06 22:41:00.164960511 +0100
+@@ -51,7 +51,7 @@
+ 	int getNumEvents();
+ 	void mergeBuffers();
+ 	//MidiEvent getMidiEvent(int index);
+-	struct MidiBuffer getMidiBuffer();
++	const struct MidiBuffer& getMidiBuffer();
+ private:
+ 	MidiBuffer buffer;
+ };
+diff -ru a/plugins/arpeggiator/arpeggiator.cpp b/plugins/arpeggiator/arpeggiator.cpp
+--- a/plugins/arpeggiator/arpeggiator.cpp	2026-11-06 22:41:00.138925360 +0100
++++ b/plugins/arpeggiator/arpeggiator.cpp	2026-11-06 22:41:00.165087557 +0100
+@@ -288,7 +288,7 @@
+ 	reset();
+ }
+ 
+-struct MidiBuffer Arpeggiator::getMidiBuffer()
++const struct MidiBuffer& Arpeggiator::getMidiBuffer()
+ {
+ 	return midiHandler.getMidiBuffer();
+ }
+diff -ru a/plugins/arpeggiator/arpeggiator.hpp b/plugins/arpeggiator/arpeggiator.hpp
+--- a/plugins/arpeggiator/arpeggiator.hpp	2026-11-06 22:41:00.138942012 +0100
++++ b/plugins/arpeggiator/arpeggiator.hpp	2026-11-06 22:41:00.165032811 +0100
+@@ -67,7 +67,7 @@
+ 	void reset();
+ 	void emptyMidiBuffer();
+ 	void allNotesOff();
+-	struct MidiBuffer getMidiBuffer();
++	const struct MidiBuffer& getMidiBuffer();
+ 	void process(const MidiEvent* event, uint32_t eventCount, uint32_t n_frames);
+ private:
+ 	uint8_t midiNotes[NUM_VOICES][2];
+diff -ru a/plugins/arpeggiator/plugin.cpp b/plugins/arpeggiator/plugin.cpp
+--- a/plugins/arpeggiator/plugin.cpp	2026-11-06 22:41:00.138953554 +0100
++++ b/plugins/arpeggiator/plugin.cpp	2026-11-06 22:41:00.165147132 +0100
+@@ -321,7 +321,8 @@
+ 
+ 	arpeggiator.process(events, eventCount, n_frames);
+ 
+-	struct MidiBuffer buffer = arpeggiator.getMidiBuffer();
++	// a reference: the buffer is ~150 KB, more than musl's default thread stack (128 KB)
++	const struct MidiBuffer& buffer = arpeggiator.getMidiBuffer();
+ 	for (unsigned x = 0; x < buffer.numBufferedEvents + buffer.numBufferedThroughEvents; x++) {
+ 		writeMidiEvent(buffer.bufferedEvents[x]); //needs to be one struct or array?
+ 	}
