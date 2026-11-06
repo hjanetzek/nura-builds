@@ -4,7 +4,7 @@
 # instruments (fluidplug-lv2, avldrums-lv2: about 450 MB of data) are optional, not in here.
 pkgname=zynthian-lv2-plugins
 pkgver=1
-pkgrel=17
+pkgrel=18
 pkgdesc="LV2 plugins enabled by default in zynthian"
 url="https://github.com/zynthian/zynthian-ui"
 arch="noarch"
@@ -40,6 +40,7 @@ depends="
 	mda-lv2
 	mimid-lv2
 	miniopl3-lv2
+	mod-arpeggiator-lv2
 	mod-caps-lv2
 	mod-distortion-lv2
 	mod-mda-lv2
@@ -62,6 +63,7 @@ depends="
 	swh-lv2
 	synthv1-lv2
 	talentedhack-lv2
+	triceratops-lv2
 	x42-plugins
 	ykchorus-lv2
 	zam-plugins-lv2

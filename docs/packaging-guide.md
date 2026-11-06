@@ -131,6 +131,7 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
 | `stat64`/`fstat64` incomplete type | musl 1.2.4+ has the LFS64 names only with `_LARGEFILE64_SOURCE` | `-D_LARGEFILE64_SOURCE` |
 | `_NL_IDENTIFICATION_LANGUAGE`, `_NL_ADDRESS_LANG_AB`, ... undeclared | glibc locale items (JUCE's `getUserLanguage()`) | define them as items of a category musl doesn't have (`0x60000`...): `nl_langinfo()` returns "" |
 | `static_cast<char>(NULL)` invalid | `NULL` is `nullptr` in C++ on musl | `0` (sed) |
+| a segfault on the first line of a plugin's `run()` (jalv's audio thread) | musl's default thread stack is 128 KB (glibc: 8 MB); a large local copy in `run()` overflows it, and `-fstack-clash-protection` faults on entry. Find it with a debug build (`!strip`, `-g -O1`, on a branch) under gdb; pass the large object by reference (mod-arpeggiator-lv2) |
 | `fts.h: No such file` | fts is a separate library | `musl-fts-dev`, `LIBS=-lfts` |
 | `soundcard.h`, `linux/...` missing | kernel headers aren't pulled in implicitly | `linux-headers` |
 | `st_atimespec` | the code picks BSD field names unless `_POSIX_C_SOURCE` is defined, which glibc defines implicitly and musl doesn't | take the POSIX branch on Linux too (`\|\| defined(__linux__)`, pd-hcs) |
