@@ -24,6 +24,10 @@ prepare() {
 	mv "$srcdir"/DPF-$_dpf dpf
 	# no GUI: without this the TTL references the UI binary, which isn't built
 	sed -i 's/\(DISTRHO_PLUGIN_HAS_UI *\)1/\10/' sources/plugin/DistrhoPluginInfo.h
+	# global.h defines a macro "maybe_unused", which breaks [[maybe_unused]] in GCC 15's
+	# libstdc++ headers: rename it (only global.h uses it)
+	sed -i 's/define maybe_unused/define REGRADER_MAYBE_UNUSED/; s/^\( *\)maybe_unused static/\1REGRADER_MAYBE_UNUSED static/' \
+		sources/global.h
 }
 
 build() {
