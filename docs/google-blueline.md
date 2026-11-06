@@ -104,6 +104,18 @@ bus-powered devices (most MIDI controllers, headphone adapters) series 2 as well
    No kernel config changes (the gen1 driver is part of `TYPEC_QCOM_PMIC`). To test on the device:
    role switching with a powered hub, then bus-powered MIDI controllers and a USB-C headphone
    adapter; charging still works (sink role).
+   **Tested on the Pixel 3** (2026-11-06, build 7.1_rc1-r104, installed from the CI artifact;
+   `boot-deploy` flashes `boot_a` on install; backup of the original boot partition:
+   `~/postmarketos/pixel3-backup/boot_a-7.1_rc1-r4.img`):
+   - powered USB-C hub: works. USB PD contract (the hub powers the phone: charging at ~1.4 A),
+     data role swap to host, xHCI with the hub's USB 3 hub, a Realtek Ethernet adapter and a MIDI
+     controller (Native Instruments Komplete Kontrol M32, `snd-usb-audio`); the hub also offers
+     DisplayPort alt mode;
+   - cable to a PC: no attach detected (TCPM stays in `SNK_UNATTACHED`, CC lines read 0), so no USB
+     networking with this kernel; the battery still charges. To investigate;
+   - the SDM845 config has no ALSA sequencer (`# CONFIG_SND_SEQUENCER is not set`): USB MIDI devices
+     appear as raw MIDI only, PipeWire's MIDI bridge and zynthian don't see them. Added to the
+     overlay's config (`SND_SEQUENCER`, `SND_SEQ_MIDI`, `SND_SEQ_DUMMY` as modules; pkgrel 105).
 5. **Follow upstream.** Track the two series (v2, merge); drop the patches once the sdm845-mainline
    tree has them.
 
