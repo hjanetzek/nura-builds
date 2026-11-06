@@ -20,7 +20,10 @@ STAGE_pyside="pyside6"
 # and the --src build of zynthian-ui doesn't build missing dependencies). The meta packages pull in
 # the LV2 plugins and Pure Data externals of aports/lv2 and aports/pd; engines (aports/engines) are
 # named here, or the always-rebuilt zynthian stage would build them as the kiosk's dependencies.
-STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree sooperlooper"
+# The instruments with large data (FluidPlug's SoundFonts, the AVL drumkits: ~450 MB, in -data
+# subpackages) aren't in the meta package, to keep images small: built here for the package
+# repository, to install by hand.
+STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree sooperlooper fluidplug-lv2 avldrums-lv2"
 # zynthian-ui and zyncoder are built from their checkouts (--src skips $source and doesn't build
 # missing dependencies, hence the order); seed-distfiles.sh puts the bundled Python packages into
 # the distfiles cache first
