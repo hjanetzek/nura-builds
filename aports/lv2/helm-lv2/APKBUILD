@@ -29,8 +29,8 @@ prepare() {
 	default_prepare
 	# its old JUCE packs the pixel structs, and GCC refuses to bind references to packed fields
 	# ("cannot bind packed field"): no packing (they are bytes, or a 32-bit word over 4 bytes;
-	# later JUCE dropped it too)
-	sed -i 's/^ #define JUCE_PACKED __attribute__((packed))$/ #define JUCE_PACKED/' \
+	# later JUCE dropped it too); CRLF line endings, so no $ anchor
+	sed -i 's/^ #define JUCE_PACKED __attribute__((packed))/ #define JUCE_PACKED/' \
 		JUCE/modules/juce_core/system/juce_PlatformDefs.h
 	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
 	mkdir -p "$srcdir"/musl-compat
