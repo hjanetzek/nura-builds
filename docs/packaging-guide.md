@@ -150,6 +150,7 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
 | `jack/jack.h: No such file` (JUCE) | JUCE's audio device module builds JACK support on Linux: `jack-dev` |
 | `#warning redirecting incorrect #include <sys/errno.h>` as an error | musl warns about non-standard headers; with the project's `-Werror` that's fatal: `-Wno-error=cpp` (Monique) |
 | `internal compiler error: in write_symbol, at lto-streamer-out.cc` | GCC 15 LTO bug: drop the project's LTO flags (`juce::juce_recommended_lto_flags`, ChowMultiTool) |
+| `multiple definition of` a helper after `-fgnu89-inline` | GNU89 `inline` defines a header's `inline` functions in every file that includes it: make the plain `inline` helpers `static inline` instead (sed in `prepare()`, TalentedHack) |
 | `-Werror` in the project's flags | remove it, or the project's switch (`SURGE_SKIP_WERROR`) |
 
 ## Packaging
