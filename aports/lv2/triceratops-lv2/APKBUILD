@@ -1,0 +1,44 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Triceratops, a polyphonic subtractive synth (zynthian's recipe install_triceratops.sh builds the
+# old waf version, URI http://nickbailey.co.nr/triceratops). The current version is a DPF plugin
+# with the URI http://thunderox.com/triceratops: zynthian's rescan adds it under the new URI.
+# DPF (a git submodule) is a second source; DSP only (lv2_dsp, UI off), and its presets bundle.
+pkgname=triceratops-lv2
+_commit=ee7fc7aef578a4d936a0cb032627e3042dcfe994
+_dpf=4238e1c7f0351bbe488d79f0899c540543ac7583
+pkgver=0_git20261025
+pkgrel=0
+pkgdesc="Triceratops polyphonic synthesizer (LV2)"
+url="https://github.com/thunderox/triceratops"
+arch="all"
+license="GPL-3.0-or-later"
+# bash: DPF's utils/generate-ttl.sh
+makedepends="bash lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/thunderox/triceratops/archive/$_commit.tar.gz
+	dpf-$_dpf.tar.gz::https://github.com/DISTRHO/DPF/archive/$_dpf.tar.gz"
+builddir="$srcdir/triceratops-$_commit"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	rm -rf DPF
+	mv "$srcdir"/DPF-$_dpf DPF
+	# no GUI: without this the TTL references the UI binary, which isn't built
+	sed -i 's/\(DISTRHO_PLUGIN_HAS_UI *\)1/\10/' plugins/triceratops/DistrhoPluginInfo.h
+}
+
+build() {
+	make -C plugins/triceratops NOOPT=true HAVE_DGL=false HAVE_OPENGL=false HAVE_CAIRO=false lv2_dsp
+	make -C DPF/utils/lv2-ttl-generator
+	"$builddir"/DPF/utils/generate-ttl.sh
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r bin/triceratops.lv2 plugins/triceratops/triceratops_presets.lv2 "$pkgdir"/usr/lib/lv2/
+	rm -f "$pkgdir"/usr/lib/lv2/triceratops_presets.lv2/*.py
+}
+sha512sums="
+a43c742156711c3d0a59d3703d6a7cf509ce2e46ec8f8f2bb556f5e15e1debdcc6453afbede72a9ac3b63b0d594a671dbed9c201354fffb1740f4ac7b798a485  triceratops-lv2-ee7fc7aef578a4d936a0cb032627e3042dcfe994.tar.gz
+56d7f907422c283584183fe9f23d984533e6f9841d30123a5d27b79760daa6114971fd95a85606652c9b12b5dd2fbcb36739a82f5199ff0a676a8f9a5f4c656b  dpf-4238e1c7f0351bbe488d79f0899c540543ac7583.tar.gz
+"
