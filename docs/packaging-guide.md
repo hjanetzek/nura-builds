@@ -184,6 +184,9 @@ differently:
   `\n` and `\t` in the TTL ("bad verb"): run it with `dash` (makedepends) and GNU `sed`.
 - `install` options and `sed -i` edge cases (FluidPlug's install block, after a careless edit);
   `sed` `a\` text with escapes needs GNU sed.
+- Tools that find their files relative to `which <tool>` can miss in the build chroot, where
+  binaries are in `/usr/sbin`: `faust2lv2` turns `/usr/sbin/faust` into `/usr/sinclude/faust`
+  ("faust include files not found"); set `FAUSTINC=/usr/include/faust FAUSTLIB=/usr/share/faust`.
 - When a generated file is broken, look at it (`cat -A`) before suspecting the compiler.
 
 ## Pure Data externals
