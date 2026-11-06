@@ -11,7 +11,8 @@ pkgdesc="gula LV2 plugins (The Vibey and others, Faust)"
 url="https://github.com/steveb/gula-plugins"
 arch="all"
 license="GPL-3.0-or-later"
-makedepends="lv2-dev"
+# boost-dev: the Faust LV2 architecture code includes boost/circular_buffer.hpp
+makedepends="boost-dev lv2-dev"
 source="$pkgname-$_commit.tar.gz::https://github.com/steveb/gula-plugins/archive/$_commit.tar.gz"
 builddir="$srcdir/gula-plugins-$_commit"
 options="!check" # no tests
