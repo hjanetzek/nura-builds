@@ -1,9 +1,10 @@
 # LV2 plugins on Nura: state and plan
 
-Status: 2026-11-06, Lenovo Duet (Nura edge, aarch64, musl). Phases 1 to 6 of the plan done: 288 of
-the 313 default plugins installed and loading (from 36 before; 287 by exact URI, as JC303's URI
-lost the trailing slash zynthian's config has). All of them build in CI (nura-builds' `plugins`
-stage).
+Status: 2026-11-06, Lenovo Duet (Nura edge, aarch64, musl). Phases 1 to 6 of the plan done, phase 7
+under way: 297 of the 313 default plugins installed and loading (from 36 before), 295 by exact URI
+(JC303's and Triceratops' URIs changed upstream; zynthian's rescan adds them under the new ones).
+All of them build in CI (nura-builds' `plugins` stage); new recipes are tried on `plugin-*`
+branches first (`plugin.yml`, see the README).
 
 zynthian's default engine configuration (`zynthian-sys/config/engine_config.json`) lists 1300
 LV2 plugins, **313 of them enabled by default** (the rest are installed on ZynthianOS but
@@ -34,7 +35,7 @@ cd /usr/share/zynthian/zynthian-ui/zyngine && python3 ./zynthian_lv2.py engines
 with zynthian's environment (`ZYNTHIAN_DIR`, `ZYNTHIAN_LIB_DIR`, `PYTHONPATH` as in
 `/usr/bin/zynthian`, then `desktop/zynthian_desktop_env.sh`), then restart the session.
 
-## Installed: 288 of 313
+## Installed: 297 of 313
 
 All pulled in by the meta package `zynthian-lv2-plugins` (`aports/lv2/`), which
 `postmarketos-ui-zynthian` depends on. From Alpine:
@@ -86,6 +87,15 @@ Packaged in `aports/lv2/` (phase 1, built and tested on the Duet):
 | `surge-xt-lv2` (+ `-data`, `-data-3rdparty`) | 1 | Surge XT 1.3.4 (release source), LV2 only; factory data (39 MB) in `-data` by `install_if`, third-party patches and wavetables (327 MB) in the optional `-data-3rdparty` |
 | `dusk-audio-lv2` | 5 | Dusk Audio's DAF plugins (their DPF fork): 4K EQ 2, TapeMachine 2, Tape Echo 2, Sunset Circuits, Chord Analyzer Headless; also Multi-Q 2, Multi-Comp 2, DuskVerb 2, Ring Out, Chord Analyzer 2 (+ MIDI) |
 | `dusk-audio-juce-lv2` | 1 | Dusk Audio's JUCE plugins (JUCE 8.0.4): DuskVerb; also 4K EQ, Multi-Comp, TapeMachine, Tape Echo, Multi-Q, Convolution Reverb, GrooveMind, DuskAmp, Chord Analyzer (+ MIDI), Spectrum Analyzer (99 MB: JUCE in every bundle) |
+| `gula-plugins-lv2` | 1 | The Vibey and 7 more (gula, Faust; generated C++ in the repository); `boost-dev` for the Faust LV2 architecture |
+| `punk-console-lv2` | 1 | Punk Console (one C file) |
+| `talentedhack-lv2` | 1 | TalentedHack autotuner; its plain C99 `inline` helpers made `static inline` |
+| `ratatouille-lv2` | 1 | Ratatouille 0.9.11 (release source with submodules), `make mod` (no GUI) |
+| `roboverb-lv2` | 1 | Roboverb from main (CMake, JUCE, LV2 only) |
+| `regrader-lv2` | 1 | Regrader (linuxmao-org's DPF port, DSP only); its `maybe_unused` macro renamed (breaks GCC 15's libstdc++) |
+| `aether-lv2` | 1 | Aether 1.2.1, DSP only (the UI library removed from its CMake) |
+| `mod-arpeggiator-lv2` | 1 | MOD Arpeggiator (DPF in the repository, static TTLs); patched: `run()` copied a 150 KB buffer onto the audio thread's stack, which musl makes 128 KB |
+| `triceratops-lv2` | 1 | Triceratops, current DPF version (URI `http://thunderox.com/triceratops`, zynthian's config has the old waf version's), DSP only, with its presets; glibc `uint` replaced |
 | `jc303-lv2` | 1 | JC303 0.13.0; its URI lost the trailing slash zynthian's config has (`.../JC303/`): the rescan adds it under the new URI |
 
 Before 2026-11-05 the kiosk package depended on `calf` instead of `calf-lv2` (Alpine puts the LV2
@@ -95,16 +105,16 @@ Available in Alpine but **not** in zynthian's defaults (all disabled there): `ls
 (0 of 194 enabled), `airwindows-lv2` (0 of 187), `noise-repellent`, `bankstown-lv2`. Not
 installed.
 
-## Missing: 25
+## Missing: 16
 
 None of these are packaged in Alpine. Source: how ZynthianOS gets them (Debian/KXStudio package
 from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a prebuilt binary).
 
 | Project | Missing | Type | ZynthianOS source | Build | Notes |
 |---|---|---|---|---|---|
-| Synths | 7 | Helm, Vaporizer2, Triceratops, Foo YC20, Fabla, SO-kl5, Mutated Instruments | recipes, Vaporizer2 from openSUSE debs | make/waf/cmake; Fabla needs NTK, Foo YC20 Faust 0.9.73 | |
-| Neural | 3 | AIDA-X, Neural Amp Modeler, Ratatouille | recipes | cmake, RTNeural/Eigen | CPU-heavy |
-| Single plugins | 13 | Aether, Argotlunar2, AMS Bitgrinder, Calf Wavetable, ChaosChimp, Granulator (Faust), Punk Console, Regrader, Roboverb, SAFE EQ, TalentedHack, The Vibey (gula), MOD Arpeggiator | Debian / recipes | various | |
+| Synths | 6 | Helm, Vaporizer2, Foo YC20, Fabla, SO-kl5, Mutated Instruments | recipes, Vaporizer2 from openSUSE debs | Helm: old JUCE Makefile; Fabla: NTK; Foo YC20: Faust 0.9.73; zynMI: make | |
+| Neural | 2 | AIDA-X, Neural Amp Modeler | recipes (AIDA-X prebuilt) | cmake, RTNeural/Eigen | CPU-heavy |
+| Single plugins | 6 | Argotlunar2, AMS Bitgrinder, Calf Wavetable, ChaosChimp, Granulator (Faust), SAFE EQ | Debian / recipes / prebuilt | various | AMS needs lvtk; Calf's Wavetable is off in Alpine's calf |
 | Others | 2 | GxVoxTonebender (source not found), FluidGM (no SoundFont in zynthian's FluidPlug fork) | | | |
 
 (The full list, plugin by plugin: regenerate with the measurement above; the table groups it.)
@@ -151,7 +161,7 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 | 4. Instruments with data (**done**) | FluidPlug, avldrums, setBfree (also as engine) | 26 | SoundFonts in `-data` (by `install_if`); FluidPlug and AVL not in images |
 | 5. EQ10Q, QMidiArp, rncbc synths (**done**) | EQ10Q, QMidiArp, padthv1/samplv1/synthv1 | ~13 | EQ10Q and QMidiArp: minutes, Debian's sources; rncbc synths with Qt 6.12's dev packages |
 | 6. JUCE (**done**) | DISTRHO-Ports (TAL, Vex), CHOW, Surge XT, Odin2, OB-Xd, Dexed, Helm, Monique, Vaporizer2, … | ~30 | one day on the Duet: JUCE needs the same musl/GCC 15 fixes in each (see packaging-guide.md) |
-| 7. Neural and the rest | AIDA-X, NAM, single plugins (Dusk Audio done: sources found) | ~25 | case by case |
+| 7. Neural and the rest (under way) | done: gula, Punk Console, TalentedHack, Ratatouille, Roboverb, Regrader, Aether, MOD Arpeggiator, Triceratops (and Dusk Audio); left: AIDA-X, NAM, the synths and single plugins above | ~16 | case by case, on `plugin-*` branches |
 
 After each phase: build, install on the Duet, rescan, measure coverage, and load each new plugin
 once (`tools/lv2-coverage.py --load`, and jalv for the ones that need host features) to catch
