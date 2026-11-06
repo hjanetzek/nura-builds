@@ -4,7 +4,7 @@
 # instruments (fluidplug-lv2, avldrums-lv2: about 450 MB of data) are optional, not in here.
 pkgname=zynthian-lv2-plugins
 pkgver=1
-pkgrel=23
+pkgrel=24
 pkgdesc="LV2 plugins enabled by default in zynthian"
 url="https://github.com/zynthian/zynthian-ui"
 arch="noarch"
@@ -33,6 +33,7 @@ depends="
 	dusk-audio-lv2
 	eq10q-lv2
 	fabla-lv2
+	foo-yc20-lv2
 	granulator-lv2
 	guitarix-lv2
 	gula-plugins-lv2
