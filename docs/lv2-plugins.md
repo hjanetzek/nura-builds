@@ -1,7 +1,9 @@
 # LV2 plugins on Nura: state and plan
 
-Status: 2026-11-06, measured on the Lenovo Duet (Nura edge, aarch64, musl). Phases 1 to 5 of
-the plan done, phase 6 nearly: 281 of the 313 default plugins installed and loading (from 36 before).
+Status: 2026-11-06, Lenovo Duet (Nura edge, aarch64, musl). Phases 1 to 6 of the plan done: 288 of
+the 313 default plugins installed and loading (from 36 before; 287 by exact URI, as JC303's URI
+lost the trailing slash zynthian's config has). All of them build in CI (nura-builds' `plugins`
+stage).
 
 zynthian's default engine configuration (`zynthian-sys/config/engine_config.json`) lists 1300
 LV2 plugins, **313 of them enabled by default** (the rest are installed on ZynthianOS but
@@ -32,7 +34,7 @@ cd /usr/share/zynthian/zynthian-ui/zyngine && python3 ./zynthian_lv2.py engines
 with zynthian's environment (`ZYNTHIAN_DIR`, `ZYNTHIAN_LIB_DIR`, `PYTHONPATH` as in
 `/usr/bin/zynthian`, then `desktop/zynthian_desktop_env.sh`), then restart the session.
 
-## Installed: 281 of 313
+## Installed: 288 of 313
 
 All pulled in by the meta package `zynthian-lv2-plugins` (`aports/lv2/`), which
 `postmarketos-ui-zynthian` depends on. From Alpine:
@@ -64,8 +66,8 @@ Packaged in `aports/lv2/` (phase 1, built and tested on the Duet):
 | `artyfx-lv2` | 2 | without GUI and SSE |
 | `abgate-lv2`, `bolliedelay-lv2`, `ykchorus-lv2` | 3 | DSP only |
 | `setbfree` (`aports/engines/`) | 2 | x42 Whirl (b_whirl); also zynthian's setBfree engine |
-| `fluidplug-lv2` (+ `-data`) | 19 (of 23) | SoundFont instruments, zynthian's fork with the SoundFonts (284 MB in `-data`); FluidGM left out (no SoundFont in the fork); `-fpermissive`; optional |
-| `avldrums-lv2` (+ `-data`) | 5 | x42 AVL Drumkits (145 MB in `-data`), without GUI and x86 flags; optional |
+| `fluidplug-lv2` (+ `-data`) | 19 (of 23) | SoundFont instruments, zynthian's fork with the SoundFonts (284 MB in `-data`, installed with the plugin by `install_if`); FluidGM left out (no SoundFont in the fork); `-fpermissive`; built in the plugins stage, not in the meta package (not in images) |
+| `avldrums-lv2` (+ `-data`) | 5 | x42 AVL Drumkits (145 MB in `-data`, by `install_if`), without GUI and x86 flags; like FluidPlug not in the meta package |
 | `dpf-plugins-lv2` | 7 | DPF-Plugins 1.7, DSP only (`lv2_dsp` per plugin), without ProM/glBars |
 | `dragonfly-reverb-lv2` | 4 | Dragonfly Reverb 3.2.10 (release source with DPF), DSP only |
 | `string-machine-lv2` | 3 | jpcima's String machine (synth, built without its cairo GUI) and its two chorus effects |
@@ -80,7 +82,10 @@ Packaged in `aports/lv2/` (phase 1, built and tested on the Duet):
 | `chow-kick-lv2`, `chow-matrix-lv2`, `chow-multitool-lv2`, `byod-lv2` | (4) | further CHOW plugins, not in zynthian's engine config: zynthian adds them disabled (enable in the engine settings) |
 | `synthv1-lv2`, `samplv1-lv2`, `padthv1-lv2` | 3 | rncbc's synths 1.5.1, Qt 6 (build needs Qt 6.12's `-dev` packages; the plugins need a display even headless) |
 | `mimid-lv2` | 1 | MiMi-d (DPF, DSP only), zynthian branch |
-| `monique-lv2`, `kr106-lv2`, `ripplerx-lv2`, `odin2-lv2` | 4 | JUCE synths, LV2 only |
+| `monique-lv2`, `kr106-lv2`, `ripplerx-lv2`, `odin2-lv2` | 4 | JUCE synths, LV2 only; Monique patched for no display (JUCE's LV2 helper creates its editor at build time) |
+| `surge-xt-lv2` (+ `-data`, `-data-3rdparty`) | 1 | Surge XT 1.3.4 (release source), LV2 only; factory data (39 MB) in `-data` by `install_if`, third-party patches and wavetables (327 MB) in the optional `-data-3rdparty` |
+| `dusk-audio-lv2` | 5 | Dusk Audio's DAF plugins (their DPF fork): 4K EQ 2, TapeMachine 2, Tape Echo 2, Sunset Circuits, Chord Analyzer Headless; also Multi-Q 2, Multi-Comp 2, DuskVerb 2, Ring Out, Chord Analyzer 2 (+ MIDI) |
+| `dusk-audio-juce-lv2` | 1 | Dusk Audio's JUCE plugins (JUCE 8.0.4): DuskVerb; also 4K EQ, Multi-Comp, TapeMachine, Tape Echo, Multi-Q, Convolution Reverb, GrooveMind, DuskAmp, Chord Analyzer (+ MIDI), Spectrum Analyzer (99 MB: JUCE in every bundle) |
 | `jc303-lv2` | 1 | JC303 0.13.0; its URI lost the trailing slash zynthian's config has (`.../JC303/`): the rescan adds it under the new URI |
 
 Before 2026-11-05 the kiosk package depended on `calf` instead of `calf-lv2` (Alpine puts the LV2
@@ -90,15 +95,13 @@ Available in Alpine but **not** in zynthian's defaults (all disabled there): `ls
 (0 of 194 enabled), `airwindows-lv2` (0 of 187), `noise-repellent`, `bankstown-lv2`. Not
 installed.
 
-## Missing: 32
+## Missing: 25
 
 None of these are packaged in Alpine. Source: how ZynthianOS gets them (Debian/KXStudio package
 from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a prebuilt binary).
 
 | Project | Missing | Type | ZynthianOS source | Build | Notes |
 |---|---|---|---|---|---|
-| Surge XT | 1 | synth | release source with submodules | cmake, JUCE | packaged (`surge-xt-lv2`, data split), building |
-| Dusk Audio | 6 | 4K EQ 2, TapeMachine 2, Tape Echo 2, Sunset Circuits, Chord Analyzer Headless (DAF), DuskVerb (JUCE) | prebuilt glibc binaries on ZynthianOS; source: github.com/dusk-audio/dusk-audio-plugins (GPL-3) with DAF, their DPF fork | cmake: DAF plugins (`dusk-audio-lv2`), JUCE 8.0.4 plugins (`dusk-audio-juce-lv2`) | packaged, building; also the plugins zynthian doesn't enable (Multi-Q, Multi-Comp, DuskAmp, GrooveMind, Ring Out, ...) |
 | Synths | 7 | Helm, Vaporizer2, Triceratops, Foo YC20, Fabla, SO-kl5, Mutated Instruments | recipes, Vaporizer2 from openSUSE debs | make/waf/cmake; Fabla needs NTK, Foo YC20 Faust 0.9.73 | |
 | Neural | 3 | AIDA-X, Neural Amp Modeler, Ratatouille | recipes | cmake, RTNeural/Eigen | CPU-heavy |
 | Single plugins | 13 | Aether, Argotlunar2, AMS Bitgrinder, Calf Wavetable, ChaosChimp, Granulator (Faust), Punk Console, Regrader, Roboverb, SAFE EQ, TalentedHack, The Vibey (gula), MOD Arpeggiator | Debian / recipes | various | |
@@ -132,8 +135,9 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 - Package names as Alpine would name them (`swh-lv2`, `dragonfly-reverb-lv2`, `mod-mda-lv2`, …),
   installing to `/usr/lib/lv2`.
 - A meta package `zynthian-lv2-plugins` depending on all of them; `postmarketos-ui-zynthian`
-  depends on the meta package. Data-heavy ones (FluidPlug soundfonts, AVL drumkits) as separate
-  packages the meta package may only recommend (install_if or optional), to keep images small.
+  depends on the meta package. Data in subpackages (see the packaging guide): `<pkg>-data` (needed)
+  comes with the plugin by `install_if`, `<pkg>-data-<what>` is optional; plugins whose data is too
+  big for images (FluidPlug, AVL drums) stay out of the meta package.
 - `tools/lv2-coverage.py`: the measurement above as a tool (counts, missing by project), to
   run after each batch.
 
@@ -144,10 +148,10 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 | 1. Small C/C++ effects (**done**) | MOD MDA, MOD utilities/distortion/pitchshifter, CAPS, TAP, SWH, Invada, infamous, SHIRO, artyfx, abGate, Bollie Delay, YK Chorus | 73 | one day, see "Phase 1: lessons" |
 | 2. DPF family | DPF-Plugins, Dragonfly Reverb, string-machine, MiniOPL3 (**done**) | ~20 | DSP only per plugin, as ykchorus |
 | 3. Guitarix (**done**) | Guitarix (`--mod-lv2 --no-standalone`), GxPlugins, GxDistortionPlus, GxSwitchlessWah | 58 of 59 | half a day: needed only libsigc++ and `<cstdint>`, no Boost/glibmm for the LV2-only build |
-| 4. Instruments with data (**done**) | FluidPlug, avldrums, setBfree (also as engine) | 26 | SoundFonts in optional `-data` packages, not in images |
+| 4. Instruments with data (**done**) | FluidPlug, avldrums, setBfree (also as engine) | 26 | SoundFonts in `-data` (by `install_if`); FluidPlug and AVL not in images |
 | 5. EQ10Q, QMidiArp, rncbc synths (**done**) | EQ10Q, QMidiArp, padthv1/samplv1/synthv1 | ~13 | EQ10Q and QMidiArp: minutes, Debian's sources; rncbc synths with Qt 6.12's dev packages |
-| 6. JUCE (**done** but Surge XT) | DISTRHO-Ports (TAL, Vex), CHOW, Surge XT, Odin2, OB-Xd, Dexed, Helm, Monique, Vaporizer2, … | ~30 | one day on the Duet: JUCE needs the same musl/GCC 15 fixes in each (see packaging-guide.md) |
-| 7. Neural and the rest | AIDA-X, NAM, Dusk (if sources), single plugins | ~25 | case by case |
+| 6. JUCE (**done**) | DISTRHO-Ports (TAL, Vex), CHOW, Surge XT, Odin2, OB-Xd, Dexed, Helm, Monique, Vaporizer2, … | ~30 | one day on the Duet: JUCE needs the same musl/GCC 15 fixes in each (see packaging-guide.md) |
+| 7. Neural and the rest | AIDA-X, NAM, single plugins (Dusk Audio done: sources found) | ~25 | case by case |
 
 After each phase: build, install on the Duet, rescan, measure coverage, and load each new plugin
 once (`tools/lv2-coverage.py --load`, and jalv for the ones that need host features) to catch
@@ -195,14 +199,16 @@ Problems found, and how the packages handle them:
 
 ### Optional data (TBD)
 
-Large sample data is kept out of device images: `fluidplug-lv2` and `avldrums-lv2` put their
-SoundFonts into `-data` subpackages (284 and 145 MB), and neither is in `zynthian-lv2-plugins`.
-The plugin packages depend on their data, so `apk add avldrums-lv2` installs a working instrument.
+Large data is kept out of device images, by the data subpackage convention in the packaging guide:
+`<pkg>-data` comes with its plugin by `install_if` (Surge XT's factory content, FluidPlug's and AVL's
+SoundFonts), optional data is `<pkg>-data-<what>` and nothing pulls it in (Surge XT's
+`-data-3rdparty`, 327 MB). FluidPlug (284 MB) and AVL drums (145 MB) are built but not in the meta
+package, so not in images; `apk add avldrums-lv2` installs a working instrument with its data.
 
 - **TBD: admin menu entry** in zynthian to install (and remove) optional data packages on the
   device (apk, with progress and the download size), then rescan the LV2 plugins
   (`zynthian_lv2.py engines`). Until then: `apk add` over ssh.
-- **Other heavy packages** (installed sizes on the Duet): `zynaddsubfx` 53 MB (its banks),
+- **Other heavy packages** (installed sizes on the Duet): `zynaddsubfx` 53 MB (34 MB of it the generated LV2 preset TTLs, plus a VST build; zynthian's engine uses the program and its 1.1 MB of banks: candidates for a separate package or removal),
   `pd-cyclone` 22 MB, `mod-caps-lv2` 26 MB, and `zynthian-data` 616 MB:
 - **TBD: split `zynthian-data`** into essential (or too small to matter) and extra data. Measured
   (MB): `presets/puredata/sampler` 180 (Pd sampler patches with samples), `tts/voices` 140 (ZynVoice
