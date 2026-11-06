@@ -1,0 +1,43 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Regrader, a degrading delay (URI https://github.com/linuxmao-org/regrader; ZynthianOS has
+# Debian's regrader). linuxmao-org's DPF port (the repository is regrader-port now). DPF (a git
+# submodule, the old one MiniOPL3 also uses) is a second source; DSP only (lv2_dsp, UI off).
+pkgname=regrader-lv2
+_commit=9154881ad6553537cc7f2a743541f6b47de2a207
+_dpf=4e180a77ec6e93abb021b28495bd84b43498bf31
+pkgver=0_git20200616
+pkgrel=0
+pkgdesc="Regrader degrading delay (LV2)"
+url="https://github.com/linuxmao-org/regrader-port"
+arch="all"
+license="MIT"
+# bash: DPF's utils/generate-ttl.sh
+makedepends="bash lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/linuxmao-org/regrader-port/archive/$_commit.tar.gz
+	dpf-$_dpf.tar.gz::https://github.com/DISTRHO/DPF/archive/$_dpf.tar.gz"
+builddir="$srcdir/regrader-port-$_commit"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	rm -rf dpf
+	mv "$srcdir"/DPF-$_dpf dpf
+	# no GUI: without this the TTL references the UI binary, which isn't built
+	sed -i 's/\(DISTRHO_PLUGIN_HAS_UI *\)1/\10/' sources/plugin/DistrhoPluginInfo.h
+}
+
+build() {
+	make -C plugins/Regrader NOOPT=true HAVE_DGL=false HAVE_OPENGL=false lv2_dsp
+	make -C dpf/utils/lv2-ttl-generator
+	# the old DPF script finds its generator relative to $0, after a cd: call it by absolute path
+	"$builddir"/dpf/utils/generate-ttl.sh
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r bin/*.lv2 "$pkgdir"/usr/lib/lv2/
+}
+sha512sums="
+1c16275f0a4f4e197b5d2c16e21bc1f1ffd53c733d7db1d0e19ec7912fdc3f0fe7d7882c080f729527fc074a0ed04b86151862329b95d498385c4d194b9e7292  regrader-lv2-9154881ad6553537cc7f2a743541f6b47de2a207.tar.gz
+cf43a8b9b6b10763dd07cdc8d0c0873f2d2e8c71a5fee48522ed7883a5f23ace411d9968b4e0b90c1e45718eb30fc5d88ab50f958108ee6e01ce96b4167264b6  dpf-4e180a77ec6e93abb021b28495bd84b43498bf31.tar.gz
+"
