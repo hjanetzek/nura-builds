@@ -29,14 +29,18 @@ resolve() {
 	esac
 }
 
-# Hash of a stage's inputs (recipe directories), for the package cache key
+# Hash of a stage's inputs, for the package cache key: what it builds (STAGE_<stage>, so adding a
+# package to the list invalidates the cache) and its recipe directories (INPUTS_<stage>)
 stage_hash() {
-	eval "inputs=\${INPUTS_$1:-}"
+	eval "builds=\${STAGE_$1:-} inputs=\${INPUTS_$1:-}"
 	# shellcheck disable=SC2154 # set by eval
-	for p in $inputs; do
-		d=$(resolve "$p")
-		(cd "$d" && find . -type f ! -path "*/.git/*" | LC_ALL=C sort | xargs sha256sum)
-	done | sha256sum | cut -c1-16
+	{
+		echo "$builds"
+		for p in $inputs; do
+			d=$(resolve "$p")
+			(cd "$d" && find . -type f ! -path "*/.git/*" | LC_ALL=C sort | xargs sha256sum)
+		done
+	} | sha256sum | cut -c1-16
 }
 
 # The local package repository (built .apk files) as a tarball, and back. The files belong to

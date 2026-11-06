@@ -67,6 +67,9 @@ jobs:
             kfp=$(printf '%s\n' "$NURA_ABUILD_KEY" | openssl rsa -pubout 2>/dev/null | sha256sum | cut -c1-8)
             echo "key=packages-$TARGET-${{ inputs.stage }}-$kfp-$prev-$h" >> "$GITHUB_OUTPUT"
             echo "partial=packages-$TARGET-${{ inputs.stage }}-$kfp-$prev-" >> "$GITHUB_OUTPUT"
+            # Transitional (remove after one run): the stage hash now includes the package list, so
+            # every key changed; take the stage's last packages whatever the previous stage's key
+            echo "any=packages-$TARGET-${{ inputs.stage }}-$kfp-" >> "$GITHUB_OUTPUT"
           else
             echo "key=" >> "$GITHUB_OUTPUT"
           fi
@@ -79,7 +82,9 @@ jobs:
           key: ${{ steps.key.outputs.key }}
           # Same signing key and previous stage, other inputs: only the same previous stage, as
           # a rebuilt dependency (a Qt module after qtbase) isn't rebuilt by its version alone
-          restore-keys: ${{ steps.key.outputs.partial }}
+          restore-keys: |
+            ${{ steps.key.outputs.partial }}
+            ${{ steps.key.outputs.any }}
           path: /home/runner/nura-out/packages.tar
 
       # A partial match: unpack the stage's last packages over the previous stage's; pmbootstrap
