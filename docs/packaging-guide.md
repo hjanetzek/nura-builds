@@ -152,6 +152,8 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
 | `#warning redirecting incorrect #include <sys/errno.h>` as an error | musl warns about non-standard headers; with the project's `-Werror` that's fatal: `-Wno-error=cpp` (Monique) |
 | `internal compiler error: in write_symbol, at lto-streamer-out.cc` | GCC 15 LTO bug: drop the project's LTO flags (`juce::juce_recommended_lto_flags`, ChowMultiTool) |
 | `multiple definition of` a helper after `-fgnu89-inline` | GNU89 `inline` defines a header's `inline` functions in every file that includes it: make the plain `inline` helpers `static inline` instead (sed in `prepare()`, TalentedHack) |
+| `cannot bind packed field` (old JUCE, `juce_PixelFormats.h`) | `JUCE_PACKED` defined empty in `juce_PlatformDefs.h` (the pixel structs keep their size; later JUCE dropped the attribute) |
+| `invalid conversion from 'short unsigned int*' to 'const short int*'` in `juce_freetype_Fonts.cpp` (old JUCE) | current FreeType changed the types: `-fpermissive` |
 | `-Werror` in the project's flags | remove it, or the project's switch (`SURGE_SKIP_WERROR`) |
 
 ## Packaging
@@ -187,6 +189,8 @@ differently:
 - Tools that find their files relative to `which <tool>` can miss in the build chroot, where
   binaries are in `/usr/sbin`: `faust2lv2` turns `/usr/sbin/faust` into `/usr/sinclude/faust`
   ("faust include files not found"); set `FAUSTINC=/usr/include/faust FAUSTLIB=/usr/share/faust`.
+- `sed` with a `$` anchor doesn't match in CRLF files (JUCE's sources, Monique): leave the anchor out
+  and check the edit on a copy of the source.
 - When a generated file is broken, look at it (`cat -A`) before suspecting the compiler.
 
 ## Pure Data externals
