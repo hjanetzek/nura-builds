@@ -105,29 +105,14 @@ jobs:
           key: ${{ steps.key.outputs.key }}
           path: /home/runner/nura-out/packages.tar
 
-      # A failed build still saved what it built (scripts/build.sh): cache it under the partial
-      # prefix, so the next attempt restores it and builds only what is missing
+      # A failed build still saved what it built (scripts/build.sh): cache it under a key that is
+      # never an exact match (only a successful build saves the stage's key) but has the partial
+      # prefix, so the next attempt with the same previous stage builds only what is missing
       - name: Save the packages built so far
-        if: failure() && steps.key.outputs.key != '' && steps.cache.outputs.cache-hit != 'true'
+        if: failure() && steps.build.outcome == 'failure' && steps.key.outputs.key != ''
         uses: actions/cache/save@v6
         with:
           key: ${{ steps.key.outputs.partial }}partial-${{ github.run_id }}-${{ github.run_attempt }}
-          path: /home/runner/nura-out/packages.tar
-
-      # A failed build keeps what it built: saved under a key that is never an exact match (only
-      # a successful build saves the stage's key) but has the prefix of a partial one, so the
-      # next run with the same previous stage continues from these packages
-      - name: Packages built before the failure
-        if: failure() && steps.build.outcome == 'failure' && steps.key.outputs.key != ''
-        run: |
-          sudo tar -C "$NURA_WORK" -cf "$NURA_OUT/packages.tar" packages
-          sudo chown "$(id -u):$(id -g)" "$NURA_OUT/packages.tar"
-
-      - name: Save them in the cache
-        if: failure() && steps.build.outcome == 'failure' && steps.key.outputs.key != ''
-        uses: actions/cache/save@v6
-        with:
-          key: ${{ steps.key.outputs.partial }}failed-${{ github.run_id }}-${{ github.run_attempt }}
           path: /home/runner/nura-out/packages.tar
 
       - name: Pass the packages on
