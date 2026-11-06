@@ -2,7 +2,7 @@
 # Fabla, a drum sampler (URI http://www.openavproductions.com/fabla; zynthian's recipe
 # install_fabla.sh builds zynthian's fork, branch morepads, with the NTK GUI). DSP only, compiled
 # directly: the GUI (gui/, NTK, not packaged) is linked into the same fabla.so in the CMake build,
-# so the manifest's UI entry is removed. Its sources include the LV2 headers by their pre-1.18
+# so the UI entries are removed from the TTLs. Its sources include the LV2 headers by their pre-1.18
 # paths: a symlink tree. The factory kits (presets/*.lv2) are installed as the CMake build does.
 pkgname=fabla-lv2
 _commit=4a66f82c523b048d67505f8b5eaf4af20df9860e
@@ -31,8 +31,10 @@ prepare() {
 		*) ln -s "$d" "$ns"/ext/$n ;;
 		esac
 	done
-	# the GUI isn't built: no UI entry
+	# the GUI isn't built: no UI entry (manifest), no UI description and reference (fabla.ttl)
 	sed -i '/^<http:\/\/www.openavproductions.com\/fabla\/gui>/,/^$/d' dsp/manifest.ttl
+	sed -i '/^<http:\/\/www.openavproductions.com\/fabla\/gui>/,/^  \] \./d;
+		/ui:ui <http:\/\/www.openavproductions.com\/fabla\/gui>/d' dsp/fabla.ttl
 }
 
 build() {
