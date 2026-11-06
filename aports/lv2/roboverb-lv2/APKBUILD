@@ -1,0 +1,85 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Roboverb (URI https://kushview.net/plugins/roboverb; zynthian's recipe install_roboverb.sh, main
+# branch with CMake and JUCE; the 1.1.0 release still used waf).
+# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
+# only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
+# loads X11 only when the editor opens).
+pkgname=roboverb-lv2
+pkgver=1.1.0_git20251217
+pkgrel=0
+_commit=df8a81ab1ff9d8db64a4dca727c1d9347f8df34f
+_deps_juce=51a8a6d7aeae7326956d747737ccf1575e61e209
+_deps_clap_juce_extensions=ea834dfd366ab2103b98e92eaacb581c69fc2e0b
+_deps_clap_juce_extensions_clap_libs_clap=df8f16c69ba1c1a15fb105f0c5a2e5b9ac6be742
+_deps_clap_juce_extensions_clap_libs_clap_helpers=7b53a685e11465154b4ccba3065224dbcbf8a893
+pkgdesc="Roboverb, a reverb based on Freeverb (LV2)"
+url="https://github.com/kushview/roboverb"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+makedepends="
+	alsa-lib-dev
+	cmake
+	fontconfig-dev
+	freetype-dev
+	libx11-dev
+	libxcursor-dev
+	libxext-dev
+	libxinerama-dev
+	libxrandr-dev
+	samurai
+	"
+source="$pkgname-$_commit.tar.gz::https://github.com/kushview/roboverb/archive/$_commit.tar.gz
+	deps_juce-${_deps_juce}.tar.gz::https://github.com/juce-framework/JUCE/archive/${_deps_juce}.tar.gz
+	deps_clap_juce_extensions-${_deps_clap_juce_extensions}.tar.gz::https://github.com/free-audio/clap-juce-extensions/archive/${_deps_clap_juce_extensions}.tar.gz
+	deps_clap_juce_extensions_clap_libs_clap-${_deps_clap_juce_extensions_clap_libs_clap}.tar.gz::https://github.com/free-audio/clap/archive/${_deps_clap_juce_extensions_clap_libs_clap}.tar.gz
+	deps_clap_juce_extensions_clap_libs_clap_helpers-${_deps_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz::https://github.com/free-audio/clap-helpers/archive/${_deps_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz
+	"
+builddir="$srcdir/roboverb-$_commit"
+options="!check" # no tests
+
+prepare() {
+	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF
+	# git submodules (outer ones first)
+	rm -rf deps/JUCE && mv "$srcdir"/JUCE-${_deps_juce} deps/JUCE
+	rm -rf deps/clap-juce-extensions && mv "$srcdir"/clap-juce-extensions-${_deps_clap_juce_extensions} deps/clap-juce-extensions
+	rm -rf deps/clap-juce-extensions/clap-libs/clap && mv "$srcdir"/clap-${_deps_clap_juce_extensions_clap_libs_clap} deps/clap-juce-extensions/clap-libs/clap
+	rm -rf deps/clap-juce-extensions/clap-libs/clap-helpers && mv "$srcdir"/clap-helpers-${_deps_clap_juce_extensions_clap_libs_clap_helpers} deps/clap-juce-extensions/clap-libs/clap-helpers
+	sed -i 's/FORMATS AU VST3 LV2 Standalone/FORMATS LV2/' CMakeLists.txt
+	default_prepare
+	# LV2 only
+	sed -i 's/set(JUCE_FORMATS AU VST3 Standalone)/set(JUCE_FORMATS)/; s/FORMATS AU VST3 Standalone/FORMATS /' \
+		CMakeLists.txt
+}
+
+build() {
+	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
+	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "");
+	# <utility> for std::exchange, which older JUCE gets indirectly from glibc's libstdc++ headers
+	# -Wno-template-body: GCC 15 errors in templates that are never instantiated (chowdsp_utils)
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -include utility -Wno-template-body \
+		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
+		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	# CMake 4: some (sub)projects declare cmake_minimum_required < 3.5
+	cmake -S . -B build -G Ninja -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release 
+	cmake --build build --target Roboverb_LV2
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	# bundle names can contain spaces
+	find build -type d -path '*/LV2/*.lv2' -prune -exec cp -r {} "$pkgdir"/usr/lib/lv2/ \;
+}
+sha512sums="
+ce53a6f301a25e5de0ab98b4b96ab1b3752068aa1b144ca9a09840b2725e9e25c39484484c147f5d60773a4876feb29edb2891e60558f7a9bbafd1d7de0d587e  roboverb-lv2-df8a81ab1ff9d8db64a4dca727c1d9347f8df34f.tar.gz
+c5d48d8f963b855d707a89ea9c7a9297a46bf0026becff778f52c4436ba634f22568109967106de504880f46ccc84904ab777860cdb71fd31deed87cba863a1f  deps_juce-51a8a6d7aeae7326956d747737ccf1575e61e209.tar.gz
+d870a4e3f8418230deb48c4ced1668137f91076ac18dfd8584f933e29f1ad710365a540edd8f4b1777514c528c4a07acf379f57d849d581de4308a4969021468  deps_clap_juce_extensions-ea834dfd366ab2103b98e92eaacb581c69fc2e0b.tar.gz
+307c6c31268710a90460c47280611d72950bc6e8df121399aad913ff68269557396ed203e4f50a5835bcfaa6f3c80283133ea9f4695104af99cdcbeb47041226  deps_clap_juce_extensions_clap_libs_clap-df8f16c69ba1c1a15fb105f0c5a2e5b9ac6be742.tar.gz
+ebd98de0c70446e32ec3a2757ba1431d2aadb9135353d8da4c8965210a145d4f756941fea3e595df81d420d65516f13e9201b9c76560f8cbaa39d1de2b9cc237  deps_clap_juce_extensions_clap_libs_clap_helpers-7b53a685e11465154b4ccba3065224dbcbf8a893.tar.gz
+"
