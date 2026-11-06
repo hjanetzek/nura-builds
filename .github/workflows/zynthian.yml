@@ -11,6 +11,7 @@ on:
       zynthian-ui-ref: { description: "zynthian-ui branch", default: nura }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
       release: { description: "publish the images as a release", type: boolean, default: false }
+      images: { description: "build the device images (off by default while the plugins settle)", type: boolean, default: false }
       rebuild: { description: "rebuild Qt and PySide from scratch (as the weekly run)", type: boolean, default: false }
   schedule:
     - cron: "0 1 * * 0"   # Sunday 01:00 UTC
@@ -109,9 +110,11 @@ jobs:
     secrets: inherit
     permissions: { contents: read, actions: write }
 
+  # The device images only when asked for (Run workflow > images), not on pushes: off while the
+  # plugin packages settle (2026-11-06); to build them on every push again, drop "inputs.images &&"
   image:
     needs: [plan, zynthian]
-    if: ${{ !cancelled() && !failure() }}
+    if: ${{ inputs.images && !cancelled() && !failure() }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     strategy:
@@ -183,10 +186,12 @@ jobs:
           name: packages-zynthian-zynthian
           path: out
       - uses: actions/download-artifact@v8
+        if: needs.image.result == 'success'
         with:
           pattern: zynthian-*
           path: out/images
           merge-multiple: true
+      # without images (image job skipped) only the package repository is published
       - name: Publish
-        run: scripts/publish.sh zynthian out/packages.tar out/images/*.img.zst
+        run: scripts/publish.sh zynthian out/packages.tar $(ls out/images/*.img.zst 2>/dev/null)
 
