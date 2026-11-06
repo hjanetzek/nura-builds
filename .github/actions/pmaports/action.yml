@@ -1,0 +1,16 @@
+# pmbootstrap's pmaports checkout from the Actions cache (one per week; saved at the end of the
+# job when the week's cache doesn't exist yet). setup.sh brings it up to date (fetch, reset):
+# a full clone takes over a minute per job, the history is needed by pin-binary.sh.
+name: pmaports
+description: Restore pmaports from the cache
+runs:
+  using: composite
+  steps:
+    - id: week
+      shell: bash
+      run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v6
+      with:
+        key: pmaports-${{ steps.week.outputs.week }}
+        restore-keys: pmaports-
+        path: /home/runner/.local/var/pmbootstrap/cache_git/pmaports

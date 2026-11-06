@@ -51,6 +51,8 @@ jobs:
           restore-keys: ${{ steps.key.outputs.prefix }}
           path: /home/runner/nura-out/packages.tar
 
+      - uses: ./.github/actions/pmaports
+
       - name: Set up pmbootstrap
         run: |
           echo "base: ${{ steps.cache.outputs.cache-matched-key || 'none, dependencies are built' }}"

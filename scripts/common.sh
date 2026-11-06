@@ -12,6 +12,8 @@ NURA_WORK=${NURA_WORK:-$HOME/nura-work}
 NURA_SRC=${NURA_SRC:-$HOME/nura-src}
 NURA_OUT=${NURA_OUT:-$here/out}
 CFG=${NURA_CFG:-$HOME/.config/pmbootstrap-nura-$TARGET.cfg}
+# pmbootstrap's pmaports checkout (its default path; CI caches it)
+PMAPORTS=${NURA_PMAPORTS:-$HOME/.local/var/pmbootstrap/cache_git/pmaports}
 ARCH=aarch64
 
 pmb() {

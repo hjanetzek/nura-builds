@@ -34,6 +34,7 @@ done
 mkdir -p "$(dirname "$CFG")"
 cat > "$CFG" <<EOF
 [pmbootstrap]
+aports = $PMAPORTS
 device = $(echo "$DEVICES" | awk '{print $1}')
 hostname = nura-$TARGET
 is_default_channel = False
@@ -76,6 +77,17 @@ if [ -n "${NURA_ABUILD_KEY:-}" ] && [ -n "${NURA_ABUILD_KEY_NAME:-}" ]; then
 	sudo cp "$keys/$NURA_ABUILD_KEY_NAME.pub" "$NURA_WORK/config_apk_keys/"
 	sudo chown root:root "$NURA_WORK/config_apk_keys/$NURA_ABUILD_KEY_NAME.pub"
 	echo "signing key: $NURA_ABUILD_KEY_NAME"
+fi
+
+# CI: pmaports from the Actions cache, brought up to date with origin and without the changes of
+# the run that saved it (pinned recipes, overlays, recipe links); pmbootstrap init clones it
+# otherwise. Not locally: there it is the user's own checkout.
+if [ -n "${GITHUB_ACTIONS:-}" ] && [ -d "$PMAPORTS/.git" ]; then
+	git -C "$PMAPORTS" fetch -q origin main
+	git -C "$PMAPORTS" checkout -q -B main FETCH_HEAD
+	git -C "$PMAPORTS" reset -q --hard
+	git -C "$PMAPORTS" clean -qfd
+	echo "pmaports: $(git -C "$PMAPORTS" log -1 --format='%h %cs %s')"
 fi
 
 # Initialise: every question answered with the default from the config

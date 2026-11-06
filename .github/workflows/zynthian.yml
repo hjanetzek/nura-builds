@@ -86,6 +86,8 @@ jobs:
         with:
           name: packages-zynthian-zynthian
           path: /home/runner/nura-out
+      - uses: ./.github/actions/pmaports
+
       - name: Set up pmbootstrap
         run: |
           export ${{ needs.refs.outputs.refs }}
