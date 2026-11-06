@@ -1,0 +1,71 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Neural Amp Modeler LV2 (URI http://github.com/mikeoliphant/neural-amp-modeler-lv2; zynthian's
+# recipe install_nam.sh): NAM and RTNeural models through NeuralAudio. The git submodules are extra
+# sources (tools/gh-submodule-sources.py); Eigen comes from RTNeural's copy, so the two GitLab Eigen
+# submodules of NeuralAmpModelerCore aren't needed. Models are separate (zynthian-data's
+# files/Neural Models). CPU-heavy.
+pkgname=neural-amp-modeler-lv2
+pkgver=0.2.3
+pkgrel=0
+_commit=3d0e1c26a4cfb7085b185811dd564f7ec7ec4991
+_deps_lv2=e9d94328743d630e27a9d322015437fd9080695d
+_deps_neuralaudio=b1137e1db2d43670e7dcf6345ade7808613cac20
+_deps_neuralaudio_deps_neuralampmodelercore=4c0ee78b71abd5eb20aec58562e7540f43caac3b
+_deps_neuralaudio_deps_neuralampmodelercore_dependencies_audiodsptools=0827c6c2fc0deced568536142ea86f189e0b98a1
+_deps_neuralaudio_deps_rtneural=5909c44909cd6100367f62cd04b348de85d57dbf
+_deps_neuralaudio_deps_rtneural_modules_xsimd=a00c81f7b9e808a42aedcf7da2fbb1f9a636da34
+_deps_neuralaudio_deps_math_approx=f6d55e70f0c5e888d3a0c4e252b02b530210c78a
+_deps_neuralaudio_utils_deps_argparse=d924b84eba1f0f0adf38b20b7b4829f6f65b6570
+pkgdesc="Neural Amp Modeler LV2 plugin"
+url="https://github.com/mikeoliphant/neural-amp-modeler-lv2"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+# linux-headers: xsimd (in RTNeural, the commit BYOD failed with) includes <asm/hwcap.h>
+makedepends="cmake linux-headers lv2-dev samurai"
+source="$pkgname-$_commit.tar.gz::https://github.com/mikeoliphant/neural-amp-modeler-lv2/archive/$_commit.tar.gz
+	deps_lv2-${_deps_lv2}.tar.gz::https://github.com/lv2/lv2/archive/${_deps_lv2}.tar.gz
+	deps_neuralaudio-${_deps_neuralaudio}.tar.gz::https://github.com/mikeoliphant/NeuralAudio/archive/${_deps_neuralaudio}.tar.gz
+	deps_neuralaudio_deps_neuralampmodelercore-${_deps_neuralaudio_deps_neuralampmodelercore}.tar.gz::https://github.com/mikeoliphant/NeuralAmpModelerCore/archive/${_deps_neuralaudio_deps_neuralampmodelercore}.tar.gz
+	deps_neuralaudio_deps_neuralampmodelercore_dependencies_audiodsptools-${_deps_neuralaudio_deps_neuralampmodelercore_dependencies_audiodsptools}.tar.gz::https://github.com/sdatkinson/AudioDSPTools/archive/${_deps_neuralaudio_deps_neuralampmodelercore_dependencies_audiodsptools}.tar.gz
+	deps_neuralaudio_deps_rtneural-${_deps_neuralaudio_deps_rtneural}.tar.gz::https://github.com/mikeoliphant/RTNeural/archive/${_deps_neuralaudio_deps_rtneural}.tar.gz
+	deps_neuralaudio_deps_rtneural_modules_xsimd-${_deps_neuralaudio_deps_rtneural_modules_xsimd}.tar.gz::https://github.com/xtensor-stack/xsimd/archive/${_deps_neuralaudio_deps_rtneural_modules_xsimd}.tar.gz
+	deps_neuralaudio_deps_math_approx-${_deps_neuralaudio_deps_math_approx}.tar.gz::https://github.com/Chowdhury-DSP/math_approx/archive/${_deps_neuralaudio_deps_math_approx}.tar.gz
+	deps_neuralaudio_utils_deps_argparse-${_deps_neuralaudio_utils_deps_argparse}.tar.gz::https://github.com/p-ranav/argparse/archive/${_deps_neuralaudio_utils_deps_argparse}.tar.gz
+	"
+builddir="$srcdir/neural-amp-modeler-lv2-$_commit"
+options="!check" # no tests
+
+prepare() {
+	# git submodules (outer ones first)
+	rm -rf deps/lv2 && mv "$srcdir"/lv2-${_deps_lv2} deps/lv2
+	rm -rf deps/NeuralAudio && mv "$srcdir"/NeuralAudio-${_deps_neuralaudio} deps/NeuralAudio
+	rm -rf deps/NeuralAudio/deps/NeuralAmpModelerCore && mv "$srcdir"/NeuralAmpModelerCore-${_deps_neuralaudio_deps_neuralampmodelercore} deps/NeuralAudio/deps/NeuralAmpModelerCore
+	rm -rf deps/NeuralAudio/deps/NeuralAmpModelerCore/Dependencies/AudioDSPTools && mv "$srcdir"/AudioDSPTools-${_deps_neuralaudio_deps_neuralampmodelercore_dependencies_audiodsptools} deps/NeuralAudio/deps/NeuralAmpModelerCore/Dependencies/AudioDSPTools
+	rm -rf deps/NeuralAudio/deps/RTNeural && mv "$srcdir"/RTNeural-${_deps_neuralaudio_deps_rtneural} deps/NeuralAudio/deps/RTNeural
+	rm -rf deps/NeuralAudio/deps/RTNeural/modules/xsimd && mv "$srcdir"/xsimd-${_deps_neuralaudio_deps_rtneural_modules_xsimd} deps/NeuralAudio/deps/RTNeural/modules/xsimd
+	rm -rf deps/NeuralAudio/deps/math_approx && mv "$srcdir"/math_approx-${_deps_neuralaudio_deps_math_approx} deps/NeuralAudio/deps/math_approx
+	rm -rf deps/NeuralAudio/Utils/deps/argparse && mv "$srcdir"/argparse-${_deps_neuralaudio_utils_deps_argparse} deps/NeuralAudio/Utils/deps/argparse
+	default_prepare
+}
+
+build() {
+	# CMake 4: some (sub)projects declare cmake_minimum_required < 3.5
+	cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+sha512sums="
+ec8f77585fd1676f10c036f7495e7d373d7c7e6ec61915f26fd660d2d0ef043da7a4a8089bb19cfcfca63c6cd37450bff06a2f1708ba9917ff19c2de11e47bb5  neural-amp-modeler-lv2-3d0e1c26a4cfb7085b185811dd564f7ec7ec4991.tar.gz
+6874c2720b855fda87852a2f275db92dd97898e9002a5ca2e0b5661f9f76124a78576982edb371044565fa37a9d2c3639c898ec7427685a955a2e13b13b1f38c  deps_lv2-e9d94328743d630e27a9d322015437fd9080695d.tar.gz
+89572d75cf995b4490ea6b8ac65dc2839e86aba2e6357d1216ad3e45725c97e30d6b4365f136b773d8f609574c248daaeec3f262cdf1e691207effff939930ca  deps_neuralaudio-b1137e1db2d43670e7dcf6345ade7808613cac20.tar.gz
+3725a5ae39fa6beaa27983ca36974359e37ffde3895210ff91670bb47c9f13dcb58f3cc59f49302871af634aee4e5144f3a09bb7878742c44b68da9a3686aed3  deps_neuralaudio_deps_neuralampmodelercore-4c0ee78b71abd5eb20aec58562e7540f43caac3b.tar.gz
+4dc0668571ba4e7d597d017c3ceebad2a7c6fe2599a8de5924d369a252ed55f61ca1ca93c0d39d0889963d25da808f61cb431cc21f8baee2f95b09715f0b81f1  deps_neuralaudio_deps_neuralampmodelercore_dependencies_audiodsptools-0827c6c2fc0deced568536142ea86f189e0b98a1.tar.gz
+e398ac31ecd9bc8761e5966c741074b89c96cc13a01feeb8b922ae9872cc9e6d9d5eea180cc93741d5d9831ce8804f72fa2cbb1c321c0ce368c98ad4debdd5c5  deps_neuralaudio_deps_rtneural-5909c44909cd6100367f62cd04b348de85d57dbf.tar.gz
+c2314ac43a71e5274f66e8e8da5d533c0a3edd25d8306672091a12db627862e069503c1e94ad8283bd127624ce6a02be7bb84870cc0c2a5391b5643d5be9479e  deps_neuralaudio_deps_rtneural_modules_xsimd-a00c81f7b9e808a42aedcf7da2fbb1f9a636da34.tar.gz
+2995917186c1a4738459e26200b03e446a329f37d20552b9159ca8c9029fb64e51c396a0973a8ab55360b418a5153329a800a2556be237443226a77c9e27bea8  deps_neuralaudio_deps_math_approx-f6d55e70f0c5e888d3a0c4e252b02b530210c78a.tar.gz
+05d53ce7ec00c5ca9caea6a025c3e4c0c2b216883b41027f4f5a879a6a4026bf301106502d9c57f145e52122e31f268520c1c449a483d5da785ea466cd471f7a  deps_neuralaudio_utils_deps_argparse-d924b84eba1f0f0adf38b20b7b4829f6f65b6570.tar.gz
+"
