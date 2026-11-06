@@ -25,6 +25,8 @@ prepare() {
 	mv "$srcdir"/DPF-$_dpf DPF
 	# no GUI: without this the TTL references the UI binary, which isn't built
 	sed -i 's/\(DISTRHO_PLUGIN_HAS_UI *\)1/\10/' plugins/triceratops/DistrhoPluginInfo.h
+	# uint is a glibc typedef (sys/types.h), not in musl: the one cast
+	sed -i 's/(uint)/(unsigned int)/' plugins/triceratops/synth.cpp
 }
 
 build() {
