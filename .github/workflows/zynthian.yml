@@ -1,6 +1,8 @@
 # zynthian (Qt Quick UI) for Nura: Qt 6.12, PySide6, the zynthian packages, and images for the
-# devices in targets/zynthian.sh. Run by hand (Actions > zynthian > Run workflow) or on pushes to
-# this repository.
+# devices in targets/zynthian.sh. Run by hand (Actions > zynthian > Run workflow), on pushes to
+# this repository, and weekly with Qt and PySide rebuilt from scratch (input "rebuild"): they
+# replace Alpine's versions and link against its libraries, so a soname change in Alpine (ICU,
+# OpenSSL, ...) breaks them without any change to their recipes.
 name: zynthian
 
 on:
@@ -9,46 +11,59 @@ on:
       zynthian-ui-ref: { description: "zynthian-ui branch", default: nura }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
       release: { description: "publish the images as a release", type: boolean, default: false }
+      rebuild: { description: "rebuild Qt and PySide from scratch (as the weekly run)", type: boolean, default: false }
+  schedule:
+    - cron: "0 1 * * 0"   # Sunday 01:00 UTC
   push:
     branches: [main]
     paths: ["aports/**", "scripts/**", "targets/zynthian.sh", ".github/workflows/zynthian.yml", ".github/workflows/stage.yml"]
 
+# The weekly rebuild (hours) has its own group: a push meanwhile doesn't cancel it
 concurrency:
-  group: zynthian-${{ github.ref }}
+  group: zynthian-${{ github.ref }}${{ github.event_name == 'schedule' && '-weekly' || '' }}
   cancel-in-progress: true
 
 env:
+  REBUILD: ${{ inputs.rebuild || github.event_name == 'schedule' }}
   REFS: ZYNTHIAN_UI_REF=${{ inputs.zynthian-ui-ref || 'nura' }} ZYNCODER_REF=${{ inputs.zyncoder-ref || 'nura' }}
 
 jobs:
+  # Job inputs of the stages (the env context isn't available in a reusable workflow's "with")
   refs:
     runs-on: ubuntu-latest
     outputs:
       refs: ${{ steps.r.outputs.refs }}
+      rebuild: ${{ steps.r.outputs.rebuild }}
     steps:
       - id: r
-        run: echo "refs=$REFS" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "refs=$REFS" >> "$GITHUB_OUTPUT"
+          echo "rebuild=$REBUILD" >> "$GITHUB_OUTPUT"
 
   qt1:
     needs: refs
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt1, refs: "${{ needs.refs.outputs.refs }}" }
+    with: { target: zynthian, stage: qt1, refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
     secrets: inherit
+    permissions: { contents: read, actions: write }
   qt2:
     needs: [refs, qt1]
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.qt1.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.qt1.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
     secrets: inherit
+    permissions: { contents: read, actions: write }
   qt3:
     needs: [refs, qt2]
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.qt2.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.qt2.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
     secrets: inherit
+    permissions: { contents: read, actions: write }
   pyside:
     needs: [refs, qt3]
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.qt3.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}" }
+    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.qt3.outputs.key }}", refs: "${{ needs.refs.outputs.refs }}", rebuild: "${{ needs.refs.outputs.rebuild == 'true' }}" }
     secrets: inherit
+    permissions: { contents: read, actions: write }
   plugins:
     needs: [refs, pyside]
     uses: ./.github/workflows/stage.yml

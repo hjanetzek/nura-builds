@@ -11,6 +11,11 @@ on:
       previous: { type: string, default: "" }       # previous stage (its artifact), "" for the first
       previous-key: { type: string, default: "" }   # previous stage's cache key
       refs: { type: string, default: "" }           # e.g. "ZYNTHIAN_UI_REF=nura ZYNCODER_REF=nura"
+      # Build from scratch, ignoring this stage's cache, and replace the cached packages under the
+      # same key (the weekly rebuild: our packages against the current versions of Alpine's
+      # libraries, which a soname change would otherwise break without any recipe change). The
+      # caller's job needs "actions: write" (deleting the old cache entry).
+      rebuild: { type: boolean, default: false }
     outputs:
       key:
         description: cache key of this stage's packages (empty if not cacheable)
@@ -73,7 +78,7 @@ jobs:
 
       - name: Cached packages
         id: cache
-        if: steps.key.outputs.key != ''
+        if: steps.key.outputs.key != '' && !inputs.rebuild
         uses: actions/cache/restore@v6
         with:
           key: ${{ steps.key.outputs.key }}
@@ -82,14 +87,24 @@ jobs:
           restore-keys: ${{ steps.key.outputs.partial }}
           path: /home/runner/nura-out/packages.tar
 
-      # A partial match: unpack the stage's last packages over the previous stage's; pmbootstrap
-      # then builds only the packages whose pkgver-pkgrel isn't in the repository (a recipe
-      # change without a pkgrel bump isn't rebuilt)
+      # A stage's cache holds the earlier stages' packages too: add only what the previous stage
+      # didn't pass on, so packages it rebuilt (the weekly rebuild) win over the cached copies.
+      # An exact match: that is the stage's result (written back for the next stage).
+      - name: Merge the cached packages with the previous stage's
+        if: steps.cache.outputs.cache-hit == 'true' && inputs.previous != ''
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/merge-cached.sh /home/runner/nura-out/packages.tar --save
+
+      # A partial match: the stage's last packages; pmbootstrap then builds only the packages
+      # whose pkgver-pkgrel isn't in the repository (a recipe change without a pkgrel bump isn't
+      # rebuilt)
       - name: Earlier packages of ${{ inputs.stage }}
         if: steps.cache.outputs.cache-matched-key != '' && steps.cache.outputs.cache-hit != 'true'
         run: |
           echo "from ${{ steps.cache.outputs.cache-matched-key }}"
-          sudo tar -C "$NURA_WORK" --same-owner -xf /home/runner/nura-out/packages.tar
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/merge-cached.sh /home/runner/nura-out/packages.tar
 
       - name: Build ${{ inputs.stage }}
         id: build
@@ -97,6 +112,15 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH" ${{ inputs.refs }}
           scripts/build.sh ${{ inputs.stage }}
+
+      # Cache entries can't be overwritten: a rebuild deletes the old one under this key first
+      - name: Replace the cached packages
+        if: steps.key.outputs.key != '' && inputs.rebuild
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          KEY: ${{ steps.key.outputs.key }}
+        run: gh cache delete "$KEY" || echo "no cache entry $KEY"
 
       - name: Save packages in the cache
         if: steps.key.outputs.key != '' && steps.cache.outputs.cache-hit != 'true'
