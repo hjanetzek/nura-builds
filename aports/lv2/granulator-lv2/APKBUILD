@@ -11,8 +11,9 @@ pkgdesc="Granulator granular delay (Faust, LV2)"
 url="https://github.com/e7mac/faust-code"
 arch="all"
 license="custom" # the repository states no licence
-# boost-dev: Faust's LV2 architecture includes boost/circular_buffer.hpp
-makedepends="bash boost-dev faust faust-tools lv2-dev"
+# boost-dev: Faust's LV2 architecture includes boost/circular_buffer.hpp; faust-dev: faust2lv2
+# checks for its headers
+makedepends="bash boost-dev faust faust-dev faust-tools lv2-dev"
 source="granulator-$_commit.dsp::https://raw.githubusercontent.com/e7mac/faust-code/$_commit/granulator.dsp"
 builddir="$srcdir/build"
 options="!check" # no tests
