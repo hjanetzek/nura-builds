@@ -4,7 +4,7 @@
 # - the package repository: release "aarch64". apk asks for <repository>/aarch64/APKINDEX.tar.gz,
 #   and release files are at .../releases/download/<tag>/<file>, so with the tag "aarch64" the
 #   repository is https://github.com/<owner>/<repo>/releases/download. Uploads the packages the
-#   release doesn't have yet, then the index, then deletes packages the index no longer has (in
+#   release doesn't have yet or has as another file (same version, rebuilt), then the index, then deletes packages the index no longer has (in
 #   that order, so the published index never points to a missing file).
 # - images: release "<target>-latest", the images replaced by each build.
 #
@@ -40,21 +40,28 @@ Updated by $run_url"
 gh release view "$repo_tag" >/dev/null 2>&1 ||
 	gh release create "$repo_tag" --prerelease --title "Package repository (aarch64)" --notes "$notes"
 
-assets=$(gh release view "$repo_tag" --json assets -q '.assets[].name')
+# Published packages with their sha256 ("name sha256:..."). A package rebuilt with the same version
+# (the zynthian stage rebuilds the kiosk package every run; full rebuilds after cache changes) is
+# another file under the same name: the index has its checksum, so the old file must be replaced,
+# or apk fails with "package integrity error".
+release_id=$(gh api "repos/{owner}/{repo}/releases/tags/$repo_tag" --jq .id)
+assets=$(gh api "repos/{owner}/{repo}/releases/$release_id/assets?per_page=100" --paginate \
+	--jq '.[] | "\(.name) \(.digest // "")"')
 new=
 for f in "$dir"/*.apk; do
 	name=$(basename "$f")
-	echo "$assets" | grep -qxF "$name" || new="$new $f"
+	sum="sha256:$(sha256sum "$f" | cut -d' ' -f1)"
+	echo "$assets" | grep -qxF "$name $sum" || new="$new $f"
 done
 # In a function: its own positional parameters (the script's are the images)
 upload_packages() {
-	echo "uploading $# new packages"
-	gh release upload "$repo_tag" "$@"
+	echo "uploading $# new or changed packages"
+	gh release upload "$repo_tag" "$@" --clobber
 }
 # shellcheck disable=SC2086 # a list of files
 [ -z "$new" ] || upload_packages $new
 gh release upload "$repo_tag" "$dir/APKINDEX.tar.gz" --clobber
-echo "$assets" | while read -r name; do
+echo "$assets" | while read -r name _; do
 	case $name in *.apk) ;; *) continue ;; esac
 	[ -f "$dir/$name" ] || { echo "deleting $name"; gh release delete-asset "$repo_tag" "$name" -y; }
 done
