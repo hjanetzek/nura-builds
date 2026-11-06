@@ -30,7 +30,11 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   (`$NURA_OUT/<target>-<device>.img.zst`).
 - `.github/workflows/<target>.yml` runs the stages as jobs (`stage.yml`), each on a fresh runner:
   stages stay under the 6 h job limit, and a stage whose recipes (and all earlier stages) are
-  unchanged takes its packages from the Actions cache. Then one image job per device.
+  unchanged takes its packages from the Actions cache. A stage whose recipes changed starts from
+  its last cached packages (same earlier stages) and builds only the packages whose
+  `pkgver-pkgrel` isn't there yet: bump `pkgrel` with a recipe change. Then one image job per
+  device.
+- `.github/workflows/packages.yml` builds single packages by name (see below).
 
 zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2` (qtdeclarative),
 `qt3` (qtwayland), `pyside` (PySide6 6.12, from zynthian-ui's `nura/pyside6`), `plugins`
@@ -59,6 +63,19 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
   ```
 
 Workflow artifacts (packages per stage, images) stay for a few days for debugging.
+
+## Building single packages
+
+`packages.yml` (by hand) builds named packages, e.g. new recipes on a branch of zynthian-ui,
+without the whole target: it starts from the newest cached packages of the `plugins` stage (Qt,
+PySide, the plugins) and uploads the built `.apk` files and the build log as the artifact
+`packages-<run id>`. The named packages are always rebuilt, their dependencies only when missing
+or outdated.
+
+```sh
+gh workflow run packages.yml -f packages="dexed-lv2 eq10q-lv2" -f zynthian-ui-ref=my-branch
+gh run download <run id>
+```
 
 ## Secrets
 
