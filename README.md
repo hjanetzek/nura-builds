@@ -35,7 +35,7 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
 zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2` (qtdeclarative),
 `qt3` (qtwayland), `pyside` (PySide6 6.12, from zynthian-ui's `nura/pyside6`), `plugins`
 (zynthian's jalv, the LV2 plugins and Pure Data externals of `nura/lv2` and `nura/pd` through
-their meta packages, zynaddsubfx, setBfree), `zynthian`
+their meta packages, zynaddsubfx, setBfree, SooperLooper), `zynthian`
 (zyncoder and zynthian-ui from their checkouts, zynthian-data, postmarketos-ui-zynthian; always
 rebuilt). The Qt modules are separate stages because their recipes ask for the other modules
 without a version, which Alpine's 6.11 would satisfy.

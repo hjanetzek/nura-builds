@@ -18,8 +18,9 @@ STAGE_qt3="qt6-qtwayland"
 STAGE_pyside="pyside6"
 # Engines and plugins the kiosk package depends on, and zynthian's jalv (zynthian-ui depends on it,
 # and the --src build of zynthian-ui doesn't build missing dependencies). The meta packages pull in
-# the LV2 plugins and Pure Data externals of nura/lv2 and nura/pd.
-STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree"
+# the LV2 plugins and Pure Data externals of nura/lv2 and nura/pd; engines (nura/engines) are named
+# here, or the always-rebuilt zynthian stage would build them as the kiosk's dependencies.
+STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree sooperlooper"
 # zynthian-ui and zyncoder are built from their checkouts (--src skips $source and doesn't build
 # missing dependencies, hence the order); seed-distfiles.sh puts the bundled Python packages into
 # the distfiles cache first
