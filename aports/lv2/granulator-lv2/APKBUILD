@@ -25,7 +25,9 @@ prepare() {
 }
 
 build() {
-	faust2lv2 granulator.dsp
+	# faust2lv2 derives the include directory from `which faust` (s?/bin/faust?/include/faust?):
+	# with faust in /usr/sbin that gives /usr/sinclude/faust
+	FAUSTINC=/usr/include/faust FAUSTLIB=/usr/share/faust faust2lv2 granulator.dsp
 }
 
 package() {
