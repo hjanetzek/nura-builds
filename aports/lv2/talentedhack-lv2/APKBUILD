@@ -15,8 +15,9 @@ builddir="$srcdir/TalentedHack-$_commit"
 options="!check" # no tests
 
 build() {
-	# without -g (DEBUG) and with the distribution's flags
-	make DEBUG= CFLAGS="$CFLAGS --std=c99 -Wall -fPIC $(pkg-config --cflags fftw3f)"
+	# without -g (DEBUG) and with the distribution's flags; -fgnu89-inline: midi.c's helpers are
+	# "inline" with GNU89 meaning, and with -Os C99 inline leaves SendPitchBend undefined
+	make DEBUG= CFLAGS="$CFLAGS --std=c99 -fgnu89-inline -Wall -fPIC $(pkg-config --cflags fftw3f)"
 }
 
 package() {
