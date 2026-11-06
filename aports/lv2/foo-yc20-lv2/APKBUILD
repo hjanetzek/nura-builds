@@ -1,0 +1,42 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Foo YC20, a Yamaha YC-20 combo organ emulation (URI http://studionumbersix.com/foo/lv2/yc20;
+# zynthian's recipe install_foo-yc20.sh builds zynthian's fork). The Faust DSP is pre-generated
+# (gen/), written for Faust 0.9.73's architecture headers: those come from Faust's 0.9.73-mr2
+# branch as a second source (only the headers are used). DSP only: the LV2 UI is a separate GTK 2
+# library (not built; its entry in the TTL is skipped by hosts). zynthian's NULL -> 0 edits.
+pkgname=foo-yc20-lv2
+_commit=6d2d4a248976a5254c19aba3e141226fd49c5f5d
+_faust=40a919756d09c6b2de19b3299b7eef55997551dc
+pkgver=0_git20181025
+pkgrel=0
+pkgdesc="Foo YC20 combo organ (LV2)"
+url="https://github.com/zynthian/foo-yc20"
+arch="all"
+license="BSD-3-Clause"
+makedepends="lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/foo-yc20/archive/$_commit.tar.gz
+	faust-$_faust.tar.gz::https://github.com/grame-cncm/faust/archive/$_faust.tar.gz"
+builddir="$srcdir/foo-yc20-$_commit"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	sed -i 's/NULL/0/' src/faust-dsp-standalone.cpp src/faust-dsp-plugin.cpp
+	# Faust 0.9.73's headers expect faust/audio/dsp.h (zynthian's recipe links it the same way)
+	ln -s ../dsp/dsp.h "$srcdir"/faust-$_faust/architecture/faust/audio/dsp.h
+}
+
+build() {
+	make PREFIX=/usr CFLAGS="$CFLAGS -ffast-math -I$srcdir/faust-$_faust/architecture" \
+		src/foo-yc20.lv2/foo-yc20.so
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r src/foo-yc20.lv2 "$pkgdir"/usr/lib/lv2/
+	rm -f "$pkgdir"/usr/lib/lv2/foo-yc20.lv2/*.o
+}
+sha512sums="
+f09105be70a20e94c0ead613671f43cd11989e2c1458def6fe1c5363a5422f81b3125e4d471509ada5b7cf7c643b41428e9d5255a231c5fcc6f438fe40d9ff6e  foo-yc20-lv2-6d2d4a248976a5254c19aba3e141226fd49c5f5d.tar.gz
+56f32dc733acd4518081758787e4e6b929fd33e9d8ad8b4672eee5de7a88d8221d128ccf0be8d7efd288036bb2eb5ef5cd1584906ebd491f0ff4a9df1d5d3929  faust-40a919756d09c6b2de19b3299b7eef55997551dc.tar.gz
+"
