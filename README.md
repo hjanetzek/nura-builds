@@ -118,7 +118,7 @@ Write `targets/<name>.sh` (repositories, stages, inputs, devices) and a workflow
 
 ## Status
 
-As of 2026-11-05:
+As of 2026-11-06:
 
 - **zynthian** builds completely on GitHub: Qt 6.12, PySide6, the plugins stage (jalv, LV2 plugins,
   Pure Data, engines), the zynthian packages and the Duet image (first successful run 2026-11-05).
@@ -128,8 +128,12 @@ As of 2026-11-05:
 - **Publishing** as releases (`zynthian-latest`, the `aarch64` package repository) is new. To check:
   the CI image on the Duet, and `apk update`/`upgrade` from the releases repository (apk following
   GitHub's download redirect).
-- **Pixel 3**: work on `pixel3-*` branches (see [docs/google-blueline.md](docs/google-blueline.md)):
-  the SDM845 kernel built from an overlay of pmaports' recipe; the USB OTG patch series don't apply
-  to its 7.1-rc1 base yet.
+- **Pixel 3**: work on `pixel3-*` branches (see [docs/google-blueline.md](docs/google-blueline.md)
+  there). zynthian runs on it from these builds (rotated to landscape, scaled, touch rotated with
+  it). The SDM845 kernel from an overlay of pmaports' recipe, with the USB Type-C/OTG patch series
+  backported to its 7.1-rc1 base and the ALSA sequencer enabled: **USB host mode works**, with USB
+  MIDI and USB audio in zynthian (tested through a powered USB-C hub, which also charges the phone
+  and gives it Ethernet). Not tested yet: bus-powered devices without a hub (the phone's VBUS),
+  device mode (USB networking to a PC) with this kernel.
 - The Qt 6.12 recipes in `aports/qt6/` are a copy of Zrythm's (`tools/nura/qt6`): keep them in step,
   and link only one of them into a local pmaports checkout.
