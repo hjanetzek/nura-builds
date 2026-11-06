@@ -1,0 +1,48 @@
+# Single recipes on plugin-* branches, before they go into the zynthian target: a push builds each
+# recipe directory of aports/lv2, aports/pd or aports/engines that the branch changes against main,
+# one job per package (packages.yml: on the newest cached packages of the plugins stage), with its
+# own log and .apk artifact. When they build, add them to the meta package (or STAGE_plugins for
+# engines) and merge to main. The zynthian workflow only runs for main.
+#
+#   git switch -c plugin-foo-lv2 && <add aports/lv2/foo-lv2> && git push -u origin plugin-foo-lv2
+name: plugin
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["plugin-*"]
+    paths: ["aports/lv2/**", "aports/pd/**", "aports/engines/**"]
+
+concurrency:
+  group: plugin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changed:
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      packages: ${{ steps.c.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - id: c
+        run: |
+          # recipe directories changed against main, without the meta packages (they would only
+          # check their dependencies); the directory name is the pkgname
+          pkgs=$(git diff --name-only origin/main...HEAD -- aports/lv2 aports/pd aports/engines \
+            | cut -d/ -f2,3 | sort -u \
+            | while read -r d; do [ -f "aports/$d/APKBUILD" ] && echo "${d#*/}"; done \
+            | grep -vxE 'zynthian-lv2-plugins|zynthian-puredata' || true)
+          echo "changed: ${pkgs:-none}"
+          echo "packages=$(printf '%s\n' $pkgs | jq -R . | jq -sc 'map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: changed
+    if: needs.changed.outputs.packages != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.changed.outputs.packages) }}
+    uses: ./.github/workflows/packages.yml
+    with: { packages: "${{ matrix.package }}" }
+    secrets: inherit

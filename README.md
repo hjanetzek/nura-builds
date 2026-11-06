@@ -84,6 +84,22 @@ gh workflow run packages.yml --ref my-branch -f packages="dexed-lv2 eq10q-lv2"
 gh run download <run id>
 ```
 
+## New plugins on plugin-* branches
+
+`plugin.yml` builds new or changed recipes before they go into the zynthian target: a push to a
+`plugin-*` branch builds each recipe directory of `aports/lv2`, `aports/pd` or `aports/engines`
+that the branch changes against `main`, one job per package (through `packages.yml`, on the
+cached packages of the plugins stage), each with its own log and `.apk` artifact. The zynthian
+workflow doesn't run for these branches. When a package builds (and runs on a device), add it to
+the meta package (`zynthian-lv2-plugins`, `zynthian-puredata`) or, for an engine, to
+`STAGE_plugins`, and merge to `main`.
+
+```sh
+git switch -c plugin-foo-lv2      # add aports/lv2/foo-lv2/APKBUILD
+git push -u origin plugin-foo-lv2
+gh run list -w plugin -L 1
+```
+
 ## Secrets
 
 | Secret | Purpose |
