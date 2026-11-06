@@ -1,0 +1,88 @@
+# Build single packages by name, e.g. a new or changed recipe on a branch of zynthian-ui, without
+# running the whole target: starts from the newest cached packages of a stage (default: plugins,
+# which has Qt, PySide and the plugins), builds the named packages (forced; missing or outdated
+# dependencies too) and uploads the built .apk files and the build log as an artifact.
+#
+#   gh workflow run packages.yml -f packages="dexed-lv2 eq10q-lv2" -f zynthian-ui-ref=my-branch
+name: packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages: { description: "packages to build (pkgnames, space separated)", required: true }
+      target: { description: "target (targets/<target>.sh)", default: zynthian }
+      zynthian-ui-ref: { description: "zynthian-ui branch", default: nura }
+      zyncoder-ref: { description: "zyncoder branch", default: nura }
+      base: { description: "stage whose cached packages to start from", default: plugins }
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 350
+    env:
+      TARGET: ${{ inputs.target }}
+      NURA_WORK: /home/runner/nura-work
+      NURA_SRC: /home/runner/nura-src
+      NURA_OUT: /home/runner/nura-out
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      ZYNTHIAN_UI_REF: ${{ inputs.zynthian-ui-ref }}
+      ZYNCODER_REF: ${{ inputs.zyncoder-ref }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost || true
+          df -h /
+
+      # Cache keys: packages-<target>-<stage>-<signing key>-... (stage.yml); the newest match
+      - name: Cache prefix
+        id: key
+        run: |
+          kfp=$(printf '%s\n' "$NURA_ABUILD_KEY" | openssl rsa -pubout 2>/dev/null | sha256sum | cut -c1-8)
+          echo "prefix=packages-$TARGET-${{ inputs.base }}-$kfp-" >> "$GITHUB_OUTPUT"
+
+      - name: Cached packages of ${{ inputs.base }}
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          key: ${{ steps.key.outputs.prefix }}
+          restore-keys: ${{ steps.key.outputs.prefix }}
+          path: /home/runner/nura-out/packages.tar
+
+      - name: Set up pmbootstrap
+        run: |
+          echo "base: ${{ steps.cache.outputs.cache-matched-key || 'none, dependencies are built' }}"
+          scripts/setup.sh
+
+      - name: Build ${{ inputs.packages }}
+        env:
+          PACKAGES: ${{ inputs.packages }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          mkdir -p "$NURA_OUT" && touch "$NURA_OUT/start"
+          # shellcheck disable=SC2086 # a list
+          scripts/build-packages.sh $PACKAGES
+
+      - name: Built packages
+        if: always()
+        run: |
+          mkdir -p "$NURA_OUT/built"
+          [ -f "$NURA_OUT/start" ] && sudo find "$NURA_WORK/packages" -name '*.apk' -newer "$NURA_OUT/start" \
+            -exec cp {} "$NURA_OUT/built/" \; || true
+          sudo cp "$NURA_WORK/log.txt" "$NURA_OUT/built/" 2>/dev/null || true
+          sudo chown -R "$(id -u):$(id -g)" "$NURA_OUT/built"
+          ls -la "$NURA_OUT/built"
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: packages-${{ github.run_id }}
+          path: /home/runner/nura-out/built
+          retention-days: 7
+
+      - name: Build log
+        if: failure()
+        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true

@@ -55,12 +55,19 @@ jobs:
       - name: Cache key
         id: key
         run: |
+          # packages-<target>-<stage>-<signing key>-<previous stage>-<this stage's inputs>: the
+          # first part is the prefix of a partial match (restore-keys below), so a stage whose
+          # recipes changed starts from its last packages and builds only what is out of date
           if grep -q "^INPUTS_${{ inputs.stage }}=\"..*\"" targets/$TARGET.sh; then
             h=$(scripts/build.sh --hash ${{ inputs.stage }})
             prev=$(echo "${{ inputs.previous-key }}" | sha256sum | cut -c1-8)
             # The signing key's public half: packages signed with another key are untrusted
             kfp=$(printf '%s\n' "$NURA_ABUILD_KEY" | openssl rsa -pubout 2>/dev/null | sha256sum | cut -c1-8)
-            echo "key=packages-$TARGET-${{ inputs.stage }}-$h-$prev-$kfp" >> "$GITHUB_OUTPUT"
+            echo "key=packages-$TARGET-${{ inputs.stage }}-$kfp-$prev-$h" >> "$GITHUB_OUTPUT"
+            echo "partial=packages-$TARGET-${{ inputs.stage }}-$kfp-$prev-" >> "$GITHUB_OUTPUT"
+            # Transitional (remove after the first run with the new key order): the cache of the
+            # same inputs under the old order <inputs>-<previous>-<signing key>
+            echo "old=packages-$TARGET-${{ inputs.stage }}-$h-" >> "$GITHUB_OUTPUT"
           else
             echo "key=" >> "$GITHUB_OUTPUT"
           fi
@@ -71,7 +78,21 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           key: ${{ steps.key.outputs.key }}
+          # Same signing key and previous stage, other inputs: only the same previous stage, as
+          # a rebuilt dependency (a Qt module after qtbase) isn't rebuilt by its version alone
+          restore-keys: |
+            ${{ steps.key.outputs.partial }}
+            ${{ steps.key.outputs.old }}
           path: /home/runner/nura-out/packages.tar
+
+      # A partial match: unpack the stage's last packages over the previous stage's; pmbootstrap
+      # then builds only the packages whose pkgver-pkgrel isn't in the repository (a recipe
+      # change without a pkgrel bump isn't rebuilt)
+      - name: Earlier packages of ${{ inputs.stage }}
+        if: steps.cache.outputs.cache-matched-key != '' && steps.cache.outputs.cache-hit != 'true'
+        run: |
+          echo "from ${{ steps.cache.outputs.cache-matched-key }}"
+          sudo tar -C "$NURA_WORK" --same-owner -xf /home/runner/nura-out/packages.tar
 
       - name: Build ${{ inputs.stage }}
         if: steps.cache.outputs.cache-hit != 'true'
