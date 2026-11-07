@@ -29,6 +29,7 @@ makedepends="
 	fontconfig-dev
 	freetype-dev
 	jack-dev
+	libbsd-dev
 	libx11-dev
 	libxcursor-dev
 	libxext-dev
@@ -78,6 +79,8 @@ build() {
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
 		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
 	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	# arc4random(): not in musl (the code uses it unless glibc < 2.36): from libbsd
+	export CXXFLAGS="$CXXFLAGS -include bsd/stdlib.h" LDFLAGS="$LDFLAGS -lbsd"
 	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_AVX=OFF
 	# at most 3 jobs: the JUCE translation units need ~1 GB each
 	cmake --build build --parallel 3 --target VASTvaporizer2_LV2
