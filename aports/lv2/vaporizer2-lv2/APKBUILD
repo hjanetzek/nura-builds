@@ -1,0 +1,120 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Vaporizer2 (URI https://www.vast-dynamics.com/plugins/VASTvaporizer2; ZynthianOS has openSUSE's build of
+# the same commit, with its data in /usr/share/Vaporizer2). JUCE 7.0.9, LV2 only, without AVX
+# (-DBUILD_AVX=OFF); FFTW from the system. Data: -data (by install_if: Noises, the small tables,
+# presets under 256 KB, ~65 MB), -data-extra (optional: the Analog and Digital wavetable sets and
+# the large presets, ~910 MB).
+# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
+# only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
+# loads X11 only when the editor opens).
+pkgname=vaporizer2-lv2
+pkgver=3.5.0_git20240914
+pkgrel=0
+subpackages="$pkgname-data:_data:noarch $pkgname-data-extra:_data_extra:noarch"
+_commit=1c56c4be304255f1c397dad725ea784f15a55ef5
+_juce=d054f0d14dcac387aebda44ce5d792b5e7a625b3
+_vastvaporizer_source_mufft=47bb08652eab399c2c7d460abe5184857110f130
+_vastvaporizer_source_anamark_tuning_library=9d6160141f53235807ac65381ab3839a35ab4856
+_clap_juce_extensions=54d83e121545490fdbb2d3dec3ba0c1da6005dde
+_clap_juce_extensions_clap_libs_clap=41964fa3f44fdbf6feb20df528a9cdf2cc3b05ba
+_clap_juce_extensions_clap_libs_clap_helpers=41e1086488f5cd27da871d07edb8eccea99e556d
+pkgdesc="VAST Dynamics Vaporizer2 hybrid wavetable synthesizer (LV2)"
+url="https://github.com/VASTDynamics/Vaporizer2"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+makedepends="
+	alsa-lib-dev
+	cmake
+	fftw-dev
+	fontconfig-dev
+	freetype-dev
+	jack-dev
+	libx11-dev
+	libxcursor-dev
+	libxext-dev
+	libxinerama-dev
+	libxrandr-dev
+	mesa-dev
+	samurai
+	"
+source="$pkgname-$_commit.tar.gz::https://github.com/VASTDynamics/Vaporizer2/archive/$_commit.tar.gz
+	juce-${_juce}.tar.gz::https://github.com/juce-framework/JUCE/archive/${_juce}.tar.gz
+	vastvaporizer_source_mufft-${_vastvaporizer_source_mufft}.tar.gz::https://github.com/Themaister/muFFT/archive/${_vastvaporizer_source_mufft}.tar.gz
+	vastvaporizer_source_anamark_tuning_library-${_vastvaporizer_source_anamark_tuning_library}.tar.gz::https://github.com/zardini123/AnaMark-Tuning-Library/archive/${_vastvaporizer_source_anamark_tuning_library}.tar.gz
+	clap_juce_extensions-${_clap_juce_extensions}.tar.gz::https://github.com/free-audio/clap-juce-extensions/archive/${_clap_juce_extensions}.tar.gz
+	clap_juce_extensions_clap_libs_clap-${_clap_juce_extensions_clap_libs_clap}.tar.gz::https://github.com/free-audio/clap/archive/${_clap_juce_extensions_clap_libs_clap}.tar.gz
+	clap_juce_extensions_clap_libs_clap_helpers-${_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz::https://github.com/free-audio/clap-helpers/archive/${_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz
+	"
+builddir="$srcdir/Vaporizer2-$_commit"
+options="!check" # no tests
+
+prepare() {
+	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF
+	# git submodules (outer ones first)
+	rm -rf JUCE && mv "$srcdir"/JUCE-${_juce} JUCE
+	rm -rf VASTvaporizer/Source/muFFT && mv "$srcdir"/muFFT-${_vastvaporizer_source_mufft} VASTvaporizer/Source/muFFT
+	rm -rf VASTvaporizer/Source/AnaMark-Tuning-Library && mv "$srcdir"/AnaMark-Tuning-Library-${_vastvaporizer_source_anamark_tuning_library} VASTvaporizer/Source/AnaMark-Tuning-Library
+	rm -rf clap-juce-extensions && mv "$srcdir"/clap-juce-extensions-${_clap_juce_extensions} clap-juce-extensions
+	rm -rf clap-juce-extensions/clap-libs/clap && mv "$srcdir"/clap-${_clap_juce_extensions_clap_libs_clap} clap-juce-extensions/clap-libs/clap
+	rm -rf clap-juce-extensions/clap-libs/clap-helpers && mv "$srcdir"/clap-helpers-${_clap_juce_extensions_clap_libs_clap_helpers} clap-juce-extensions/clap-libs/clap-helpers
+	default_prepare
+	# LV2 only
+	sed -i 's/set(JUCE_FORMATS AU VST3 Standalone)/set(JUCE_FORMATS)/; s/FORMATS AU VST3 Standalone/FORMATS /' \
+		CMakeLists.txt
+}
+
+build() {
+	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
+	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "");
+	# <utility> for std::exchange, which older JUCE gets indirectly from glibc's libstdc++ headers
+	# -Wno-template-body: GCC 15 errors in templates that are never instantiated (chowdsp_utils)
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -include utility -Wno-template-body \
+		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
+		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_AVX=OFF
+	# at most 3 jobs: the JUCE translation units need ~1 GB each
+	cmake --build build --parallel 3 --target VASTvaporizer2_LV2
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2 "$pkgdir"/usr/share/Vaporizer2
+	# bundle names can contain spaces
+	find build -type d -path '*/LV2/*.lv2' -prune -exec cp -r {} "$pkgdir"/usr/lib/lv2/ \;
+	# the plugin looks for its data in /usr/share/Vaporizer2 (VASTAudioProcessor::getVSTPath)
+	cp -r VASTvaporizer/Noises VASTvaporizer/Tables VASTvaporizer/Presets "$pkgdir"/usr/share/Vaporizer2/
+}
+
+_data() {
+	pkgdesc="$pkgdesc (Noises, small tables, presets under 256 KB)"
+	depends=""
+	install_if="$pkgname=$pkgver-r$pkgrel"
+	amove usr/share/Vaporizer2
+	# the large parts go to -data-extra
+	local d="$subpkgdir"/usr/share/Vaporizer2 x="$srcdir"/data-extra
+	mkdir -p "$x"/Tables "$x"/Presets
+	mv "$d"/Tables/Analog "$d"/Tables/Digital "$x"/Tables/
+	find "$d"/Presets -type f -size +255k -exec mv {} "$x"/Presets/ \;
+}
+
+_data_extra() {
+	pkgdesc="$pkgdesc (Analog and Digital wavetable sets, large presets)"
+	depends="$pkgname-data=$pkgver-r$pkgrel"
+	mkdir -p "$subpkgdir"/usr/share/Vaporizer2
+	cp -r "$srcdir"/data-extra/* "$subpkgdir"/usr/share/Vaporizer2/
+}
+sha512sums="
+d154f5f33285aac9170ad3a88e6297794750a738f54fae54ead7d8c15076cfa3bf216a6a066b02fd47f4e3e4b331cfbefe55455691890911797138d526cf9312  vaporizer2-lv2-1c56c4be304255f1c397dad725ea784f15a55ef5.tar.gz
+03856031cce01607c6b4f976500ebef1ee9879fda1faf45927e00619399ae6764d217a1d067193c9d88abdb94a4b36ba632673a6581708aecd363a830a3899c9  juce-d054f0d14dcac387aebda44ce5d792b5e7a625b3.tar.gz
+cd718c064dc26727f0520f02c38b61ce5d8a8c7a3daa53002455db54a0a89dcb130f153b84f80c09efc023c212384208ee694d3134557de9880385e7292443da  vastvaporizer_source_mufft-47bb08652eab399c2c7d460abe5184857110f130.tar.gz
+b03337de70c9a0b513051ba744da917d8efbeb0705fa9bb17a397d90380832ae6babcd823ef6b604bda32c80a3388787cd0b8aeb90395a1b93f7b2ce2340ec8c  vastvaporizer_source_anamark_tuning_library-9d6160141f53235807ac65381ab3839a35ab4856.tar.gz
+5597b67897046d3c10d8b89bc90ff30dc0e925981f0fc7e4028441df1fb738c608fe3801c607feb568ba2e4f5c45ede79ca503d30a4cd1b1d8272aca60d89b26  clap_juce_extensions-54d83e121545490fdbb2d3dec3ba0c1da6005dde.tar.gz
+13d72e478cd96eec931d0126281d44a673e5053715367a5fa34a99f4c05682324513b2e4b148c767495fdd4f07782c5193f98e8ea0a332668be8b649bf0e7826  clap_juce_extensions_clap_libs_clap-41964fa3f44fdbf6feb20df528a9cdf2cc3b05ba.tar.gz
+c57f77536e73d447e5f4996acfa3d7c3647a418fc8c6661356688b68710acddc98e53d05e1d88d8da97f65cae8717d04bec4b1cd4d2da5ee30760ab2f3374980  clap_juce_extensions_clap_libs_clap_helpers-41e1086488f5cd27da871d07edb8eccea99e556d.tar.gz
+"
