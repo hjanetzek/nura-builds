@@ -55,7 +55,6 @@ for host in "$@"; do
 	ssh "$host" 'sudo apk update >/dev/null 2>&1; sudo apk upgrade --simulate 2>/dev/null' |
 		grep -E '(Upgrading|Installing|Downgrading|Purging) ' | sed -E 's/^\( *[0-9]+\/[0-9]+\) //' \
 		> "$tmp/upgrades" || true
-	ssh "$host" 'apk info -v 2>/dev/null' | sort -u > "$tmp/installed-v"
 	ssh "$host" 'apk info 2>/dev/null' | sort -u > "$tmp/installed"
 	comm -23 "$tmp/repo-names" "$tmp/installed" |
 		grep -vE -- '-(dev|dbg|doc|pyc)$|^qt6-|^pyside6' > "$tmp/missing" || true
@@ -69,17 +68,13 @@ for host in "$@"; do
 	[ -n "$apply" ] || continue
 	changed=$(grep -cE 'zynthian|-lv2|^.*(Upgrading|Installing) pd-' "$tmp/upgrades" || true)
 	ssh "$host" 'sudo apk upgrade 2>&1 | grep -E "ERROR|WARNING|^OK"' || true
-	# Packages of this repository still older than the repository's version
-	stale=
-	while read -r name version; do
-		cur=$(grep -E "^$name-[0-9]" "$tmp/installed-v" | head -n 1 | sed "s/^$name-//")
-		[ -n "$cur" ] && [ "$cur" != "$version" ] || continue
-		# shellcheck disable=SC2029
-		now=$(ssh "$host" "apk info -ev $name 2>/dev/null" | sed "s/^$name-//")
-		[ "$now" = "$version" ] || stale="$stale $name"
-	done < "$tmp/repo"
+	# Packages of this repository that are still older than what is available (apk upgrade leaves
+	# some, seen with zynthian-ui and zyncoder): apk version -l '<' lists them
+	stale=$(ssh "$host" "apk version -l '<' -q 2>/dev/null" | sort -u | comm -12 - "$tmp/repo-names" |
+		tr '\n' ' ')
+	stale=${stale% }
 	if [ -n "$stale" ]; then
-		echo "upgrading by name:$stale"
+		echo "upgrading by name: $stale"
 		# shellcheck disable=SC2029 # expanded here on purpose
 		ssh "$host" "sudo apk add -u $stale 2>&1 | grep -E 'ERROR|^OK'" || true
 		changed=1
