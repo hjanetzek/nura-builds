@@ -146,6 +146,15 @@ jobs:
           key: ${{ steps.key.outputs.key }}
           path: /home/runner/nura-out/packages.tar
 
+      # Only the newest entry of a stage is ever restored: delete this stage's older ones on this
+      # branch (and its partial caches), or they fill GitHub's 10 GB limit and evict the others
+      - name: Delete the stage's older cache entries
+        if: steps.key.outputs.key != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: scripts/prune-cache.sh "${{ steps.key.outputs.key }}"
+
       # A failed build still saved what it built (scripts/build.sh): cache it under a key that is
       # never an exact match (only a successful build saves the stage's key) but has the partial
       # prefix, so the next attempt with the same previous stage builds only what is missing
