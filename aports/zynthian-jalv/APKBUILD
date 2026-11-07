@@ -5,19 +5,24 @@
 # Installed as /usr/lib/zynthian/bin/jalv, beside Alpine's jalv; zynthian's environment
 # (desktop/zynthian_desktop_env.sh) puts /usr/lib/zynthian/bin first on PATH.
 #
-# Only the JACK command line host (no GTK/Qt GUIs, no suil, no PortAudio). From a local
-# checkout:
+# The JACK command line host, and in zynthian-jalv-gtk the GTK frontend jalv.gtk3 (suil), which
+# shows plugin GUIs (X11 UIs embedded through suil's x11-in-gtk3, GTK3 UIs) in sessions that can
+# show other windows (postmarketos-ui-zynthian-niri). gtk-hide-ui.patch: start it with the window
+# hidden (-H) and show/hide it by command ("ui show", "ui hide"), so that zynthian opens a plugin's
+# GUI on demand; for zynthian/jalv upstream. No Qt frontend (Alpine's suil has no Qt5 wrapper), no
+# PortAudio. From a local checkout:
 #   pmbootstrap build --src=/path/to/jalv zynthian-jalv
 pkgname=zynthian-jalv
 _commit=e01b6d64651d451107640b1a502e06c9ec10e353
 pkgver=1.12.1_git20260330
-pkgrel=0
+pkgrel=1
 pkgdesc="zynthian's jalv: LV2 host with the asynchronous command line zynthian uses"
 url="https://github.com/zynthian/jalv"
 arch="aarch64 x86_64"
 license="ISC"
 options="!check"
 makedepends="
+	gtk+3.0-dev
 	jack-dev
 	lilv-dev
 	lv2-dev
@@ -25,19 +30,23 @@ makedepends="
 	serd-dev
 	sord-dev
 	sratom-dev
+	suil-dev
 	zix-dev
 	"
-source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/jalv/archive/$_commit.tar.gz"
+subpackages="$pkgname-gtk"
+source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/jalv/archive/$_commit.tar.gz
+	gtk-hide-ui.patch
+	"
 builddir="$srcdir/jalv-$_commit"
 
 build() {
 	abuild-meson \
 		--wrap-mode=nodownload \
 		-Djack=enabled \
-		-Dgtk3=disabled \
+		-Dgtk3=enabled \
 		-Dqt5=disabled \
 		-Dportaudio=disabled \
-		-Dsuil=disabled \
+		-Dsuil=enabled \
 		-Dtests=disabled \
 		. output
 	meson compile -C output
@@ -47,6 +56,13 @@ package() {
 	install -Dm755 output/jalv -t "$pkgdir"/usr/lib/zynthian/bin/
 }
 
+gtk() {
+	pkgdesc="$pkgdesc (GTK frontend: plugin GUIs)"
+	depends="$pkgname=$pkgver-r$pkgrel"
+	install -Dm755 "$builddir"/output/jalv.gtk3 -t "$subpkgdir"/usr/lib/zynthian/bin/
+}
+
 sha512sums="
 94d0935959fa86bcb06311e60446d07b170872c870a8d107e9ec1469e89f40c9fe63028f05e6199ce0fac3d1cf2ed19a18906faae14c234a2d72b4ffef515301  zynthian-jalv-e01b6d64651d451107640b1a502e06c9ec10e353.tar.gz
+4575c313f2ffc63ecbc18c1bcbd177e78fc2315c5d0bea985dd54f739191244f02819b54c8d8247d197653d3be537fe7123676924491e526e662c4f3c7d402d7  gtk-hide-ui.patch
 "
