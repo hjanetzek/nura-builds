@@ -16,15 +16,20 @@ Pure Data externals, the kiosk package.
 ## Install
 
 Each of them provides `zynthian-ui` (versioned, so apk installs only one of them) and installs where
-zynthian-ui does. On a Nura zynthian install (or an image), switch with
+zynthian-ui does. On a Nura zynthian install (or an image), where the kiosk package
+(postmarketos-ui-zynthian) depends on zynthian-ui, switch with
 
 ```sh
-sudo apk add zynthian-ui-tomita '!zynthian-ui'      # or zynthian-ui-vangelis
+sudo apk del zynthian-ui              # only drops it from the world file: the kiosk still needs it
+sudo apk add zynthian-ui-tomita       # replaces it (or zynthian-ui-vangelis)
 sudo systemctl restart tinydm
 ```
 
-and back with `sudo apk add zynthian-ui '!zynthian-ui-tomita'`. The kiosk session
-(postmarketos-ui-zynthian) starts the Tk UI when the installed zynthian-ui has no Qt UI.
+and back the same way (`apk del zynthian-ui-tomita`, `apk add zynthian-ui`). Not
+`apk add zynthian-ui-tomita '!zynthian-ui'`: the `!` excludes the providers of the name too. From a
+host, zynthian-ui's `nura/tools/switch_ui.sh qt|vangelis|tomita` does it (checked on the Duet:
+Qt -> tomita -> vangelis -> Qt). The kiosk session starts the Tk UI when the installed zynthian-ui
+has no Qt UI (postmarketos-ui-zynthian r16; the patched launcher falls back as well).
 
 ## The patches
 
