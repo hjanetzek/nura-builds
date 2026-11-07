@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 21:55:06 +0100
+Subject: [PATCH] ctrldev: load user drivers without a link in the code tree
+
+User drivers in $ZYNTHIAN_MY_DATA_DIR/ctrldev are imported as
+zyngine.ctrldev_user.<module> through a zyngine/ctrldev_user link that the
+ZynthianOS update scripts create. Where the code is read-only (installed
+package) there is no link: register zyngine.ctrldev_user as a package whose
+path is the user directory, and scan that directory. With the link present
+nothing changes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 8a9361677d68dd9b7f6780755bfa81e95489eb8d)
+---
+ zyngine/zynthian_ctrldev_manager.py | 32 ++++++++++++++++++++++++++++-
+ 1 file changed, 31 insertions(+), 1 deletion(-)
+
+diff --git a/zyngine/zynthian_ctrldev_manager.py b/zyngine/zynthian_ctrldev_manager.py
+index 60d5aa02..10edf8a5 100644
+--- a/zyngine/zynthian_ctrldev_manager.py
++++ b/zyngine/zynthian_ctrldev_manager.py
+@@ -26,7 +26,9 @@
+ 
+ from zynconf import zynthian_paths
+ import os
++import sys
+ import glob
++import types
+ import logging
+ import importlib
+ import traceback
+@@ -41,6 +43,30 @@ from zyncoder.zyncore import lib_zyncore
+ DRIVER_DEVELOPMENT = False
+ #DRIVER_DEVELOPMENT = True
+ 
++# ------------------------------------------------------------------------------
++# User drivers
++# ------------------------------------------------------------------------------
++# User drivers live in $ZYNTHIAN_MY_DATA_DIR/ctrldev and are imported as
++# zyngine.ctrldev_user.<module>. ZynthianOS links zyngine/ctrldev_user to that
++# directory. Where the code is read-only (installed package) there is no link:
++# register the package with its path pointing to the user directory instead.
++
++user_ctrldev_dir = f"{zynthian_paths.my_data_dir}/ctrldev"
++
++
++def setup_user_ctrldev_package():
++    if os.path.exists(f"{zynthian_paths.ui_dir}/zyngine/ctrldev_user") or "zyngine.ctrldev_user" in sys.modules:
++        return
++    package = types.ModuleType("zyngine.ctrldev_user")
++    package.__path__ = [user_ctrldev_dir]
++    package.__package__ = "zyngine.ctrldev_user"
++    sys.modules["zyngine.ctrldev_user"] = package
++    import zyngine
++    zyngine.ctrldev_user = package
++
++
++setup_user_ctrldev_package()
++
+ # ------------------------------------------------------------------------------
+ # Zynthian Control Device Manager Class
+ # ------------------------------------------------------------------------------
+@@ -74,7 +100,11 @@ class zynthian_ctrldev_manager():
+ 
+         # Find and load new driver modules
+         for dirname in self.ctrldev_dirnames:
+-            for module_path in glob.glob(f"{self.ctrldev_path_base}/{dirname}/*.py"):
++            if dirname == "ctrldev_user" and not os.path.exists(f"{self.ctrldev_path_base}/{dirname}"):
++                dpath = user_ctrldev_dir
++            else:
++                dpath = f"{self.ctrldev_path_base}/{dirname}"
++            for module_path in glob.glob(f"{dpath}/*.py"):
+                 module_name = Path(module_path).stem
+                 if not module_name.startswith("__") and not module_name.startswith("zynthian_ctrldev_base") and module_name not in self.driver_classes:
+                     try:

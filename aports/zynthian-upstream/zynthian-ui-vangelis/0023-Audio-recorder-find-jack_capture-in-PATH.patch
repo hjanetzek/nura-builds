@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Thu, 5 Nov 2026 13:23:19 +0100
+Subject: [PATCH] Audio recorder: find jack_capture in PATH
+
+The recorder started /usr/local/bin/jack_capture, where ZynthianOS
+installs it; distributions install it in PATH (Alpine: jack_capture), so
+recording failed with "No such file or directory". Use the one in PATH,
+falling back to /usr/local/bin. The Nura kiosk package depends on it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ zyngine/zynthian_audio_recorder.py | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/zyngine/zynthian_audio_recorder.py b/zyngine/zynthian_audio_recorder.py
+index cd0395a4..5a4afdb1 100644
+--- a/zyngine/zynthian_audio_recorder.py
++++ b/zyngine/zynthian_audio_recorder.py
+@@ -27,6 +27,7 @@
+ from zynconf import zynthian_paths
+ import os
+ import logging
++import shutil
+ from subprocess import Popen
+ from datetime import datetime
+ 
+@@ -68,7 +69,9 @@ class zynthian_audio_recorder:
+             # Already recording
+             return False
+ 
+-        cmd = ["/usr/local/bin/jack_capture", "--daemon", "--bitdepth", "16", "--bufsize", "30", "--maxbufsize", "120"]
++        # ZynthianOS installs jack_capture in /usr/local/bin, distributions in PATH
++        jack_capture = shutil.which("jack_capture") or "/usr/local/bin/jack_capture"
++        cmd = [jack_capture, "--daemon", "--bitdepth", "16", "--bufsize", "30", "--maxbufsize", "120"]
+         single_chan = True
+         for chain in self.state_manager.chain_manager.chains.values():
+             if chain.zynmixer_proc and chain.zynmixer_proc.controllers_dict["record"].value:

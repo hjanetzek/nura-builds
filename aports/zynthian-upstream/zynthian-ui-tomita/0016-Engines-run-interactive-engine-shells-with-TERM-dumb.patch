@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Tue, 3 Nov 2026 00:35:33 +0100
+Subject: [PATCH] Engines: run interactive engine shells with TERM=dumb
+
+Engines like fluidsynth are driven through pexpect, waiting for their
+prompt. With a terminal type in the environment (a terminal, or the cage
+session's TERM=linux) readline switches on bracketed paste and prints
+"\x1b[?2004h> ", so fluidsynth's "\n> " prompt never matched: zynthian
+waited 30 s and fluidsynth ran without a soundfont, silent. ZynthianOS's
+systemd service has no TERM, which readline treats like dumb.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 61dcd7e350df32201fbb0509866576478b32e30f)
+---
+ zyngine/zynthian_engine.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/zyngine/zynthian_engine.py b/zyngine/zynthian_engine.py
+index 88b6ec62..927f7f5b 100644
+--- a/zyngine/zynthian_engine.py
++++ b/zyngine/zynthian_engine.py
+@@ -67,6 +67,11 @@ class zynthian_basic_engine:
+         self.proc_exit = False
+         self.command = command
+         self.command_env = os.environ.copy()
++        # Engines' interactive shells are driven through pexpect. With a terminal type set
++        # (from a terminal or a desktop session; ZynthianOS's systemd service has none),
++        # readline switches on bracketed paste and prefixes its prompt with "\x1b[?2004h",
++        # so the prompt never matches (fluidsynth timed out on postmarketOS).
++        self.command_env['TERM'] = "dumb"
+         self.command_prompt = prompt
+         self.command_cwd = cwd
+         self.ignore_not_on_gui = False

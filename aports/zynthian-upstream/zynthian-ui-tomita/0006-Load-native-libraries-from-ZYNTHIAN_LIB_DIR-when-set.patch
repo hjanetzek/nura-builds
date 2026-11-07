@@ -1,0 +1,127 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 21:54:21 +0100
+Subject: [PATCH] Load native libraries from ZYNTHIAN_LIB_DIR when set
+
+A package installs the zynlibs to a library directory (e.g.
+/usr/lib/zynthian) instead of the build directories in the source tree.
+zynthian_paths.native_lib() returns the library from ZYNTHIAN_LIB_DIR if
+it's there, else from the build directory as before.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 50ddf333455f48374b309d3c7ec4a6dc25fc1990)
+---
+ zynconf/zynthian_paths.py                | 13 +++++++++++++
+ zyngine/zynthian_engine_clippy.py        |  2 +-
+ zynlibs/zynaudioplayer/zynaudioplayer.py |  3 ++-
+ zynlibs/zynmixer/zynmixer.py             |  4 ++--
+ zynlibs/zynseq/zynseq.py                 |  2 +-
+ zynlibs/zynsmf/zynsmf.py                 |  3 ++-
+ 6 files changed, 21 insertions(+), 6 deletions(-)
+
+diff --git a/zynconf/zynthian_paths.py b/zynconf/zynthian_paths.py
+index 432db653..0956cf6d 100644
+--- a/zynconf/zynthian_paths.py
++++ b/zynconf/zynthian_paths.py
+@@ -52,3 +52,16 @@ recipe_dir = _env("ZYNTHIAN_RECIPE_DIR", f"{sys_dir}/scripts/recipes")
+ 
+ # Writable LV2 directory where zynthian installs plugins and presets
+ lv2_dir = _env("ZYNTHIAN_LV2_DIR", f"{plugins_dir}/lv2")
++
++# Installed native libraries (e.g. /usr/lib/zynthian in a package). Unset: each
++# library is loaded from its build directory in the source tree.
++lib_dir = os.environ.get("ZYNTHIAN_LIB_DIR", "")
++
++
++def native_lib(fname, build_dir):
++    """Path of native library fname: from ZYNTHIAN_LIB_DIR if it's there, else from build_dir"""
++    if lib_dir:
++        fpath = os.path.join(lib_dir, fname)
++        if os.path.isfile(fpath):
++            return fpath
++    return os.path.join(build_dir, fname)
+diff --git a/zyngine/zynthian_engine_clippy.py b/zyngine/zynthian_engine_clippy.py
+index e3cd7eda..c8d897ad 100644
+--- a/zyngine/zynthian_engine_clippy.py
++++ b/zyngine/zynthian_engine_clippy.py
+@@ -90,7 +90,7 @@ class zynthian_engine_clippy(zynthian_engine):
+     # ---------------------------------------------------------------------------
+ 
+     def start(self):
+-        self.libclippy = ctypes.cdll.LoadLibrary(f"{zynthian_paths.ui_dir}/zynlibs/zynclippy/build/libzynclippy.so")
++        self.libclippy = ctypes.cdll.LoadLibrary(zynthian_paths.native_lib("libzynclippy.so", f"{zynthian_paths.ui_dir}/zynlibs/zynclippy/build"))
+         self.libclippy.init()
+         self.libclippy.getGain.restype = ctypes.c_float
+         self.libclippy.getJackname.restype = ctypes.c_char_p
+diff --git a/zynlibs/zynaudioplayer/zynaudioplayer.py b/zynlibs/zynaudioplayer/zynaudioplayer.py
+index 81616120..2392b8f2 100644
+--- a/zynlibs/zynaudioplayer/zynaudioplayer.py
++++ b/zynlibs/zynaudioplayer/zynaudioplayer.py
+@@ -25,6 +25,7 @@
+ # ********************************************************************
+ 
+ import ctypes
++from zynconf import zynthian_paths
+ import logging
+ #from _ctypes import dlclose
+ from os.path import dirname, realpath
+@@ -49,7 +50,7 @@ def cb_handler(id, play_state, loop, pos, varispeed):
+ 
+ try:
+     # Load or increment ref to lib
+-    libaudioplayer = ctypes.cdll.LoadLibrary(dirname(realpath(__file__))+"/build/libzynaudioplayer.so")
++    libaudioplayer = ctypes.cdll.LoadLibrary(zynthian_paths.native_lib("libzynaudioplayer.so", dirname(realpath(__file__)) + "/build"))
+     libaudioplayer.get_codec.restype = ctypes.c_char_p
+     libaudioplayer.get_duration.restype = ctypes.c_float
+     libaudioplayer.get_position.restype = ctypes.c_float
+diff --git a/zynlibs/zynmixer/zynmixer.py b/zynlibs/zynmixer/zynmixer.py
+index 6868783d..e1ebe128 100644
+--- a/zynlibs/zynmixer/zynmixer.py
++++ b/zynlibs/zynmixer/zynmixer.py
+@@ -56,10 +56,10 @@ class ZynMixer():
+         self.mixbus = is_mixbus
+         if is_mixbus:
+             self.lib_zynmixer = ctypes.cdll.LoadLibrary(
+-                f"{zynthian_paths.ui_dir}/zynlibs/zynmixer/build/libzynmixer_mixbus.so")
++                zynthian_paths.native_lib("libzynmixer_mixbus.so", f"{zynthian_paths.ui_dir}/zynlibs/zynmixer/build"))
+         else:
+             self.lib_zynmixer = ctypes.cdll.LoadLibrary(
+-                f"{zynthian_paths.ui_dir}/zynlibs/zynmixer/build/libzynmixer.so")
++                zynthian_paths.native_lib("libzynmixer.so", f"{zynthian_paths.ui_dir}/zynlibs/zynmixer/build"))
+ 
+         self.lib_zynmixer.addStrip.restype = ctypes.c_int8
+         self.lib_zynmixer.removeStrip.argtypes = [ctypes.c_uint8]
+diff --git a/zynlibs/zynseq/zynseq.py b/zynlibs/zynseq/zynseq.py
+index 97f020a1..da2c6fe1 100644
+--- a/zynlibs/zynseq/zynseq.py
++++ b/zynlibs/zynseq/zynseq.py
+@@ -192,7 +192,7 @@ class zynseq(zynthian_engine):
+         self.custom_gui_fpath = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_tempo.py"
+ 
+         try:
+-            self.libseq = ctypes.cdll.LoadLibrary(dirname(realpath(__file__))+"/build/libzynseq.so")
++            self.libseq = ctypes.cdll.LoadLibrary(zynthian_paths.native_lib("libzynseq.so", dirname(realpath(__file__)) + "/build"))
+             self.libseq.getSequenceName.restype = ctypes.c_char_p
+ 
+             self.libseq.addNote.argtypes = [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_float, ctypes.c_float]
+diff --git a/zynlibs/zynsmf/zynsmf.py b/zynlibs/zynsmf/zynsmf.py
+index 4185a763..95bc1979 100644
+--- a/zynlibs/zynsmf/zynsmf.py
++++ b/zynlibs/zynsmf/zynsmf.py
+@@ -24,6 +24,7 @@
+ # ********************************************************************
+ 
+ import ctypes
++from zynconf import zynthian_paths
+ from _ctypes import dlclose
+ from os.path import dirname, realpath
+ import os
+@@ -88,7 +89,7 @@ def init():
+     global libsmf
+     try:
+         libsmf = ctypes.cdll.LoadLibrary(
+-            dirname(realpath(__file__)) + "/build/libzynsmf.so")
++            zynthian_paths.native_lib("libzynsmf.so", dirname(realpath(__file__)) + "/build"))
+         libsmf.addSmf.restype = ctypes.c_ulong
+         libsmf.unload.argtypes = [ctypes.c_ulong]
+         libsmf.removeSmf.argtypes = [ctypes.c_ulong]

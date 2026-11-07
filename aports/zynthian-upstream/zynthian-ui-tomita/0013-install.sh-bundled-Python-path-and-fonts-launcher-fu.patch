@@ -1,0 +1,64 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 22:31:10 +0100
+Subject: [PATCH] install.sh: bundled Python path and fonts; launcher:
+ fullscreen switch
+
+- /usr/bin/zynthian adds $ZYNTHIAN_DIR/python to PYTHONPATH when it exists
+  (Python packages bundled by a package).
+- The UI fonts (Audiowide, ...) are linked to /usr/share/fonts/zynthian for
+  fontconfig; Tk fell back to another font before.
+- ZYNTHIAN_FULLSCREEN=1 drops DISPLAY_WIDTH/HEIGHT so the UI uses the whole
+  screen (kiosk).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit f7094631ad806ffef3d3dc601b7f8eaa4c65c537)
+---
+ desktop/install.sh          | 8 ++++++++
+ desktop/zynthian_desktop.sh | 5 +++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/desktop/install.sh b/desktop/install.sh
+index ff300455..20cd11e4 100755
+--- a/desktop/install.sh
++++ b/desktop/install.sh
+@@ -67,8 +67,16 @@ install_ui() {
+ 	#!/bin/sh
+ 	export ZYNTHIAN_DIR="\${ZYNTHIAN_DIR:-$PREFIX/share/zynthian}"
+ 	export ZYNTHIAN_LIB_DIR="\${ZYNTHIAN_LIB_DIR:-$PREFIX/lib/zynthian}"
++	# Python packages bundled with the package (not packaged by the distribution)
++	if [ -d "\$ZYNTHIAN_DIR/python" ]; then
++		export PYTHONPATH="\$ZYNTHIAN_DIR/python\${PYTHONPATH:+:\$PYTHONPATH}"
++	fi
+ 	exec "\$ZYNTHIAN_DIR/zynthian-ui/desktop/zynthian_desktop.sh" "\$@"
+ 	EOF
++
++	# The UI's fonts (Audiowide, ...), found by Tk through fontconfig
++	mkdir -p "$destdir$PREFIX/share/fonts"
++	ln -sfn ../zynthian/zynthian-ui/fonts "$destdir$PREFIX/share/fonts/zynthian"
+ 	chmod 755 "$destdir$PREFIX/bin/zynthian"
+ 
+ 	# Byte-compile: the installed tree is read-only at run time
+diff --git a/desktop/zynthian_desktop.sh b/desktop/zynthian_desktop.sh
+index 993d9de3..f945d0f7 100755
+--- a/desktop/zynthian_desktop.sh
++++ b/desktop/zynthian_desktop.sh
+@@ -9,6 +9,7 @@
+ # Environment: see zynthian_desktop_env.sh for the directories. Also
+ #   ZYNTHIAN_LOG_LEVEL   10=DEBUG, 20=INFO (default), 30=WARNING, ...
+ #   ZYNTHIAN_DEBUG=1     same as ZYNTHIAN_LOG_LEVEL=10 plus Python fault handler
++#   ZYNTHIAN_FULLSCREEN=1  use the whole screen (kiosk), ignoring DISPLAY_WIDTH/HEIGHT
+ #******************************************************************************
+ 
+ source "$(dirname "${BASH_SOURCE[0]}")/zynthian_desktop_env.sh"
+@@ -40,6 +41,10 @@ load_config_env() {
+ 	if [ -f "$ZYNTHIAN_CONFIG_DIR/zynthian_custom_config.sh" ]; then
+ 		source "$ZYNTHIAN_CONFIG_DIR/zynthian_custom_config.sh"
+ 	fi
++	# Kiosk: use the whole screen, whatever size the config has
++	if [ "$ZYNTHIAN_FULLSCREEN" == "1" ]; then
++		unset DISPLAY_WIDTH DISPLAY_HEIGHT
++	fi
+ }
+ 
+ del_last_state() {

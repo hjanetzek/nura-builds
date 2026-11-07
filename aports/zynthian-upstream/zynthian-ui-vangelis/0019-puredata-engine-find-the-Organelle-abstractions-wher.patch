@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Thu, 5 Nov 2026 19:00:31 +0100
+Subject: [PATCH] puredata engine: find the Organelle abstractions where
+ zynthian-data isn't in /zynthian
+
+Organelle patches declare zynthian's abstractions by their ZynthianOS path
+(/zynthian/zynthian-data/puredata/organelle). Where the data directory is elsewhere
+(desktop, distribution packages) pd didn't find clockfix, WCTL, ...; the engine adds
+this system's directory to pd's search path (-path). Nothing changes on ZynthianOS.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit a84c3f7f8be8bcec7a31965efea9abcf49dfcca9)
+---
+ zyngine/zynthian_engine_puredata.py | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/zyngine/zynthian_engine_puredata.py b/zyngine/zynthian_engine_puredata.py
+index 22bf0633..ce844f0d 100644
+--- a/zyngine/zynthian_engine_puredata.py
++++ b/zyngine/zynthian_engine_puredata.py
+@@ -123,6 +123,12 @@ class zynthian_engine_puredata(zynthian_engine):
+             self.base_command = f"pd -jack -nojackconnect -jackname \"{self.jackname}\" -rt -alsamidi -mididev 1"
+         else:
+             self.base_command = f"pd -nogui -jack -nojackconnect -jackname \"{self.jackname}\" -rt -alsamidi -mididev 1"
++        # Patches declare zynthian's Organelle abstractions by their ZynthianOS path
++        # (/zynthian/zynthian-data/puredata/organelle); where the data is elsewhere (desktop,
++        # distribution packages), add this system's directory to pd's search path
++        organelle_dir = f"{zynthian_paths.data_dir}/puredata/organelle"
++        if organelle_dir != "/zynthian/zynthian-data/puredata/organelle" and os.path.isdir(organelle_dir):
++            self.base_command += f" -path \"{organelle_dir}\""
+ 
+         self.reset()
+ 

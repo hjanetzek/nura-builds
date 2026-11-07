@@ -1,0 +1,220 @@
+# zynthian-ui from upstream (vangelis, zynthian's stable branch) for postmarketOS/Nura: the Tk UI,
+# unmodified except for the port patches below, for those who want zynthian as upstream ships it
+# on the devices Nura supports. The Qt UI port is the package zynthian-ui (hjanetzek/zynthian-ui,
+# nura branch).
+#
+# The patches are the port's essentials from the nura branch (git format-patch; regenerate them
+# by cherry-picking onto a newer upstream commit, see docs/zynthian-upstream.md): desktop mode
+# (no Raspberry Pi hardware), directories from the environment instead of /zynthian, native
+# libraries from ZYNTHIAN_LIB_DIR, the install script and launcher (desktop/), PipeWire (port
+# aliases, the main output), and a few fixes needed to run (see each patch).
+#
+# Installs where zynthian-ui does and provides it, so the kiosk package (postmarketos-ui-zynthian)
+# works with it (it falls back to the Tk UI); excludes the other zynthian-ui packages.
+pkgname=zynthian-ui-vangelis
+_commit=fcbd1694bcf08b04c19afd2ddd1d68d14fc4e400
+pkgver=0_git20261106
+pkgrel=0
+pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream vangelis, Tk UI)"
+url="https://github.com/zynthian/zynthian-ui"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+options="!check"
+# Versioned: apk then allows only one package providing zynthian-ui (and prefers the real zynthian-ui
+# when it resolves the name, e.g. for the kiosk package)
+provides="zynthian-ui=$pkgver-r$pkgrel"
+depends="
+	bash
+	ffmpeg
+	lilv
+	py3-beautifulsoup4
+	py3-cffi
+	py3-dbus
+	py3-evdev
+	py3-levenshtein
+	py3-lilv
+	py3-numpy
+	py3-pexpect
+	py3-pillow
+	py3-psutil
+	py3-pyalsaaudio
+	py3-rdflib
+	py3-requests
+	py3-scipy
+	py3-typing-extensions
+	py3-udev
+	py3-usb
+	py3-websocket-client
+	py3-yaml
+	python3
+	python3-tkinter
+	rubberband
+	sooperlooper
+	sox
+	so:libasound.so.2
+	so:libjack.so.0
+	so:libsndfile.so.1
+	zynthian-data
+	zynthian-sys-config
+	zyncoder
+	zynthian-jalv
+	"
+makedepends="
+	bash
+	cmake
+	cython
+	jack-dev
+	liblo-dev
+	libsamplerate-dev
+	libsndfile-dev
+	linux-headers
+	nlohmann-json
+	py3-pip
+	py3-setuptools
+	py3-wheel
+	python3-dev
+	rubberband-dev
+	samurai
+	"
+subpackages="$pkgname-dbg"
+_pyliblo3_commit=029b83a03b4f24d905f818591903411753901273
+_pywheels="
+	jack_client-0.5.7-py3-none-any.whl
+	soundfile-0.14.0-py2.py3-none-any.whl
+	alsa_midi-1.0.4-py3-none-any.whl
+	oyaml-1.0-py2.py3-none-any.whl
+	wavio-0.0.9-py3-none-any.whl
+	ffmpeg_python-0.2.0-py3-none-any.whl
+	pyrubberband-0.4.0-py3-none-any.whl
+	abletonparsing-0.1.3-py3-none-any.whl
+	future-1.0.0-py3-none-any.whl
+	"
+_pysdists="
+	sox-1.5.0.tar.gz
+	hwmon-1.0.tar.gz
+	pyliblo3-$_pyliblo3_commit.tar.gz
+	"
+source="
+	zynthian-ui-$_commit.tar.gz::https://github.com/zynthian/zynthian-ui/archive/$_commit.tar.gz
+	https://files.pythonhosted.org/packages/54/dd/ba4f56992e958a2b6a4a0603a7bf69f5de275538eee4041e77e1f9882719/jack_client-0.5.7-py3-none-any.whl
+	https://files.pythonhosted.org/packages/b1/d1/5e338af9ca6ed0786cd5bb03f6d60de1c325728c1189014f3b59aae7403c/soundfile-0.14.0-py2.py3-none-any.whl
+	https://files.pythonhosted.org/packages/1b/4b/762472e90fc105a0897964f719d40728e6830c91a0f80e1fe90463b05c45/alsa_midi-1.0.4-py3-none-any.whl
+	https://files.pythonhosted.org/packages/37/aa/111610d8bf5b1bb7a295a048fc648cec346347a8b0be5881defd2d1b4a52/oyaml-1.0-py2.py3-none-any.whl
+	https://files.pythonhosted.org/packages/87/9a/50c7b7107b98330d295f82a38a8d33210fb33ca472cbdd18dce4ca2fdaec/wavio-0.0.9-py3-none-any.whl
+	https://files.pythonhosted.org/packages/d7/0c/56be52741f75bad4dc6555991fabd2e07b432d333da82c11ad701123888a/ffmpeg_python-0.2.0-py3-none-any.whl
+	https://files.pythonhosted.org/packages/d8/88/238aa67e353012d8dd999372aedada3f627bc9895d5d2a5305e7ffb1affd/pyrubberband-0.4.0-py3-none-any.whl
+	https://files.pythonhosted.org/packages/cf/5e/f8e31535f6483801d8790c65871ea8416429234a578d46aee7e898b0166d/abletonparsing-0.1.3-py3-none-any.whl
+	https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl
+	https://files.pythonhosted.org/packages/3d/a2/d8e0d8fd7abf509ead4a2cb0fb24e5758b5330166bf9223d5cb9f98a7e8d/sox-1.5.0.tar.gz
+	https://files.pythonhosted.org/packages/3d/3c/d1f552e63b2c1f4ea462c1f788801f88a64a22f3c59275a8596564abb5fe/hwmon-1.0.tar.gz
+	pyliblo3-$_pyliblo3_commit.tar.gz::https://github.com/gesellkammer/pyliblo3/archive/$_pyliblo3_commit.tar.gz
+	0001-autoconnect-keep-port-aliases-locally-when-the-JACK-.patch
+	0002-Make-all-directories-configurable-through-environmen.patch
+	0003-Add-desktop-mode-ZYNTHIAN_DESKTOP-1.patch
+	0004-Run-without-Raspberry-Pi-hardware.patch
+	0005-Add-desktop-Linux-setup-and-launcher.patch
+	0006-Load-native-libraries-from-ZYNTHIAN_LIB_DIR-when-set.patch
+	0007-ctrldev-load-user-drivers-without-a-link-in-the-code.patch
+	0008-Desktop-mode-don-t-run-update_zynthian_sys.sh.patch
+	0009-Add-install-script-and-installed-mode-for-packages.patch
+	0010-zynclippy-fix-printf-formats-for-64-bit-sizes.patch
+	0011-Help-viewer-optional-run-without-tkinterweb-and-bs4.patch
+	0012-Desktop-mode-don-t-look-for-the-RBPi-audio-device.patch
+	0013-install.sh-bundled-Python-path-and-fonts-launcher-fu.patch
+	0014-setup_desktop.sh-copy-factory-files-without-preservi.patch
+	0015-Desktop-mode-hide-engines-whose-program-isn-t-instal.patch
+	0016-Engines-run-interactive-engine-shells-with-TERM-dumb.patch
+	0017-Audio-player-no-crash-at-exit-after-playing-a-file.patch
+	0018-Snapshots-map-ZynthianOS-data-paths-to-this-system-s.patch
+	0019-puredata-engine-find-the-Organelle-abstractions-wher.patch
+	0020-ALSA-mixer-skip-controls-the-mixer-list-can-t-match-.patch
+	0021-Main-output-under-PipeWire-hardware-outputs-found-by.patch
+	0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
+	0023-Audio-recorder-find-jack_capture-in-PATH.patch
+	0024-desktop-launcher-environment-setup-and-install-scrip.patch
+	"
+builddir="$srcdir/zynthian-ui-$_commit"
+
+_srcfile() {
+	echo "$srcdir/$1"
+}
+
+build() {
+	# Native libraries, without RPATH: they go to /usr/lib/zynthian and only use system libraries
+	local lib
+	for lib in zynsmf zynseq zynaudioplayer zynmixer zynclippy; do
+		cmake -S zynlibs/$lib -B zynlibs/$lib/build \
+			-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+			-DCMAKE_SKIP_RPATH=ON \
+			-DCMAKE_CXX_FLAGS="$CXXFLAGS -Wno-psabi" \
+			-DENABLE_OSC=0
+		cmake --build zynlibs/$lib/build
+	done
+
+	# Wheels of the bundled Python packages that come as source
+	local pysrc="$srcdir"/pysrc
+	rm -rf "$pysrc" "$srcdir"/pywheels
+	mkdir -p "$pysrc" "$srcdir"/pywheels
+	for f in $_pysdists; do
+		tar --no-same-owner -xzf "$(_srcfile $f)" -C "$pysrc"
+	done
+	for f in "$pysrc"/*/; do
+		python3 -m pip wheel --no-index --no-deps --no-build-isolation \
+			--wheel-dir "$srcdir"/pywheels "$f"
+	done
+}
+
+package() {
+	PREFIX=/usr bash ./desktop/install.sh ui "$pkgdir"
+
+	local f pydir="$pkgdir"/usr/share/zynthian/python
+	local wheels=
+	for f in $_pywheels; do
+		wheels="$wheels $(_srcfile $f)"
+	done
+	# shellcheck disable=SC2086 # list of files
+	python3 -m pip install --no-index --no-deps --no-compile --target "$pydir" \
+		$wheels "$srcdir"/pywheels/*.whl
+	rm -rf "$pydir"/bin # pyliblo3's command line tools
+	python3 -m compileall -q -d /usr/share/zynthian/python "$pydir"
+}
+
+sha512sums="
+d22e6386f5ad116386e337b933724964ed988c41453fa3bf9684dc9376baddad524431c807e24e177c7416a8ff4fb3bb409b5ac68470dbe086e9030c47960c2e  zynthian-ui-fcbd1694bcf08b04c19afd2ddd1d68d14fc4e400.tar.gz
+43bae9f9891d0359f0c840891ef12834aa2172917587fe028273636d5fc9160efc44f203827feda7fb603d1a237175f1ba5412611cb556288ce51101981c85a9  jack_client-0.5.7-py3-none-any.whl
+bdbe5e7d7d7271aceb92f15e256d8708c10aa53221d8f2a72b96c30346d943184a8400edb61e5eb72e96a1dd6bad98885d9a598a0f8e0dcf5aa8c2bcb0205b0f  soundfile-0.14.0-py2.py3-none-any.whl
+75301069d039ed0a6ba5b050a707b122fffb7072206a992f0a67287ed79e11cce8e6489daa9e340beaf7b2871e870f0127b0282a0ada26a62de5e535b0bd9616  alsa_midi-1.0.4-py3-none-any.whl
+d33a3743b9d4c9cdf95ec2f5a55c3cb50f392b4775d3e94169f069805ee72e757b68758c7a12d9147c90d304f2fb149aa4480cceaba02693a1b858c9fc461569  oyaml-1.0-py2.py3-none-any.whl
+077c41c91305d24faaa6dda1cd315309c471817cf57c91913598eb073ef82c8569b7682a60365fe2d647dfcf7f8f13a63c695189a81f176f1e566e5a7eb6228d  wavio-0.0.9-py3-none-any.whl
+0cc09bc38bbae22744fafe17ed8d18cb17a304f82cd4ea9e311d945816e95c6ecff0deecc40c89066f670d8dc7e7149fd5f0952c4951b2a4e5f13e58c6ff7357  ffmpeg_python-0.2.0-py3-none-any.whl
+17ac98370b9d3b9f8f827453589b70f6713b781227a362d4cc34d79293de3701ea0319224be456505aaa06dd0dd8f619b09c6bec89d22476fe01f8be7c543cb2  pyrubberband-0.4.0-py3-none-any.whl
+d6e2c8d2321a2fae547be662a9a1f6f7cd5de076209d6747da588395a3a6bbb621dd989f45f669a56f2031dc4dbcc7450563eee2f9cc87ab117fe3d403a1dbd7  abletonparsing-0.1.3-py3-none-any.whl
+d130bfa136bd171b9972b5c281c578545f2a84a909fdf18a6d2d71dd12fb3d512a7a1fa5cf7300433adece1d306eb2f22d7278f4c90e744e04dc67ba627a82c0  future-1.0.0-py3-none-any.whl
+32e25b411c62a2c7d1b2e9351052707938c7f8ae39c7df80fc01a6509ee4fb908f4abeba8a4e6040b36cd04a9099b1f5d160b7f2b1854a9362cf13b2f0c1a284  sox-1.5.0.tar.gz
+fd06e30c529cef41f6b5746b341fdd33735c8c9bb09b68f71407f855ae193cd2a21fa396b26801a610d069635ac8a63b09dc8b1482fb692545dc0db454cef16b  hwmon-1.0.tar.gz
+89a5586f2eac5155877954c05febbb6ef7304dc8dd0b38b813cceac0dbd82a0779b1e6c869381dce95db63ca5945acd222508de1c8ee0fef2ba2babe83eab5cb  pyliblo3-029b83a03b4f24d905f818591903411753901273.tar.gz
+049323e3592c523b3b3967fe8cffaa27c237877a81cd8267b7e3defecfadcf4d1d7eec2c59a8388392ec18a8d7aae3c8c0f28529d1e1ac8942e0783d54266925  0001-autoconnect-keep-port-aliases-locally-when-the-JACK-.patch
+b2b68c665193f7743ed4f52ddf4e8ba56cdb0c3ff4752e38ea9b8884a3a4fb5e383bcc4f0e3507986c6ddbec6950f59101feef06d18909e50bb54ec340d914f3  0002-Make-all-directories-configurable-through-environmen.patch
+4737a9db421e145cdc18bd3554fb6fc5f0cb45ddcb4f40564db4c673429832b4d4dbac9d85e787c07072fac1eaf712792ea87618cea3db2e43f4c672f1047f42  0003-Add-desktop-mode-ZYNTHIAN_DESKTOP-1.patch
+16b5da4bae79021f35e6efc538efabf931b87968b2df6c1fa9112f24f3e0239b62f4da82f5c4e8a4d2e69af4a5f42fd08c316d5cf8de6bcb63eac93e54300bf5  0004-Run-without-Raspberry-Pi-hardware.patch
+387ee886a8d63800ea1cf58ab105db8f3693e1eb946c152e3cdeda37672d53b831718977dbbf5cdfd140b0595c741392293dcd6abdea9dfb293670a7efd021ad  0005-Add-desktop-Linux-setup-and-launcher.patch
+9130ea9302f210c691b4d086e475846b8092e99012bec7c69d8d2a33ff61470ea1f20633295e7daa6bfd36fdb2065d5b891a6e06e1c29aa626006a27fe9d2231  0006-Load-native-libraries-from-ZYNTHIAN_LIB_DIR-when-set.patch
+3608e77244dfc93b7efe90e037b9dfa27a4e8198b25cf70c1e13f25d7483282893ba32eb0a48b4907f6ca08936db91e95618a5f18479f7530528f9c2a31ff462  0007-ctrldev-load-user-drivers-without-a-link-in-the-code.patch
+da8d11f29b9a16d1d13c8119d04423d0bd27c1d8eb701d32eba9ca55aa060ed8e9b58271758b803427a497903d9250f02bc671b19cace63815c8cfc2f1b3b27c  0008-Desktop-mode-don-t-run-update_zynthian_sys.sh.patch
+a5d9a745bd14cfd1ae5bdd04681fb80aa06aaad35123f700598d385096083569fc8ed1e946f4a5b2de0de984a7cecb74c264359eb640d7342bc82032b8e36174  0009-Add-install-script-and-installed-mode-for-packages.patch
+add9ec14680e9a8ea524fe9fca4162dae3d69ac8a3c696925d2cd4e89566b9c507ad08e453d44fd2e5d4fdd355cccb1a82b527531577f61844e8c22191fdabf1  0010-zynclippy-fix-printf-formats-for-64-bit-sizes.patch
+9c239a9fb0fb53dd2b9d23745d5d75e84f0e805e897843b4749b73927021400f81b51d029e9a53ee0971676b4639f1fe98aa2baab2cb23ac35c8b025b69b4216  0011-Help-viewer-optional-run-without-tkinterweb-and-bs4.patch
+137a45a479b542c8e4183852eff3f787f8d5aa67e76336e9c5c7899009de1d2d26500a84070bcd4b54037153392b201e4776a24ecbaf0900ea312c3e19196dd7  0012-Desktop-mode-don-t-look-for-the-RBPi-audio-device.patch
+305b8c57a1551e79b6181b3ac0e0b8ef0b44e86e17100bca0a95818a04f2348b89a57b79966377e5d63a99bb951690372e3280754ae3ca6e8c7dadb196ff4e03  0013-install.sh-bundled-Python-path-and-fonts-launcher-fu.patch
+ee4eba948d74be5864670e219d8beeeb671bf8350d4a63a0c8aa45f0644b66a616982ee1c6c43b956036e526548bfa9a7228234120415c9981ed1dd322bda08c  0014-setup_desktop.sh-copy-factory-files-without-preservi.patch
+2e244ffb2a1e87f80a84c7c8390ac11007af44bb3cfc6b49e0a6c4c7579fb74a114fcdc616b859ba93834a7e0c02261cfcf08a8ca54e8018eda3b73666c711f1  0015-Desktop-mode-hide-engines-whose-program-isn-t-instal.patch
+e1c1b99364040216da4875492ab2be8a5cab142cfc564c15344c40e75f128e8030c69d0bc0b0ec7d543bfc259a342811dc601a641296ad4186d56286add81fe5  0016-Engines-run-interactive-engine-shells-with-TERM-dumb.patch
+f8ef1345925279fae947f31319a80e1efcc122b1d217042c105c0824e72e9558abbfbe3cd242214aa16f2061255f42366bd51883e74add5b96a2b2ab40079ca0  0017-Audio-player-no-crash-at-exit-after-playing-a-file.patch
+fdfd83f8daa1537830f505a3371db22eac39ccf8df7f102a59bcec4e5340a96deffb43eefffa7c8179bfe4efdd61418f27c20cb0f5532e7b39bec8b4bf913589  0018-Snapshots-map-ZynthianOS-data-paths-to-this-system-s.patch
+8f35ba015364070a5b9050adaf3b217788a16eb7bc7b972a7e7d4347fc54186c5901575cb999368ba0716d71038c7e9883a946ea47e677fb7041ba6ae1a623ac  0019-puredata-engine-find-the-Organelle-abstractions-wher.patch
+95058d0929be4da2cb6dbd3b30f576c924500ac65c784f371b6ef01c4a64189c29705578264dbc260464cf22e27bd70a2d1ee038ca5b4001e6d10986d6dac97a  0020-ALSA-mixer-skip-controls-the-mixer-list-can-t-match-.patch
+9ff343b834e8dbf9621a6942167d581ff244304eb088e7b868b6174ddcde8493fce5545fd86439af1dc777d436a3acfe380554389e6552958a99b40ea915b50b  0021-Main-output-under-PipeWire-hardware-outputs-found-by.patch
+9cdc2bc9362b0a9f43e5ddcbd554e0814c4edc3a5bd3ee7b2e2cb7c9f416ebe53b80c2fe95e30c96a22dc11176e0cbcab35e8048c2334315e81329eda13aef45  0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
+89c6f675d95fc61f7b5f09e8e8843e05c1283607f5ad7fc39278a353012348496a4b7a03b73bfb9e39a96a8af724bef58739c18723a68b2550e18d0598c4db42  0023-Audio-recorder-find-jack_capture-in-PATH.patch
+32ee3b544a54aab154c3ebad34ca29fdbe1c435e973866daaaadb56e3b337fcca92704ceecbe0eeb5937c2cc7e93b158bf7b3886ff9a63b645c225e0230310a0  0024-desktop-launcher-environment-setup-and-install-scrip.patch
+"

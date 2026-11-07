@@ -1,0 +1,207 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Sat, 7 Nov 2026 17:15:31 +0100
+Subject: [PATCH] desktop/: launcher, environment, setup and install script as
+ in nura 945463b0
+
+zynthian's jalv on the PATH (ZYNTHIAN_LIB_DIR/bin), GLX for the Tk OpenGL widgets, the Tk UI
+when the tree has no Qt UI.
+---
+ desktop/install.sh              |  7 ++++
+ desktop/setup_desktop.sh        | 62 ++++++++++++++++++++++++++++-----
+ desktop/zynthian_desktop.sh     | 10 +++++-
+ desktop/zynthian_desktop_env.sh | 13 +++++++
+ 4 files changed, 83 insertions(+), 9 deletions(-)
+
+diff --git a/desktop/install.sh b/desktop/install.sh
+index 20cd11e4..24c866ac 100755
+--- a/desktop/install.sh
++++ b/desktop/install.sh
+@@ -51,6 +51,13 @@ install_ui() {
+ 	(cd "$ui_src" && find zynlibs -name '*.py' ! -name 'unit_tests.py' ! -name 'test.py' ! -name 'format_docs.py' -print0 |
+ 		tar --null -T - -cf -) | tar -C "$ui_dst" -xf -
+ 	install -m 755 "$ui_src/zynthian_main.py" "$ui_dst/"
++	# Qt Quick UI (ZYNTHIAN_UI=qt), without the M0 spike; not in upstream trees (nura-builds'
++	# builds of upstream zynthian-ui with the port patches: Tk only)
++	if [ -d "$ui_src/zynqt" ]; then
++		copy_tree "$ui_src/zynqt" "$ui_dst/zynqt"
++		rm -rf "$ui_dst/zynqt/spike"
++		install -m 755 "$ui_src/zynthian_qt_main.py" "$ui_dst/"
++	fi
+ 	install -m 644 "$ui_src/LICENSE.txt" "$ui_dst/"
+ 	mkdir -p "$ui_dst/desktop"
+ 	install -m 755 "$ui_src/desktop/zynthian_desktop.sh" "$ui_src/desktop/setup_desktop.sh" "$ui_dst/desktop/"
+diff --git a/desktop/setup_desktop.sh b/desktop/setup_desktop.sh
+index 580242c8..cb6a3347 100755
+--- a/desktop/setup_desktop.sh
++++ b/desktop/setup_desktop.sh
+@@ -6,10 +6,14 @@
+ # and data directories. Safe to run again: existing user files are kept.
+ #
+ #   desktop/setup_desktop.sh            everything
+-#   desktop/setup_desktop.sh build      only build zyncore and the zynlibs
++#   desktop/setup_desktop.sh build      only build zyncore, the zynlibs and zynthian's jalv
++#   desktop/setup_desktop.sh jalv       only build zynthian's jalv (../jalv, branch asyncli)
+ #   desktop/setup_desktop.sh venv       only create/update the venv
+ #   desktop/setup_desktop.sh dirs       only create config and data dirs
+ #
++# ZYNTHIAN_TK_WIDGETS=1 adds the Python packages of the Tk OpenGL widgets (audio file
++# waveform), which the Qt UI doesn't need.
++#
+ # Needs uv. System packages are not installed here; see desktop/README.md.
+ #******************************************************************************
+ 
+@@ -19,10 +23,15 @@ source "$(dirname "${BASH_SOURCE[0]}")/zynthian_desktop_env.sh"
+ 
+ DESKTOP_DIR="$ZYNTHIAN_UI_DIR/desktop"
+ 
+-# Python packages for the venv, installed with uv. The venv is created with
+-# --system-site-packages, so packages from the distribution are used where
+-# installed (a Nura package will depend on those instead).
++# Python packages for the venv, all installed with uv: the venv does not see the
++# distribution's packages, so the desktop runs with a known set, kept in line with the
++# Nura package's py3-* dependencies (nura/zynthian-ui/APKBUILD). PySide6 at the Qt
++# version of the Duet (Zrythm's Qt 6.12 packages).
+ PY_PACKAGES=(
++	"pyside6-essentials==6.12.*"   # the core modules, as the Duet's PySide6 build
++	typing-extensions
++	dbus-python
++	cffi
+ 	pillow
+ 	numpy
+ 	scipy
+@@ -52,6 +61,13 @@ PY_PACKAGES=(
+ 	pyusb
+ )
+ 
++# Tk OpenGL widgets (zynthian_widget_audio_file), optional: ZYNTHIAN_TK_WIDGETS=1
++PY_PACKAGES_TK_WIDGETS=(
++	moderngl
++	moderngl-window
++	pyopengltk
++)
++
+ # check_dirs <dir>... => fail if one is missing
+ check_dirs() {
+ 	local missing=0
+@@ -71,16 +87,45 @@ do_build() {
+ 	ZYNTHIAN_WIRING_LAYOUT=DUMMIES "$ZYNTHIAN_ZYNCODER_DIR/build.sh"
+ 	echo "=== Building zynlibs ..."
+ 	"$ZYNTHIAN_UI_DIR/zynlibs/build.sh" Release
++	do_jalv
++}
++
++# zynthian's jalv (ZynthianOS: zynthian-sys/scripts/recipes/install_lv2_jalv.sh), only the
++# JACK command line host the jalv engine runs; into ZYNTHIAN_SW_DIR, on PATH through
++# zynthian_desktop_env.sh
++do_jalv() {
++	if [ ! -d "$ZYNTHIAN_JALV_SRC_DIR" ]; then
++		echo "=== No $ZYNTHIAN_JALV_SRC_DIR: LV2 engines need zynthian's jalv, clone it with"
++		echo "    git clone --recursive -b asyncli https://github.com/zynthian/jalv.git $ZYNTHIAN_JALV_SRC_DIR"
++		return 0
++	fi
++	echo "=== Building zynthian's jalv ..."
++	local build_dir="$ZYNTHIAN_SW_DIR/build/jalv"
++	if [ ! -f "$build_dir/build.ninja" ]; then
++		meson setup "$build_dir" "$ZYNTHIAN_JALV_SRC_DIR" --prefix="$ZYNTHIAN_SW_DIR" \
++			-Djack=enabled -Dgtk3=disabled -Dqt5=disabled -Dportaudio=disabled -Dsuil=disabled -Dtests=disabled
++	fi
++	meson compile -C "$build_dir"
++	meson install -C "$build_dir"
+ }
+ 
+ do_venv() {
+ 	echo "=== Python venv in $ZYNTHIAN_VENV_DIR ..."
++	if [ -f "$ZYNTHIAN_VENV_DIR/pyvenv.cfg" ] && grep -q "include-system-site-packages = true" "$ZYNTHIAN_VENV_DIR/pyvenv.cfg"; then
++		# An older venv that saw the distribution's packages: recreate it
++		echo "Recreating the venv without system site-packages ..."
++		rm -rf "$ZYNTHIAN_VENV_DIR"
++	fi
+ 	if [ ! -x "$ZYNTHIAN_VENV_DIR/bin/python3" ]; then
+ 		mkdir -p "$(dirname "$ZYNTHIAN_VENV_DIR")"
+-		# The system Python: it has tkinter, and the venv sees its packages
+-		uv venv --python /usr/bin/python3 --system-site-packages "$ZYNTHIAN_VENV_DIR"
++		# The system Python for its tkinter; its site-packages stay out of the venv
++		uv venv --python /usr/bin/python3 "$ZYNTHIAN_VENV_DIR"
++	fi
++	local packages=("${PY_PACKAGES[@]}")
++	if [ "${ZYNTHIAN_TK_WIDGETS:-0}" = 1 ]; then
++		packages+=("${PY_PACKAGES_TK_WIDGETS[@]}")
+ 	fi
+-	uv pip install --python "$ZYNTHIAN_VENV_DIR/bin/python3" "${PY_PACKAGES[@]}"
++	uv pip install --python "$ZYNTHIAN_VENV_DIR/bin/python3" "${packages[@]}"
+ 
+ 	# lilv's Python bindings are one ctypes module, not on PyPI and not packaged
+ 	# by every distribution (Arch). Take it from upstream, matching the system liblilv.
+@@ -143,10 +188,11 @@ do_dirs() {
+ 
+ case "${1:-all}" in
+ 	build) check_dirs "$ZYNTHIAN_ZYNCODER_DIR"; do_build ;;
++	jalv) do_jalv ;;
+ 	venv) do_venv ;;
+ 	dirs) check_dirs "$ZYNTHIAN_SYS_DIR" "$ZYNTHIAN_DATA_DIR"; do_dirs ;;
+ 	all) check_dirs "$ZYNTHIAN_SYS_DIR" "$ZYNTHIAN_DATA_DIR" "$ZYNTHIAN_ZYNCODER_DIR"; do_build; do_venv; do_dirs ;;
+-	*) echo "Usage: $0 [all|build|venv|dirs]"; exit 1 ;;
++	*) echo "Usage: $0 [all|build|jalv|venv|dirs]"; exit 1 ;;
+ esac
+ 
+ echo "=== Done. Start with: $DESKTOP_DIR/zynthian_desktop.sh"
+diff --git a/desktop/zynthian_desktop.sh b/desktop/zynthian_desktop.sh
+index f945d0f7..7e968438 100755
+--- a/desktop/zynthian_desktop.sh
++++ b/desktop/zynthian_desktop.sh
+@@ -84,7 +84,15 @@ cd "$ZYNTHIAN_UI_DIR"
+ error_counter=0
+ while true; do
+ 	load_config_env
+-	python3 ./zynthian_main.py
++	# ZYNTHIAN_UI=qt: the Qt Quick UI (docs/qt-port-plan.md) instead of the Tk UI (if this tree
++	# has it: upstream zynthian-ui hasn't)
++	if [ "$ZYNTHIAN_UI" == "qt" ] && [ -f ./zynthian_qt_main.py ]; then
++		python3 ./zynthian_qt_main.py
++	else
++		# Tk draws through X11 (XWayland on a Wayland desktop): its OpenGL widgets
++		# (pyopengltk) need GLX, PyOpenGL would pick EGL when WAYLAND_DISPLAY is set
++		PYOPENGL_PLATFORM="${PYOPENGL_PLATFORM:-glx}" python3 ./zynthian_main.py
++	fi
+ 	status=$?
+ 	echo "zynthian exit status: $status"
+ 
+diff --git a/desktop/zynthian_desktop_env.sh b/desktop/zynthian_desktop_env.sh
+index 736340ed..97d231b9 100755
+--- a/desktop/zynthian_desktop_env.sh
++++ b/desktop/zynthian_desktop_env.sh
+@@ -9,6 +9,8 @@
+ # this zynthian-ui checkout, as cloned by hand:
+ #
+ #   <ZYNTHIAN_DIR>/zynthian-ui, zynthian-sys, zynthian-data, zynthian-help, zyncoder
++#   <ZYNTHIAN_DIR>/jalv: zynthian's jalv (github.com/zynthian/jalv, branch asyncli), which
++#   the LV2 engine needs; setup_desktop.sh builds it into ZYNTHIAN_SW_DIR
+ #
+ # A package sets ZYNTHIAN_DIR (e.g. /usr/share/zynthian) instead.
+ # Everything that zynthian writes goes to the XDG directories of the user.
+@@ -25,6 +27,7 @@ export ZYNTHIAN_SYS_DIR="${ZYNTHIAN_SYS_DIR:-$ZYNTHIAN_DIR/zynthian-sys}"
+ export ZYNTHIAN_DATA_DIR="${ZYNTHIAN_DATA_DIR:-$ZYNTHIAN_DIR/zynthian-data}"
+ export ZYNTHIAN_HELP_DIR="${ZYNTHIAN_HELP_DIR:-$ZYNTHIAN_DIR/zynthian-help}"
+ export ZYNTHIAN_ZYNCODER_DIR="${ZYNTHIAN_ZYNCODER_DIR:-$ZYNTHIAN_DIR/zyncoder}"
++export ZYNTHIAN_JALV_SRC_DIR="${ZYNTHIAN_JALV_SRC_DIR:-$ZYNTHIAN_DIR/jalv}"
+ export ZYNTHIAN_RECIPE_DIR="${ZYNTHIAN_RECIPE_DIR:-$ZYNTHIAN_SYS_DIR/scripts/recipes}"
+ 
+ _zd_config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+@@ -37,6 +40,16 @@ export ZYNTHIAN_LV2_DIR="${ZYNTHIAN_LV2_DIR:-$ZYNTHIAN_PLUGINS_DIR/lv2}"
+ export ZYNTHIAN_SW_DIR="${ZYNTHIAN_SW_DIR:-$_zd_data_home/zynthian/sw}"
+ export ZYNTHIAN_PLUGINS_SRC_DIR="${ZYNTHIAN_PLUGINS_SRC_DIR:-$ZYNTHIAN_SW_DIR/plugins}"
+ export ZYNTHIAN_VENV_DIR="${ZYNTHIAN_VENV_DIR:-$_zd_data_home/zynthian/venv}"
++# zynthian's own programs (its jalv) before the system's: the jalv engine talks to the
++# asyncli fork's command line, a distribution's jalv makes it hang. Built by
++# setup_desktop.sh into ZYNTHIAN_SW_DIR, or packaged in ZYNTHIAN_LIB_DIR/bin (Nura)
++for _zd_bin in "${ZYNTHIAN_LIB_DIR:-/usr/lib/zynthian}/bin" "$ZYNTHIAN_SW_DIR/bin"; do
++	case ":$PATH:" in
++		*":$_zd_bin:"*) ;;
++		*) [ -d "$_zd_bin" ] && export PATH="$_zd_bin:$PATH" ;;
++	esac
++done
++unset _zd_bin
+ # Removable media, as mounted by udisks
+ export ZYNTHIAN_EX_DATA_DIR="${ZYNTHIAN_EX_DATA_DIR:-/run/media/$USER}"
+ 

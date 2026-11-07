@@ -1,0 +1,123 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 22:13:11 +0100
+Subject: [PATCH] Help viewer optional: run without tkinterweb and bs4
+
+tkinterweb's wheel ships a prebuilt glibc Tkhtml library, and neither it
+nor its build is packaged for Alpine. Without tkinterweb or bs4 the help
+screen is a stand-in with the same interface that only logs; multitouch
+falls back to tkinter.Frame for its type check.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit fa98c97fda3901aaf3f48d5a9163ae1fff431391)
+---
+ zyngui/multitouch.py        |  5 ++-
+ zyngui/zynthian_gui_help.py | 75 ++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 77 insertions(+), 3 deletions(-)
+
+diff --git a/zyngui/multitouch.py b/zyngui/multitouch.py
+index 143a761e..a8f36ded 100644
+--- a/zyngui/multitouch.py
++++ b/zyngui/multitouch.py
+@@ -35,7 +35,10 @@ from select import select
+ from time import monotonic
+ from threading import Thread
+ from subprocess import run, PIPE
+-from tkinterweb import HtmlFrame
++try:
++    from tkinterweb import HtmlFrame
++except ImportError:
++    HtmlFrame = tkinter.Frame  # Without the help viewer
+ from dataclasses import dataclass
+ from collections import namedtuple
+ from evdev import ecodes, InputDevice
+diff --git a/zyngui/zynthian_gui_help.py b/zyngui/zynthian_gui_help.py
+index 3e61a264..1a2320fd 100644
+--- a/zyngui/zynthian_gui_help.py
++++ b/zyngui/zynthian_gui_help.py
+@@ -27,8 +27,17 @@ import os
+ import logging
+ import tkinter
+ from pathlib import Path
+-from bs4 import BeautifulSoup
+-from tkinterweb import HtmlFrame
++
++# The help viewer needs tkinterweb (with its Tkhtml library) and bs4. Without
++# them (e.g. not packaged for the system) the help screen is unavailable.
++try:
++    from bs4 import BeautifulSoup
++    from tkinterweb import HtmlFrame
++    help_available = True
++except ImportError as e:
++    logging.warning(f"Help viewer not available => {e}")
++    help_available = False
++    HtmlFrame = tkinter.Frame  # Placeholder, so the class below can be defined
+ 
+ 
+ # Zynthian specific modules
+@@ -426,3 +435,65 @@ class zynthian_gui_help(HtmlFrame):
+             self.zyngui.tts.announce(tts, False, False, False)
+ 
+ # -------------------------------------------------------------------------------
++
++
++# ------------------------------------------------------------------------------
++# Stand-in without the help viewer
++# ------------------------------------------------------------------------------
++
++if not help_available:
++
++    class zynthian_gui_help(tkinter.Frame):
++        """Same interface as the help viewer, shows nothing."""
++
++        help_dir = zynthian_paths.help_dir
++
++        def __init__(self):
++            self.shown = False
++            self.zyngui = zynthian_gui_config.zyngui
++            super().__init__(zynthian_gui_config.top)
++
++        def load_file(self, fpath):
++            logging.warning(f"Help viewer not available, can't show {fpath}")
++
++        def set_html(self, html):
++            logging.warning("Help viewer not available")
++
++        def build_view(self):
++            return True
++
++        def hide(self):
++            self.shown = False
++
++        def show(self):
++            self.shown = True
++
++        def back_action(self):
++            return False
++
++        def zynpot_cb(self, i, dval):
++            return True
++
++        def switch(self, i, t):
++            return False
++
++        def switch_select(self, t='S'):
++            pass
++
++        def arrow_up(self):
++            pass
++
++        def arrow_down(self):
++            pass
++
++        def arrow_left(self):
++            pass
++
++        def arrow_right(self):
++            pass
++
++        def refresh_loading(self):
++            pass
++
++        def plot_zctrls(self):
++            pass
