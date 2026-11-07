@@ -1,0 +1,37 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# zynMI: Mutable Instruments' Braids, Plaits and Marbles as LV2 plugins, from the source on the
+# BraidsPlaitsMarbles branch (main has only a README). zynthian installs the newer prebuilt release
+# (Braids and Plaits combined as "Mutated Instruments", URI https://github.com/PatttF/zynMI/plugins/mutated),
+# whose source isn't published: these have the branch's URIs
+# (http://mutable-instruments.net/plugins/{braids,plaits,marbles}), which zynthian's rescan adds.
+# The repository's prebuilt binaries (aarch64-build, x86_64-build) are removed before building.
+pkgname=zynmi-lv2
+_commit=f42c53193cbbd48271551c79f40fb235f881ec07
+pkgver=0_git20251027
+pkgrel=0
+pkgdesc="Mutable Instruments Braids, Plaits, Marbles (zynMI, LV2)"
+url="https://github.com/PatttF/zynMI/tree/BraidsPlaitsMarbles"
+arch="all"
+license="GPL-3.0-or-later AND MIT"
+makedepends="lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/PatttF/zynMI/archive/$_commit.tar.gz"
+builddir="$srcdir/zynMI-$_commit"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	rm -rf aarch64-build x86_64-build
+}
+
+build() {
+	# ARCH=x86_64 is the native build (plain g++); ARCH_FLAGS empty: no -march=native
+	make plugins ARCH=x86_64 CXX="${CXX:-g++}" ARCH_FLAGS= BUILD_DIR=./out
+}
+
+package() {
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r out/mi_braids.lv2 out/mi_plaits.lv2 out/mi_marbles.lv2 "$pkgdir"/usr/lib/lv2/
+}
+sha512sums="
+251d1909b2212dee2058ecd1a9d09e12f967170fb8726f342c5747d51cc1c60b3cb9a40b6847a0780e6568770c1581e85adc192ea86c4d88b49af9dbf3a5cce7  zynmi-lv2-f42c53193cbbd48271551c79f40fb235f881ec07.tar.gz
+"
