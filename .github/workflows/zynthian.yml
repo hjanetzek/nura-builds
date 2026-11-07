@@ -13,6 +13,9 @@ on:
       release: { description: "publish the images as a release", type: boolean, default: false }
       images: { description: "build the device images (off by default while the plugins settle)", type: boolean, default: false }
       rebuild: { description: "rebuild Qt and PySide from scratch (as the weekly run)", type: boolean, default: false }
+      # x86_64: the packages for amd64 (release "x86_64") and the QEMU image (qemu-amd64) on
+      # x86-64 runners; pushes and the weekly run build aarch64
+      arch: { description: "architecture", type: choice, options: [aarch64, x86_64], default: aarch64 }
   schedule:
     - cron: "0 1 * * 0"   # Sunday 01:00 UTC
   push:
@@ -21,10 +24,11 @@ on:
 
 # The weekly rebuild (hours) has its own group: a push meanwhile doesn't cancel it
 concurrency:
-  group: zynthian-${{ github.ref }}${{ github.event_name == 'schedule' && '-weekly' || '' }}
+  group: zynthian-${{ github.ref }}-${{ inputs.arch || 'aarch64' }}${{ github.event_name == 'schedule' && '-weekly' || '' }}
   cancel-in-progress: true
 
 env:
+  NURA_ARCH: ${{ inputs.arch || 'aarch64' }}
   REBUILD: ${{ inputs.rebuild || github.event_name == 'schedule' }}
   REFS: ZYNTHIAN_UI_REF=${{ inputs.zynthian-ui-ref || 'nura' }} ZYNCODER_REF=${{ inputs.zyncoder-ref || 'nura' }}
 
@@ -71,42 +75,42 @@ jobs:
     # runs after a skipped stage too (!failure() instead of the default success())
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt1 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt1, key: "${{ needs.plan.outputs.key_qt1 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt1 == 'true' }}" }
+    with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: qt1, key: "${{ needs.plan.outputs.key_qt1 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt1 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   qt2:
     needs: [plan, qt1]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt2 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt2, previous: qt1, previous-key: "${{ needs.plan.outputs.key_qt1 }}", previous-cached: "${{ needs.plan.outputs.run_qt1 != 'true' }}", key: "${{ needs.plan.outputs.key_qt2 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt2 == 'true' }}" }
+    with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: qt2, previous: qt1, previous-key: "${{ needs.plan.outputs.key_qt1 }}", previous-cached: "${{ needs.plan.outputs.run_qt1 != 'true' }}", key: "${{ needs.plan.outputs.key_qt2 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt2 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   qt3:
     needs: [plan, qt2]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt3 == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: qt3, previous: qt2, previous-key: "${{ needs.plan.outputs.key_qt2 }}", previous-cached: "${{ needs.plan.outputs.run_qt2 != 'true' }}", key: "${{ needs.plan.outputs.key_qt3 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt3 == 'true' }}" }
+    with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: qt3, previous: qt2, previous-key: "${{ needs.plan.outputs.key_qt2 }}", previous-cached: "${{ needs.plan.outputs.run_qt2 != 'true' }}", key: "${{ needs.plan.outputs.key_qt3 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt3 == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   pyside:
     needs: [plan, qt3]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_pyside == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: pyside, previous: qt3, previous-key: "${{ needs.plan.outputs.key_qt3 }}", previous-cached: "${{ needs.plan.outputs.run_qt3 != 'true' }}", key: "${{ needs.plan.outputs.key_pyside }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_pyside == 'true' }}" }
+    with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: pyside, previous: qt3, previous-key: "${{ needs.plan.outputs.key_qt3 }}", previous-cached: "${{ needs.plan.outputs.run_qt3 != 'true' }}", key: "${{ needs.plan.outputs.key_pyside }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_pyside == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   plugins:
     needs: [plan, pyside]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_plugins == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: plugins, previous: pyside, previous-key: "${{ needs.plan.outputs.key_pyside }}", previous-cached: "${{ needs.plan.outputs.run_pyside != 'true' }}", key: "${{ needs.plan.outputs.key_plugins }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_plugins == 'true' }}" }
+    with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: plugins, previous: pyside, previous-key: "${{ needs.plan.outputs.key_pyside }}", previous-cached: "${{ needs.plan.outputs.run_pyside != 'true' }}", key: "${{ needs.plan.outputs.key_plugins }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_plugins == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
   zynthian:
     needs: [plan, plugins]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_zynthian == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, stage: zynthian, previous: plugins, previous-key: "${{ needs.plan.outputs.key_plugins }}", previous-cached: "${{ needs.plan.outputs.run_plugins != 'true' }}", key: "${{ needs.plan.outputs.key_zynthian }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_zynthian == 'true' }}" }
+    with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: zynthian, previous: plugins, previous-key: "${{ needs.plan.outputs.key_plugins }}", previous-cached: "${{ needs.plan.outputs.run_plugins != 'true' }}", key: "${{ needs.plan.outputs.key_zynthian }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_zynthian == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
 
@@ -115,12 +119,13 @@ jobs:
   image:
     needs: [plan, zynthian]
     if: ${{ inputs.images && !cancelled() && !failure() }}
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        device: [google-kukui]   # as DEVICES in targets/zynthian.sh
+        # as DEVICES (aarch64) and DEVICES_x86_64 in targets/zynthian.sh
+        device: ${{ fromJSON(inputs.arch == 'x86_64' && '["qemu-amd64"]' || '["google-kukui"]') }}
     permissions:
       contents: write
     env:

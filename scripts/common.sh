@@ -1,7 +1,7 @@
 # Shared by the scripts: paths, the pmbootstrap call, the target's settings.
 # Environment: TARGET (default zynthian), NURA_WORK (pmbootstrap work dir, default
 # ~/nura-work), NURA_SRC (checkouts of the source repositories, default ~/nura-src),
-# NURA_OUT (packages and images to keep, default ./out).
+# NURA_OUT (packages and images to keep, default ./out), NURA_ARCH (aarch64, default, or x86_64).
 set -eu
 
 here=$(cd "$(dirname "$0")/.." && pwd)
@@ -14,7 +14,13 @@ NURA_OUT=${NURA_OUT:-$here/out}
 CFG=${NURA_CFG:-$HOME/.config/pmbootstrap-nura-$TARGET.cfg}
 # pmbootstrap's pmaports checkout (its default path; CI caches it)
 PMAPORTS=${NURA_PMAPORTS:-$HOME/.local/var/pmbootstrap/cache_git/pmaports}
-ARCH=aarch64
+ARCH=${NURA_ARCH:-aarch64}
+# The devices of the architecture (DEVICES_<arch> in the target file; DEVICES: aarch64's)
+eval "DEVICES=\${DEVICES_$ARCH:-\${DEVICES:-}}"
+# Target name in cache keys: as before for aarch64, <target>_<arch> for the others (no "-":
+# prune-cache.sh splits keys at "-")
+KEY_TARGET=$TARGET
+[ "$ARCH" = aarch64 ] || KEY_TARGET=${TARGET}_$ARCH
 
 pmb() {
 	pmbootstrap -c "$CFG" -y "$@"

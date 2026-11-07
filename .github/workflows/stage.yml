@@ -1,4 +1,5 @@
-# One build stage of a target (targets/<target>.sh), on a native arm64 runner: restore the
+# One build stage of a target (targets/<target>.sh), on a native runner of the architecture (arm64
+# for aarch64, x86-64 for x86_64): restore the
 # packages of the previous stage, build this stage (or take its packages from the cache if its
 # recipes and all earlier stages are unchanged), pass the package repository on as an artifact.
 # The caller skips the job altogether when the plan (scripts/plan.sh) finds it cached.
@@ -14,6 +15,7 @@ on:
       key: { type: string, default: "" }            # this stage's cache key (scripts/plan.sh)
       previous-cached: { type: boolean, default: false }  # previous job skipped: packages from the cache
       refs: { type: string, default: "" }           # e.g. "ZYNTHIAN_UI_REF=nura ZYNCODER_REF=nura"
+      arch: { type: string, default: aarch64 }      # aarch64 or x86_64 (the runner and NURA_ARCH)
       # Build from scratch, ignoring this stage's cache, and replace the cached packages under the
       # same key (the weekly rebuild: our packages against the current versions of Alpine's
       # libraries, which a soname change would otherwise break without any recipe change). The
@@ -29,12 +31,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     timeout-minutes: 350
     outputs:
       key: ${{ steps.key.outputs.key }}
     env:
       TARGET: ${{ inputs.target }}
+      NURA_ARCH: ${{ inputs.arch }}
       NURA_WORK: /home/runner/nura-work
       NURA_SRC: /home/runner/nura-src
       NURA_OUT: /home/runner/nura-out
@@ -87,8 +90,10 @@ jobs:
             prev=$(echo "${{ inputs.previous-key }}" | sha256sum | cut -c1-8)
             # The signing key's public half: packages signed with another key are untrusted
             kfp=$(printf '%s\n' "$NURA_ABUILD_KEY" | openssl rsa -pubout 2>/dev/null | sha256sum | cut -c1-8)
-            echo "key=packages-$TARGET-${{ inputs.stage }}-$kfp-$prev-$h" >> "$GITHUB_OUTPUT"
-            echo "partial=packages-$TARGET-${{ inputs.stage }}-$kfp-$prev-" >> "$GITHUB_OUTPUT"
+            # (target as in common.sh: <target>_<arch> for other architectures than aarch64)
+            kt=$TARGET; [ "$NURA_ARCH" = aarch64 ] || kt=${TARGET}_$NURA_ARCH
+            echo "key=packages-$kt-${{ inputs.stage }}-$kfp-$prev-$h" >> "$GITHUB_OUTPUT"
+            echo "partial=packages-$kt-${{ inputs.stage }}-$kfp-$prev-" >> "$GITHUB_OUTPUT"
           else
             echo "key=" >> "$GITHUB_OUTPUT"
           fi

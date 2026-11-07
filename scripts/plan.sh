@@ -8,6 +8,7 @@
 # run from scratch. Stages without INPUTS_<stage>, or with inputs from other repositories (@repo),
 # always run. The key is the one stage.yml uses:
 #   packages-<target>-<stage>-<signing key>-<previous stage's key>-<this stage's hash>
+# (<target>_<arch> for other architectures than aarch64, see common.sh)
 #
 # Environment: NURA_ABUILD_KEY, REBUILD, GH_TOKEN/GH_REPO (gh cache list; actions: read);
 # NURA_PLAN_OFFLINE=1: don't ask GitHub (every cacheable stage counts as cached).
@@ -28,7 +29,7 @@ for stage in $STAGES; do
 	# shellcheck disable=SC2154 # set by eval
 	if [ -n "$inputs" ] && ! echo "$inputs" | grep -q '@'; then
 		prev=$(echo "$prev_key" | sha256sum | cut -c1-8)
-		key="packages-$TARGET-$stage-$kfp-$prev-$(stage_hash "$stage")"
+		key="packages-$KEY_TARGET-$stage-$kfp-$prev-$(stage_hash "$stage")"
 	else
 		key=
 	fi

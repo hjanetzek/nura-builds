@@ -1,9 +1,10 @@
 #!/bin/sh
 # Publish a build as GitHub releases of this repository (gh, GH_TOKEN with contents: write):
 #
-# - the package repository: release "aarch64". apk asks for <repository>/aarch64/APKINDEX.tar.gz,
-#   and release files are at .../releases/download/<tag>/<file>, so with the tag "aarch64" the
-#   repository is https://github.com/<owner>/<repo>/releases/download. Uploads the packages the
+# - the package repository: release "<arch>" (NURA_ARCH: aarch64, default, or x86_64). apk asks
+#   for <repository>/<arch>/APKINDEX.tar.gz, and release files are at
+#   .../releases/download/<tag>/<file>, so with the architecture as the tag the repository is
+#   https://github.com/<owner>/<repo>/releases/download, the same for all architectures. Uploads the packages the
 #   release doesn't have yet or has as another file (same version, rebuilt), then the index, then deletes packages the index no longer has (in
 #   that order, so the published index never points to a missing file).
 # - images: release "<target>-latest", the images replaced by each build.
@@ -14,7 +15,8 @@ set -eu
 target=$1
 tar=$2
 shift 2
-repo_tag=aarch64
+arch=${NURA_ARCH:-aarch64}
+repo_tag=$arch
 image_tag=$target-latest
 run_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-}"
 repository_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/releases/download"
@@ -22,13 +24,13 @@ repository_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-# Packages of the local repository (packages/<channel>/aarch64/)
-tar -C "$tmp" -xf "$tar" --wildcards --no-anchored "*/aarch64/*.apk" "*/aarch64/APKINDEX.tar.gz"
+# Packages of the local repository (packages/<channel>/<arch>/)
+tar -C "$tmp" -xf "$tar" --wildcards --no-anchored "*/$arch/*.apk" "*/$arch/APKINDEX.tar.gz"
 dir=$(dirname "$(find "$tmp" -name APKINDEX.tar.gz | head -n 1)")
 [ -f "$dir/APKINDEX.tar.gz" ] || { echo "no APKINDEX.tar.gz in $tar" >&2; exit 1; }
 echo "packages: $(find "$dir" -name '*.apk' | wc -l) in $dir"
 
-notes="Package repository of nura-builds (aarch64, Nura edge), signed with keys/nura-builds-ci.rsa.pub.
+notes="Package repository of nura-builds ($arch, Nura edge), signed with keys/nura-builds-ci.rsa.pub.
 
 On a device (as root):
 
@@ -38,7 +40,7 @@ On a device (as root):
 
 Updated by $run_url"
 gh release view "$repo_tag" >/dev/null 2>&1 ||
-	gh release create "$repo_tag" --prerelease --title "Package repository (aarch64)" --notes "$notes"
+	gh release create "$repo_tag" --prerelease --title "Package repository ($arch)" --notes "$notes"
 
 # Published packages with their sha256 ("name sha256:..."). A package rebuilt with the same version
 # (the zynthian stage rebuilds the kiosk package every run; full rebuilds after cache changes) is

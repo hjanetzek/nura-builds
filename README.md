@@ -75,6 +75,13 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
   apk update && apk upgrade
   ```
 
+- **amd64**: the same for x86_64, built only when asked for (Actions > zynthian > Run workflow,
+  architecture `x86_64`; pushes and the weekly run build aarch64): release
+  [`x86_64`](../../releases/tag/x86_64) at the same repository URL (apk asks for
+  `<repository>/x86_64/APKINDEX.tar.gz`), and with `images` the QEMU image
+  `zynthian-qemu-amd64.img.zst` in `zynthian-latest`. On x86-64 runners; cache keys
+  `packages-zynthian_x86_64-<stage>-...` (`NURA_ARCH`, `DEVICES_x86_64` in the target file).
+
 Workflow artifacts (packages per stage, images) stay for a few days for debugging.
 
 ## Building single packages
