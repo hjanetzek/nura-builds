@@ -5,6 +5,7 @@
 REPOS="
 zynthian-ui https://github.com/hjanetzek/zynthian-ui nura nura
 zyncoder    https://github.com/hjanetzek/zyncoder    nura -
+drivenbymoss-rust https://github.com/hjanetzek/drivenbymoss-rust main nura
 "
 
 # Stages, built in this order; each one a list of pmbootstrap build arguments, separated by ";".
@@ -26,8 +27,10 @@ STAGE_pyside="pyside6"
 STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree sooperlooper fluidplug-lv2 avldrums-lv2"
 # zynthian-ui and zyncoder are built from their checkouts (--src skips $source and doesn't build
 # missing dependencies, hence the order); seed-distfiles.sh puts the bundled Python packages into
-# the distfiles cache first
-STAGE_zynthian="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; postmarketos-ui-zynthian"
+# the distfiles cache first. DrivenByMoss (its zynthian controller drivers, and dbm-nihost for the
+# NI Maschine Mk2/JAM) from its checkout too, after zynthian-ui (its drivers go into zynthian-ui's tree);
+# its recipe fetches the Rust crates itself. The kiosk package depends on both.
+STAGE_zynthian="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@drivenbymoss-rust drivenbymoss; --src=@drivenbymoss-rust dbm-nihost; postmarketos-ui-zynthian"
 SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
 
 # Recipe directories whose contents decide whether a stage's cached packages are still valid
