@@ -1,0 +1,209 @@
+From c3c13b5338e19fdebb26c5fbaa7d3602ede49e22 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Sat, 7 Nov 2026 12:45:25 +0100
+Subject: [PATCH] GTK: start with the UI window hidden, show/hide it by command
+
+New option -H/--hide-ui: the window isn't shown at start, and closing it
+only hides it (the plugin keeps running). New commands "ui show",
+"ui hide" and "ui toggle" show or hide the window from the command
+line (run in the GTK main loop); every change is reported on stdout as
+"#GUI> shown" or "#GUI> hidden", so a host like zynthian can open and
+close a plugin's native GUI on demand and keep track when the user
+closes it. The console and Qt frontends report "no UI window".
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/frontend.h     |  6 +++++
+ src/jalv.c         |  8 ++++++
+ src/jalv_console.c |  6 +++++
+ src/jalv_gtk.c     | 62 +++++++++++++++++++++++++++++++++++++++++++++-
+ src/jalv_qt.cpp    |  6 +++++
+ src/options.h      |  1 +
+ 6 files changed, 88 insertions(+), 1 deletion(-)
+
+diff --git a/src/frontend.h b/src/frontend.h
+index 6202fee..8a36825 100644
+--- a/src/frontend.h
++++ b/src/frontend.h
+@@ -48,6 +48,12 @@ jalv_frontend_open(Jalv* jalv);
+ int
+ jalv_frontend_close(Jalv* jalv);
+ 
++/// Show (1), hide (0) or toggle (-1) the UI window; may be called from any thread.
++/// Visibility changes are reported on stdout as "#GUI> shown" / "#GUI> hidden".
++/// Returns 0, or -1 if the frontend has no UI window.
++int
++jalv_frontend_show_ui(Jalv* jalv, int show);
++
+ /// Needed by console
+ void update_ui_title(Jalv* jalv);
+ void update_ui_presets(Jalv* jalv);
+diff --git a/src/jalv.c b/src/jalv.c
+index 01e958f..da831b9 100644
+--- a/src/jalv.c
++++ b/src/jalv.c
+@@ -1785,6 +1785,12 @@ jalv_process_command(Jalv* jalv, const char* cmd)
+   } else if (strncmp(cmd, "bypass ", 7) == 0) {
+   		matches = sscanf(cmd + 7,"%n%f", &index, &value);
+       jalv->bypass = value ? 2 : 3;
++    } else if (strcmp(cmd, "ui show\n") == 0 || strcmp(cmd, "ui hide\n") == 0 ||
++               strcmp(cmd, "ui toggle\n") == 0) {
++      const int show = cmd[3] == 's' ? 1 : cmd[3] == 'h' ? 0 : -1;
++      if (jalv_frontend_show_ui(jalv, show)) {
++        fprintf(stderr, "error: no UI window\n");
++      }
+     } else if (strcmp(cmd, "help\n") == 0) {
+ 		fprintf(stdout,
+ 		        "Commands:\n"
+@@ -1799,6 +1805,8 @@ jalv_process_command(Jalv* jalv, const char* cmd)
+ 		        "                    Save preset (BANK_URI is optional)\n"
+ 		        "  set INDEX VALUE   Set control value by port index\n"
+ 		        "  set SYMBOL VALUE  Set control value by symbol\n"
++		        "  ui show|hide|toggle\n"
++		        "                    Show or hide the UI window (GTK, see --hide-ui)\n"
+ 		        "  SYMBOL = VALUE    Set control value by symbol\n");
+ 	} else if (strcmp(cmd, "\n") == 0) {
+ 		// Prompt again if just pressed enter
+diff --git a/src/jalv_console.c b/src/jalv_console.c
+index bcdef91..f675c23 100644
+--- a/src/jalv_console.c
++++ b/src/jalv_console.c
+@@ -264,6 +264,12 @@ jalv_frontend_close(Jalv* jalv)
+   return 0;
+ }
+ 
++int
++jalv_frontend_show_ui(Jalv* ZIX_UNUSED(jalv), int ZIX_UNUSED(show))
++{
++  return -1;
++}
++
+ //-----------------------------------------------------------------------------
+ 
+ void update_ui_title(Jalv* jalv)
+diff --git a/src/jalv_gtk.c b/src/jalv_gtk.c
+index c67c819..ef4ec5b 100644
+--- a/src/jalv_gtk.c
++++ b/src/jalv_gtk.c
+@@ -72,6 +72,54 @@ on_window_destroy(GtkWidget* ZIX_UNUSED(widget), gpointer ZIX_UNUSED(data))
+   gtk_main_quit();
+ }
+ 
++static void
++report_ui_visible(bool visible)
++{
++  fprintf(stdout, "#GUI> %s\n", visible ? "shown" : "hidden");
++  fflush(stdout);
++}
++
++// With --hide-ui, closing the window only hides it (the plugin keeps running)
++static gboolean
++on_window_delete(GtkWidget* widget,
++                 GdkEvent* ZIX_UNUSED(event),
++                 gpointer  data)
++{
++  Jalv* jalv = (Jalv*)data;
++  if (!jalv->opts.hide_ui) {
++    return FALSE;
++  }
++  gtk_widget_hide(widget);
++  report_ui_visible(false);
++  return TRUE;
++}
++
++static gboolean
++show_ui_idle(gpointer data)
++{
++  const int show = GPOINTER_TO_INT(data) - 1;
++  if (s_jalv && s_jalv->window) {
++    GtkWidget* window  = (GtkWidget*)s_jalv->window;
++    const bool visible = gtk_widget_get_visible(window);
++    const bool want    = show < 0 ? !visible : show != 0;
++    if (want) {
++      gtk_window_present(GTK_WINDOW(window));
++    } else {
++      gtk_widget_hide(window);
++    }
++    report_ui_visible(want);
++  }
++  return G_SOURCE_REMOVE;
++}
++
++int
++jalv_frontend_show_ui(Jalv* ZIX_UNUSED(jalv), int show)
++{
++  // From the command line thread: run it in the GTK main loop
++  g_idle_add(show_ui_idle, GINT_TO_POINTER(show + 1));
++  return 0;
++}
++
+ int
+ jalv_frontend_init(int* argc, char*** argv, JalvOptions* opts)
+ {
+@@ -148,6 +196,13 @@ jalv_frontend_init(int* argc, char*** argv, JalvOptions* opts)
+      &opts->no_menu,
+      "Do not show Jalv menu on window",
+      NULL},
++    {"hide-ui",
++     'H',
++     0,
++     G_OPTION_ARG_NONE,
++     &opts->hide_ui,
++     "Start with the window hidden; closing it hides it (commands: ui show/hide/toggle)",
++     NULL},
+     {"jack-name",
+      'n',
+      0,
+@@ -1462,6 +1517,7 @@ jalv_frontend_open(Jalv* jalv)
+   s_jalv = jalv;
+ 
+   g_signal_connect(window, "destroy", G_CALLBACK(on_window_destroy), jalv);
++  g_signal_connect(window, "delete-event", G_CALLBACK(on_window_delete), jalv);
+ 
+   set_window_title(jalv);
+ 
+@@ -1525,7 +1581,11 @@ jalv_frontend_open(Jalv* jalv)
+ 
+   g_timeout_add(1000 / jalv->ui_update_hz, (GSourceFunc)jalv_update, jalv);
+ 
+-  gtk_window_present(GTK_WINDOW(window));
++  if (jalv->opts.hide_ui) {
++    report_ui_visible(false);
++  } else {
++    gtk_window_present(GTK_WINDOW(window));
++  }
+ 
+   init_cli_thread(jalv);
+   gtk_main();
+diff --git a/src/jalv_qt.cpp b/src/jalv_qt.cpp
+index 002fb43..8eea23b 100644
+--- a/src/jalv_qt.cpp
++++ b/src/jalv_qt.cpp
+@@ -732,6 +732,12 @@ jalv_frontend_close(Jalv*)
+   return 0;
+ }
+ 
++int
++jalv_frontend_show_ui(Jalv*, int)
++{
++  return -1; // TODO
++}
++
+ //-----------------------------------------------------------------------------
+ 
+ void update_ui_presets(Jalv* jalv)
+diff --git a/src/options.h b/src/options.h
+index 21101c0..6d82839 100644
+--- a/src/options.h
++++ b/src/options.h
+@@ -26,6 +26,7 @@ typedef struct {
+   int      show_hidden;     ///< Show controls for notOnGUI ports
+   int      no_menu;         ///< Hide menu iff true
+   int      show_ui;         ///< Show non-embedded UI
++  int      hide_ui;         ///< Start with the UI window hidden; closing it hides it
+   int      print_controls;  ///< Print control changes to stdout
+   int      non_interactive; ///< Do not listen for commands on stdin
+   char*    ui_uri;          ///< URI of UI to load
+-- 
+2.56.0
+
