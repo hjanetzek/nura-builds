@@ -9,7 +9,7 @@
 # loads X11 only when the editor opens).
 pkgname=vaporizer2-lv2
 pkgver=3.5.0_git20240914
-pkgrel=0
+pkgrel=1
 subpackages="$pkgname-data:_data:noarch $pkgname-data-extra:_data_extra:noarch"
 _commit=1c56c4be304255f1c397dad725ea784f15a55ef5
 _juce=d054f0d14dcac387aebda44ce5d792b5e7a625b3
@@ -57,6 +57,11 @@ prepare() {
 	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
 	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
 	EOF
+	# processBlock() dereferences the playhead's std::optional position unchecked: empty in jalv
+	# until the host sends time info (abort with _GLIBCXX_ASSERTIONS); keep it optional
+	sed -i 's/positionInfo = \*getPlayHead()->getPosition();/positionInfo = getPlayHead()->getPosition();/' \
+		VASTvaporizer/Source/Plugin/VASTAudioProcessor.cpp
+	grep -q 'positionInfo = getPlayHead()->getPosition();' VASTvaporizer/Source/Plugin/VASTAudioProcessor.cpp
 	# git submodules (outer ones first)
 	rm -rf JUCE && mv "$srcdir"/JUCE-${_juce} JUCE
 	rm -rf VASTvaporizer/Source/muFFT && mv "$srcdir"/muFFT-${_vastvaporizer_source_mufft} VASTvaporizer/Source/muFFT
