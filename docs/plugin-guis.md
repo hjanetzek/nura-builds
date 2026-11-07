@@ -104,6 +104,16 @@ Qt5), granulator (faust Qt). Their UIs aren't installed, so zynthian shows none.
 - Build in the clean CI environment (`packages.yml --ref <branch>`); the Duet hides missing
   makedepends.
 
+## Known issues
+
+- **Monique: the SETUP and INFO panels (and the keyboard) are cut off.** They extend the GUI at
+  the bottom: the editor grows in height. Monique's GUI is resizable with a fixed aspect ratio,
+  and in the full-screen plugin window JUCE fits it to the width: with a panel open the window
+  gets taller than the screen (seen: 1174x970 logical on the Duet's 1280x800) and the bottom part
+  is cut off. Without the panels it fits (1280x800). Possible fixes: a per-plugin scale factor
+  (`jalv.gtk3 -S`, from the GUI's height with the panels open) instead of full-screen, a floating
+  window niri can move, or fitting to the height in JUCE's LV2 wrapper.
+
 ## Open questions
 
 - Do JUCE GUIs (Surge XT, Odin2) run in jalv.gtk3 on musl and Panfrost?
