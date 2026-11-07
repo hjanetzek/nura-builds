@@ -1,8 +1,9 @@
 # LV2 plugins on Nura: state and plan
 
 Status: 2026-11-07, Lenovo Duet (Nura edge, aarch64, musl). Phases 1 to 6 of the plan done, phase 7
-nearly: 304 of the 313 default plugins installed and loading (from 36 before), 302 by exact URI
+nearly: 305 of the 313 default plugins installed and loading (from 36 before), 303 by exact URI
 (JC303's and Triceratops' URIs changed upstream; zynthian's rescan adds them under the new ones).
+Mutated Instruments has a stand-in (zynMI's Braids, Plaits and Marbles under other URIs).
 All of them build in CI (nura-builds' `plugins` stage); new recipes are tried on `plugin-*`
 branches first (`plugin.yml`, see the README).
 
@@ -35,7 +36,7 @@ cd /usr/share/zynthian/zynthian-ui/zyngine && python3 ./zynthian_lv2.py engines
 with zynthian's environment (`ZYNTHIAN_DIR`, `ZYNTHIAN_LIB_DIR`, `PYTHONPATH` as in
 `/usr/bin/zynthian`, then `desktop/zynthian_desktop_env.sh`), then restart the session.
 
-## Installed: 304 of 313
+## Installed: 305 of 313
 
 All pulled in by the meta package `zynthian-lv2-plugins` (`aports/lv2/`), which
 `postmarketos-ui-zynthian` depends on. From Alpine:
@@ -103,6 +104,8 @@ Packaged in `aports/lv2/` (phase 1, built and tested on the Duet):
 | `helm-lv2` | 1 | Helm 0.9.0 (its old JUCE: no `JUCE_PACKED`, `-fpermissive` for current FreeType) |
 | `fabla-lv2` | 1 | Fabla (zynthian's fork, morepads), DSP only: the NTK GUI and the UI entries in the TTLs left out |
 | `foo-yc20-lv2` | 1 | Foo YC20 (zynthian's fork), DSP only, against Faust 0.9.73's architecture headers |
+| `vaporizer2-lv2` (+ `-data`, `-data-extra`) | 1 | Vaporizer2 3.5.0 (JUCE). `-data` (68 MB, by `install_if`): noises, the small wavetables, the presets under 256 KB (249); `-data-extra` (optional, ~910 MB installed, 490 MB download): the Analog and Digital wavetables and the larger presets. `arc4random()` from libbsd; patched: `processBlock()` dereferenced the playhead's empty `std::optional` position (abort in jalv with `_GLIBCXX_ASSERTIONS`) |
+| `zynmi-lv2` | (stand-in) | zynMI's Braids, Plaits and Marbles from the source on its `BraidsPlaitsMarbles` branch, URIs `http://mutable-instruments.net/plugins/{braids,plaits,marbles}`: zynthian's default "Mutated Instruments" is a newer prebuilt release whose source isn't published |
 | `jc303-lv2` | 1 | JC303 0.13.0; its URI lost the trailing slash zynthian's config has (`.../JC303/`): the rescan adds it under the new URI |
 
 Before 2026-11-05 the kiosk package depended on `calf` instead of `calf-lv2` (Alpine puts the LV2
@@ -112,20 +115,19 @@ Available in Alpine but **not** in zynthian's defaults (all disabled there): `ls
 (0 of 194 enabled), `airwindows-lv2` (0 of 187), `noise-repellent`, `bankstown-lv2`. Not
 installed.
 
-## Missing: 9
+## Missing: 8
 
 None of these are packaged in Alpine. Source: how ZynthianOS gets them (Debian/KXStudio package
 from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a prebuilt binary).
 
 | Plugin | Why it's missing | What it would take |
 |---|---|---|
-| Vaporizer2 | not done yet: a 740 MB repository (SDKs, FFTW, presets), JUCE, preset and wavetable data separate | a recipe like the other JUCE packages, data in `-data` |
 | Calf Wavetable | Alpine's calf is built without the experimental plugins | our own calf build with `--enable-experimental`, replacing Alpine's calf-lv2 |
 | Argotlunar2 | old JUCE port in DISTRHO-Ports-Extra (2018) | building DISTRHO-Ports-Extra's legacy JUCE |
 | ChaosChimp | 2014 JUCE project (teragonaudio) | an old JUCE with an LV2 wrapper |
 | SAFE EQ | 2015 JUCE project (semanticaudio), with its own JUCE modules | as ChaosChimp |
 | SO-kl5 | uses the obsolete LV2 event extension (`ev:EventPort`): jalv 1.10 and zynthian's jalv refuse it | port the MIDI input to atoms |
-| Mutated Instruments | zynMI's repository has no source (prebuilt binaries only) | the source |
+| Mutated Instruments | the prebuilt release's source isn't published; stand-in `zynmi-lv2` (Braids, Plaits, Marbles from the `BraidsPlaitsMarbles` branch, other URIs) | the source of the release |
 | GxVoxTonebender | source not found (in neither Guitarix 0.47 nor GxPlugins 1.0) | the source |
 | FluidGM | no SoundFont in zynthian's FluidPlug fork | a GM SoundFont |
 
@@ -173,7 +175,7 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 | 4. Instruments with data (**done**) | FluidPlug, avldrums, setBfree (also as engine) | 26 | SoundFonts in `-data` (by `install_if`); FluidPlug and AVL not in images |
 | 5. EQ10Q, QMidiArp, rncbc synths (**done**) | EQ10Q, QMidiArp, padthv1/samplv1/synthv1 | ~13 | EQ10Q and QMidiArp: minutes, Debian's sources; rncbc synths with Qt 6.12's dev packages |
 | 6. JUCE (**done**) | DISTRHO-Ports (TAL, Vex), CHOW, Surge XT, Odin2, OB-Xd, Dexed, Helm, Monique, Vaporizer2, … | ~30 | one day on the Duet: JUCE needs the same musl/GCC 15 fixes in each (see packaging-guide.md) |
-| 7. Neural and the rest (nearly done) | done: gula, Punk Console, TalentedHack, Ratatouille, Roboverb, Regrader, Aether, MOD Arpeggiator, Triceratops, Granulator, AMS Bitgrinder, NAM, AIDA-X, Helm, Fabla, Foo YC20 (and Dusk Audio); left: see Missing | | case by case, on `plugin-*` branches |
+| 7. Neural and the rest (nearly done) | done: gula, Punk Console, TalentedHack, Ratatouille, Roboverb, Regrader, Aether, MOD Arpeggiator, Triceratops, Granulator, AMS Bitgrinder, NAM, AIDA-X, Helm, Fabla, Foo YC20, Vaporizer2, zynMI (and Dusk Audio); left: see Missing | | case by case, on `plugin-*` branches |
 
 After each phase: build, install on the Duet, rescan, measure coverage, and load each new plugin
 once (`tools/lv2-coverage.py --load`, and jalv for the ones that need host features) to catch
@@ -223,8 +225,8 @@ Problems found, and how the packages handle them:
 
 Large data is kept out of device images, by the data subpackage convention in the packaging guide:
 `<pkg>-data` comes with its plugin by `install_if` (Surge XT's factory content, FluidPlug's and AVL's
-SoundFonts), optional data is `<pkg>-data-<what>` and nothing pulls it in (Surge XT's
-`-data-3rdparty`, 327 MB). FluidPlug (284 MB) and AVL drums (145 MB) are built but not in the meta
+SoundFonts, Vaporizer2's small wavetables and presets), optional data is `<pkg>-data-<what>` and nothing
+pulls it in (Surge XT's `-data-3rdparty`, 327 MB; Vaporizer2's `-data-extra`, ~910 MB). FluidPlug (284 MB) and AVL drums (145 MB) are built but not in the meta
 package, so not in images; `apk add avldrums-lv2` installs a working instrument with its data.
 
 - **TBD: admin menu entry** in zynthian to install (and remove) optional data packages on the

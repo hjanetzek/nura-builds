@@ -133,6 +133,7 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
 | `static_cast<char>(NULL)` invalid | `NULL` is `nullptr` in C++ on musl | `0` (sed) |
 | a segfault on the first line of a plugin's `run()` (jalv's audio thread) | musl's default thread stack is 128 KB (glibc: 8 MB); a large local copy in `run()` overflows it, and `-fstack-clash-protection` faults on entry. Find it with a debug build (`!strip`, `-g -O1`, on a branch) under gdb; pass the large object by reference (mod-arpeggiator-lv2) |
 | `fts.h: No such file` | fts is a separate library | `musl-fts-dev`, `LIBS=-lfts` |
+| `arc4random` undeclared, then `undefined reference to 'arc4random'` | glibc 2.36+ has it, musl doesn't | libbsd: `libbsd-dev`, `-include bsd/stdlib.h`, and `-lbsd` at the end of the link line: in `LDFLAGS` it comes before the objects and `--as-needed` drops it; with CMake `-DCMAKE_CXX_STANDARD_LIBRARIES=-lbsd` (Vaporizer2) |
 | `soundcard.h`, `linux/...` missing | kernel headers aren't pulled in implicitly | `linux-headers` |
 | `st_atimespec` | the code picks BSD field names unless `_POSIX_C_SOURCE` is defined, which glibc defines implicitly and musl doesn't | take the POSIX branch on Linux too (`\|\| defined(__linux__)`, pd-hcs) |
 | a symbol "not found" when the plugin loads | see "C99 inline" below | |
@@ -220,6 +221,15 @@ differently:
   process with SIGKILL, so ninja reports "signal 9", which looks like the OOM killer. Before
   guessing (memory, LTO), get evidence: a debug branch that runs the step alone and the helper
   under `strace`/`gdb`, built with `packages.yml` from a nura-builds branch (`--ref <branch>`).
+- **Test with sound, not only a start**: "jalv starts" misses crashes in `run()` that only come with
+  the first notes or time info. Play notes and record the output (the session's PipeWire, zynthian may
+  run alongside): `pw-link "Midi-Bridge:Midi Through: Port-0 (capture)" test:in`, a recorder
+  without autoconnect (`pw-record -P '{ node.name=rec node.autoconnect=false }' --format s16 out.wav`,
+  linked from `test:audio_out_*`), notes with `aseqsend -p 14:0 90 3c 64`, then the peak per second.
+- **`Assertion ... failed` from libstdc++ headers** (`optional:1186 ... _M_is_engaged()`): Alpine
+  builds with `-D_GLIBCXX_ASSERTIONS`, which aborts on bugs that pass silently elsewhere (an empty
+  `std::optional` dereferenced; Vaporizer2's `*getPlayHead()->getPosition()`). Fix the code; don't
+  turn the assertions off.
 - A crash only at shutdown (jalv exits on EOF) may not show under gdb (timing); the core dump is in
   `coredumpctl`. Plugin libraries are stripped, so the trace names only the library and offset.
 - Engines that aren't plugins (SooperLooper, setBfree, ZynAddSubFX): start them as the engine does
