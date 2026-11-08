@@ -91,7 +91,7 @@ and runs it in QEMU with KVM, OpenGL through virgl (`virtio-vga-gl`: the guest r
 desktop's GPU), PipeWire audio (virtio-sound), SSH on `localhost:2222` and webconf on
 `localhost:8080`; `-U VID:PID` passes a USB MIDI controller through, `-r` starts from a fresh copy,
 `-u` fetches a newer image. It needs QEMU's GL, display and audio modules (it names the missing
-ones; on Arch `qemu-hw-display-virtio-vga-gl qemu-hw-display-virtio-gpu-gl qemu-ui-opengl
+ones; on Arch `qemu-hw-display-virtio-{gpu,gpu-gl,gpu-pci,gpu-pci-gl,vga,vga-gl} qemu-ui-opengl
 qemu-ui-gtk qemu-audio-pipewire`, and `qemu-hw-usb-host` for passthrough) and OVMF (`edk2-ovmf`).
 
 ## Building single packages

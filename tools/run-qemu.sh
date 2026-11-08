@@ -127,7 +127,8 @@ displays=$(qemu-system-x86_64 -display help 2>/dev/null)
 missing=
 has_device() { echo "$devices" | grep -q "name \"$1\""; }
 if [ "$gl" = on ]; then
-	has_device virtio-vga-gl || missing="$missing qemu-hw-display-virtio-vga-gl qemu-hw-display-virtio-gpu-gl qemu-ui-opengl"
+	# (the -gl modules need the plain virtio-gpu/-vga ones too: without them QEMU lists none)
+	has_device virtio-vga-gl || missing="$missing qemu-hw-display-virtio-gpu qemu-hw-display-virtio-gpu-gl qemu-hw-display-virtio-gpu-pci qemu-hw-display-virtio-gpu-pci-gl qemu-hw-display-virtio-vga qemu-hw-display-virtio-vga-gl qemu-ui-opengl"
 else
 	has_device virtio-vga || missing="$missing qemu-hw-display-virtio-vga qemu-hw-display-virtio-gpu"
 fi
