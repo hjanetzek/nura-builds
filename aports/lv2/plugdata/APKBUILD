@@ -3,7 +3,7 @@
 # JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
 # only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
 # loads X11 only when the editor opens).
-# libxi-dev: its JUCE fork includes X11/extensions/XInput2.h (touch input).
+# libxi-dev, libxcomposite-dev: its JUCE fork includes XInput2.h and Xcomposite.h.
 pkgname=plugdata
 pkgver=0.9.3.2
 pkgrel=0
@@ -42,6 +42,7 @@ makedepends="
 	freetype-dev
 	jack-dev
 	libx11-dev
+	libxcomposite-dev
 	libxcursor-dev
 	libxext-dev
 	libxi-dev
