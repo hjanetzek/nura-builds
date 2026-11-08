@@ -1,0 +1,13 @@
+--- a/src/common/Thread.cpp	2026-11-08 20:10:50.431705269 +0100
++++ b/src/common/Thread.cpp	2026-11-08 20:10:50.443396747 +0100
+@@ -384,7 +384,9 @@
+             schp.sched_priority = sched_get_priority_min(policy) + this->PriorityDelta;
+         }
+     }
+-    if (pthread_setschedparam(__thread_id, policy, &schp) != 0) {
++    // pthread_self(): called by the new thread itself (pthreadLauncher), possibly before
++    // pthread_create() has returned and stored __thread_id (musl stores it only then)
++    if (pthread_setschedparam(pthread_self(), policy, &schp) != 0) {
+         std::cerr << "Thread: WARNING, can't assign "
+                   << policyDescription
+                   << " scheduling to thread!"
