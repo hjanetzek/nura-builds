@@ -1,15 +1,18 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
-# DISTRHO-Ports: JUCE plugins ported to LV2. Only the 15 that zynthian enables by default (Debian's
-# distrho-plugin-ports-lv2 / recipe install_distrho_ports.sh on ZynthianOS): TAL Dub-3, Filter-2,
-# Reverb I-III, Vocoder-II, NoiseMaker; Vex; OB-Xd; The Pilgrim; Luftikus; Temper; dRowAudio
-# Distortion, Distortion Shaper, Flanger. All JUCE 5. DSP only (linux-headless: no X11 or
+# DISTRHO-Ports: JUCE plugins ported to LV2, the JUCE 5 ones ZynthianOS installs (Debian's
+# distrho-plugin-ports-lv2 / recipe install_distrho_ports.sh): enabled in zynthian by default TAL
+# Dub-3, Filter-2, Reverb I-III, Vocoder-II, NoiseMaker; Vex; OB-Xd; The Pilgrim; Luftikus; Temper;
+# dRowAudio Distortion, Distortion Shaper, Flanger; disabled by default, but on the image (TAL-Filter
+# is in the factory snapshot "008-Drone") TAL-Filter, The Function, dRowAudio Reverb and Tremolo,
+# EasySSP, EQinox, LUFS Meter (and Multichannel), PitchedDelay, ReFine, StereoSourceSeparation,
+# Wolpertinger. Not Vitalium (JUCE 6.0, also on the image). DSP only (linux-headless: no X11 or
 # freetype), LV2 only. Master, as the 2021 release predates fixes for current compilers.
 pkgname=distrho-ports-lv2
 _commit=d3b62da2e83c69b0866af5bb2e29ac78dc8014cf
 _juce5=d1a2d5908202f2529886e07c3e65118c821cba98
 pkgver=0_git20250914
-pkgrel=0
-pkgdesc="DISTRHO-Ports JUCE plugins enabled in zynthian (LV2, no GUIs)"
+pkgrel=1
+pkgdesc="DISTRHO-Ports JUCE plugins as on ZynthianOS (LV2, no GUIs)"
 url="https://github.com/DISTRHO/DISTRHO-Ports"
 arch="all"
 license="GPL-2.0-or-later AND GPL-3.0-or-later"
@@ -34,7 +37,7 @@ prepare() {
 	sed -i 's/static_cast<char>(NULL)/static_cast<char>(0)/' libs/juced/source/audio/osc/*.cpp
 }
 
-_plugins="arctican-pilgrim,drowaudio-distortion,drowaudio-distortionshaper,drowaudio-flanger,luftikus,obxd,tal-dub-3,tal-filter-2,tal-noisemaker,tal-reverb,tal-reverb-2,tal-reverb-3,tal-vocoder-2,temper,vex"
+_plugins="arctican-function,arctican-pilgrim,drowaudio-distortion,drowaudio-distortionshaper,drowaudio-flanger,drowaudio-reverb,drowaudio-tremolo,easySSP,eqinox,LUFSMeter,LUFSMeter-Multi,luftikus,obxd,pitchedDelay,refine,stereosourceseparation,tal-dub-3,tal-filter,tal-filter-2,tal-noisemaker,tal-reverb,tal-reverb-2,tal-reverb-3,tal-vocoder-2,temper,vex,wolpertinger"
 
 build() {
 	# musl: stat64 and friends only with _LARGEFILE64_SOURCE; _NL_IDENTIFICATION_* are glibc
