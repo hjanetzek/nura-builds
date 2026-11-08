@@ -8,7 +8,8 @@ pkgdesc="C++ library for Gigasampler/GigaStudio, DLS, SoundFont and KORG sound f
 url="https://www.linuxsampler.org/libgig/"
 arch="all"
 license="GPL-2.0-or-later"
-makedepends="libsndfile-dev util-linux-dev"
+# linux-headers: linux/cdrom.h (the Akai CD-ROM reader)
+makedepends="libsndfile-dev linux-headers util-linux-dev"
 subpackages="$pkgname-dev gigtools:_tools"
 source="https://download.linuxsampler.org/packages/libgig-$pkgver.tar.bz2"
 options="!check" # no tests
