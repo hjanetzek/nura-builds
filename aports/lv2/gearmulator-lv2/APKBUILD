@@ -1,0 +1,120 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# gearmulator (The Usual Suspects): Osirus (Virus A/B/C) and OsTIrus (Virus TI) DSP56300 emulations, JUCE with RmlUi skins. Need the user's ROMs (not packaged). Disabled in zynthian's config (shared snapshots use them); the other synths (Vavra, Xenia, NodalRed2x, JE-8086, 88Emu) not built yet.
+# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
+# only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
+# loads X11 only when the editor opens).
+pkgname=gearmulator-lv2
+pkgver=2.2.27
+pkgrel=0
+_commit=719f92ee3b3a606143d30bea4647ce501b95094c
+_source_cpu_dsp56300=2a7ca1e9ce4b0d74b47d9a6384f6d15c1588d2b0
+_source_cpu_dsp56300_source_asmjit=3577608cab0bc509f856ebf6e41b2f9d9f71acc4
+_source_3rdparty_juce=54e15111b0355db5245039250b348e58b3e45e24
+_source_3rdparty_cpp_terminal=43f5dc0061ce31ea0ddc8fd4cc1d65d83e33a232
+_source_cpu_mc68k=cc3693a23fde2ea97aec261198f9e6291ead5e5e
+_source_3rdparty_clap_juce_extensions=2aaad9e637c62a4eed4664a7e8ef52dca9dc3ba6
+_source_3rdparty_clap_juce_extensions_clap_libs_clap=df8f16c69ba1c1a15fb105f0c5a2e5b9ac6be742
+_source_3rdparty_clap_juce_extensions_clap_libs_clap_helpers=7b53a685e11465154b4ccba3065224dbcbf8a893
+_source_3rdparty_rmlui=0c8e94e49e76ab5e40526aea62d22d21605e1125
+_source_3rdparty_freetype=828916527ce4f69af722bce46ce54d289001a0bd
+_source_3rdparty_freetype_subprojects_dlg=72dfcc858c040c54a6a0b88fcb7e70ee186d3167
+_source_3rdparty_portmidi_latest=101dac9455e2718512c94e24cbcae6a6f34b908b
+_source_3rdparty_lunasvg=f8aabfb444bb37f69df7290790f57e4a27730a93
+_source_3rdparty_lunasvg_plutovg=5e4712cf873b0c7829a4a6157763e2ad3ac49164
+pkgdesc="Osirus and OsTIrus Virus emulations (LV2, with GUI; ROMs not included)"
+url="https://github.com/dsp56300/gearmulator"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+makedepends="
+	alsa-lib-dev
+	cmake
+	fontconfig-dev
+	freetype-dev
+	libx11-dev
+	libxcursor-dev
+	libxext-dev
+	libxinerama-dev
+	libxrandr-dev
+	samurai
+	"
+source="$pkgname-$_commit.tar.gz::https://github.com/dsp56300/gearmulator/archive/$_commit.tar.gz
+	source_cpu_dsp56300-${_source_cpu_dsp56300}.tar.gz::https://github.com/dsp56300/dsp56300/archive/${_source_cpu_dsp56300}.tar.gz
+	source_cpu_dsp56300_source_asmjit-${_source_cpu_dsp56300_source_asmjit}.tar.gz::https://github.com/dsp56300/asmjit/archive/${_source_cpu_dsp56300_source_asmjit}.tar.gz
+	source_3rdparty_juce-${_source_3rdparty_juce}.tar.gz::https://github.com/dsp56300/JUCE/archive/${_source_3rdparty_juce}.tar.gz
+	source_3rdparty_cpp_terminal-${_source_3rdparty_cpp_terminal}.tar.gz::https://github.com/dsp56300/cpp-terminal/archive/${_source_3rdparty_cpp_terminal}.tar.gz
+	source_cpu_mc68k-${_source_cpu_mc68k}.tar.gz::https://github.com/dsp56300/mc68k/archive/${_source_cpu_mc68k}.tar.gz
+	source_3rdparty_clap_juce_extensions-${_source_3rdparty_clap_juce_extensions}.tar.gz::https://github.com/dsp56300/clap-juce-extensions/archive/${_source_3rdparty_clap_juce_extensions}.tar.gz
+	source_3rdparty_clap_juce_extensions_clap_libs_clap-${_source_3rdparty_clap_juce_extensions_clap_libs_clap}.tar.gz::https://github.com/free-audio/clap/archive/${_source_3rdparty_clap_juce_extensions_clap_libs_clap}.tar.gz
+	source_3rdparty_clap_juce_extensions_clap_libs_clap_helpers-${_source_3rdparty_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz::https://github.com/free-audio/clap-helpers/archive/${_source_3rdparty_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz
+	source_3rdparty_rmlui-${_source_3rdparty_rmlui}.tar.gz::https://github.com/dsp56300/RmlUi/archive/${_source_3rdparty_rmlui}.tar.gz
+	source_3rdparty_freetype-${_source_3rdparty_freetype}.tar.gz::https://github.com/freetype/freetype/archive/${_source_3rdparty_freetype}.tar.gz
+	source_3rdparty_freetype_subprojects_dlg-${_source_3rdparty_freetype_subprojects_dlg}.tar.gz::https://github.com/nyorain/dlg/archive/${_source_3rdparty_freetype_subprojects_dlg}.tar.gz
+	source_3rdparty_portmidi_latest-${_source_3rdparty_portmidi_latest}.tar.gz::https://github.com/PortMidi/portmidi/archive/${_source_3rdparty_portmidi_latest}.tar.gz
+	source_3rdparty_lunasvg-${_source_3rdparty_lunasvg}.tar.gz::https://github.com/sammycage/lunasvg/archive/${_source_3rdparty_lunasvg}.tar.gz
+	source_3rdparty_lunasvg_plutovg-${_source_3rdparty_lunasvg_plutovg}.tar.gz::https://github.com/sammycage/plutovg/archive/${_source_3rdparty_lunasvg_plutovg}.tar.gz
+	"
+builddir="$srcdir/gearmulator-$_commit"
+options="!check" # no tests
+
+prepare() {
+	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF
+	# git submodules (outer ones first)
+	rm -rf source/cpu/dsp56300 && mv "$srcdir"/dsp56300-${_source_cpu_dsp56300} source/cpu/dsp56300
+	rm -rf source/cpu/dsp56300/source/asmjit && mv "$srcdir"/asmjit-${_source_cpu_dsp56300_source_asmjit} source/cpu/dsp56300/source/asmjit
+	rm -rf source/3rdparty/JUCE && mv "$srcdir"/JUCE-${_source_3rdparty_juce} source/3rdparty/JUCE
+	rm -rf source/3rdparty/cpp-terminal && mv "$srcdir"/cpp-terminal-${_source_3rdparty_cpp_terminal} source/3rdparty/cpp-terminal
+	rm -rf source/cpu/mc68k && mv "$srcdir"/mc68k-${_source_cpu_mc68k} source/cpu/mc68k
+	rm -rf source/3rdparty/clap-juce-extensions && mv "$srcdir"/clap-juce-extensions-${_source_3rdparty_clap_juce_extensions} source/3rdparty/clap-juce-extensions
+	rm -rf source/3rdparty/clap-juce-extensions/clap-libs/clap && mv "$srcdir"/clap-${_source_3rdparty_clap_juce_extensions_clap_libs_clap} source/3rdparty/clap-juce-extensions/clap-libs/clap
+	rm -rf source/3rdparty/clap-juce-extensions/clap-libs/clap-helpers && mv "$srcdir"/clap-helpers-${_source_3rdparty_clap_juce_extensions_clap_libs_clap_helpers} source/3rdparty/clap-juce-extensions/clap-libs/clap-helpers
+	rm -rf source/3rdparty/RmlUi && mv "$srcdir"/RmlUi-${_source_3rdparty_rmlui} source/3rdparty/RmlUi
+	rm -rf source/3rdparty/freetype && mv "$srcdir"/freetype-${_source_3rdparty_freetype} source/3rdparty/freetype
+	rm -rf source/3rdparty/freetype/subprojects/dlg && mv "$srcdir"/dlg-${_source_3rdparty_freetype_subprojects_dlg} source/3rdparty/freetype/subprojects/dlg
+	rm -rf source/3rdparty/portmidi-latest && mv "$srcdir"/portmidi-${_source_3rdparty_portmidi_latest} source/3rdparty/portmidi-latest
+	rm -rf source/3rdparty/lunasvg && mv "$srcdir"/lunasvg-${_source_3rdparty_lunasvg} source/3rdparty/lunasvg
+	rm -rf source/3rdparty/lunasvg/plutovg && mv "$srcdir"/plutovg-${_source_3rdparty_lunasvg_plutovg} source/3rdparty/lunasvg/plutovg
+	default_prepare
+}
+
+build() {
+	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
+	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "")
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE \
+		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
+		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dgearmulator_BUILD_JUCEPLUGIN_LV2=ON -Dgearmulator_BUILD_JUCEPLUGIN_VST2=OFF -Dgearmulator_BUILD_JUCEPLUGIN_VST3=OFF -Dgearmulator_BUILD_JUCEPLUGIN_CLAP=OFF -Dgearmulator_BUILD_JUCEPLUGIN_AU=OFF -Dgearmulator_SYNTH_VAVRA=OFF -Dgearmulator_SYNTH_XENIA=OFF -Dgearmulator_SYNTH_NODALRED2X=OFF -Dgearmulator_SYNTH_JE8086=OFF -Dgearmulator_SYNTH_88EMU=OFF -Dgearmulator_COMPONENT_DSPBRIDGE=OFF -Dgearmulator_BUILD_INSTALLER=OFF -DBUILD_TESTING=OFF
+	# at most 3 jobs: the JUCE translation units need ~1 GB each
+	cmake --build build --parallel 3 --target osirusJucePlugin_LV2 osTIrusJucePlugin_LV2
+}
+
+package() {
+	local d
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	for d in $(find build -type d -path '*/LV2/*.lv2' -prune); do
+		cp -r "$d" "$pkgdir"/usr/lib/lv2/
+	done
+}
+sha512sums="
+def5463db2322325b5cf728fb7596a7023f619d34fb77cdbabeabf43a1f5a0f554a46bda1184270dc3453029a420882f1a89899e42689209402e1a7f795368d4  gearmulator-lv2-719f92ee3b3a606143d30bea4647ce501b95094c.tar.gz
+5ef00b591db9f4e5cc022cf005ea5c4dd99523ba70e5bc796218c6a6c40ac79d240708e3667eff6abe7f3b145346fe8e328fa299a5d13fa0a324264b60f5e138  source_cpu_dsp56300-2a7ca1e9ce4b0d74b47d9a6384f6d15c1588d2b0.tar.gz
+36557af5c82ccc8e5ef2d4effe22b75e22c2bf1f4504daae3ff813e907449be6e7b25678af071cb9dede7c6e02dc5c8ad2fc2a3da011aa660eb7f5c75ab23042  source_cpu_dsp56300_source_asmjit-3577608cab0bc509f856ebf6e41b2f9d9f71acc4.tar.gz
+53868f553aab2f5533629902d20a4ad7b0f4507bb744cbfe6cb15912ed1fd851416974a8d16dccd038242260880c91957979de42a4573f1d25263112e97d8a42  source_3rdparty_juce-54e15111b0355db5245039250b348e58b3e45e24.tar.gz
+32724703a6a2acf35ca1f3447271ade686c03f39f44e3e80d80d2fd772416b625447e178e4525c74e3304b3066d0c4fb4c6d1a1541afb19b1679953ac3a31813  source_3rdparty_cpp_terminal-43f5dc0061ce31ea0ddc8fd4cc1d65d83e33a232.tar.gz
+b19fdeef6021f3991c23afedd9a84d4e7cb7271fb910a7d77b0565e17884bea8d71bbf1edfc9a194ae25e9dda6e5e4a15fae9c5d50ec4c0e730e099bc4533f16  source_cpu_mc68k-cc3693a23fde2ea97aec261198f9e6291ead5e5e.tar.gz
+4f7efc0a79fd5f901c909794bd09b340709b2637a069fd62408fcf34706f35f1e71f2af728b50910fc7bd840298f15db0eb275778811f591ab07bea420c61b3c  source_3rdparty_clap_juce_extensions-2aaad9e637c62a4eed4664a7e8ef52dca9dc3ba6.tar.gz
+307c6c31268710a90460c47280611d72950bc6e8df121399aad913ff68269557396ed203e4f50a5835bcfaa6f3c80283133ea9f4695104af99cdcbeb47041226  source_3rdparty_clap_juce_extensions_clap_libs_clap-df8f16c69ba1c1a15fb105f0c5a2e5b9ac6be742.tar.gz
+ebd98de0c70446e32ec3a2757ba1431d2aadb9135353d8da4c8965210a145d4f756941fea3e595df81d420d65516f13e9201b9c76560f8cbaa39d1de2b9cc237  source_3rdparty_clap_juce_extensions_clap_libs_clap_helpers-7b53a685e11465154b4ccba3065224dbcbf8a893.tar.gz
+7664aecf1add68158f472a479b483432127cf343b0bcb67c4bb0d58f5a8111ad6efbafe7b6e209a23354a9a6ab46c3897206b5f0ef568b0743155559bd8519d5  source_3rdparty_rmlui-0c8e94e49e76ab5e40526aea62d22d21605e1125.tar.gz
+d90f8e2177a231597f9b6c4c3386914f051d0b37fb11bffcc9d3378df5ebe946e2a8a6c635aeb05b22fb4b51b230829de1f1b6fb26ea3d4844f39c8d5c762deb  source_3rdparty_freetype-828916527ce4f69af722bce46ce54d289001a0bd.tar.gz
+05042f98b49a46f8f60c8bd4d96720b4bc4b1ae28874db0a49a59b1fd63f217e1f4f123f4341c59223ebc82ef8008a363f90d3e4fd50100daae09de16426a741  source_3rdparty_freetype_subprojects_dlg-72dfcc858c040c54a6a0b88fcb7e70ee186d3167.tar.gz
+d4b4fc881d1290fd26e9fb3ad98157e853503022fa7189bc0361865badda57526320ad9cb1b7c2437a60074c51c6c1e8096ad4a44b5825e0b216c44fc5171fad  source_3rdparty_portmidi_latest-101dac9455e2718512c94e24cbcae6a6f34b908b.tar.gz
+c9f10c6ddaf2cd6c57bd5bb23a715b8854d0063f9b6feee8e864a3f4e192a22cff5ecfd70119a564dea87aa31a8cd950c563326035fe8400dfa66e05b88cbb52  source_3rdparty_lunasvg-f8aabfb444bb37f69df7290790f57e4a27730a93.tar.gz
+8e06ec2d187a3bccaa9d191fbabb96cf801666c5a1fe9c299b0ee8dc3360134403b1163d24fcf3bd80de8616fb8c21500c3aa8b2fc882a1c11a96109ad606b45  source_3rdparty_lunasvg_plutovg-5e4712cf873b0c7829a4a6157763e2ad3ac49164.tar.gz
+"
