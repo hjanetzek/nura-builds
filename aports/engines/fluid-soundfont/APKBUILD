@@ -1,0 +1,48 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Fluid (R3) SoundFonts, General MIDI and GS, as Debian packages them (fluid-soundfont-gm/-gs):
+# in /usr/share/sounds/sf2. ZynthianOS installs Debian's packages and links them into
+# zynthian-data's soundfonts/sf2, where zynthian's fluidsynth engine lists them (System banks) and
+# its factory snapshot "003-FluidR3 GM" finds FluidR3_GM.sf2: the same links here.
+# Not in Alpine. Data only: the source tarball holds the converted .sf2 files.
+pkgname=fluid-soundfont
+pkgver=3.1
+pkgrel=0
+pkgdesc="Fluid (R3) General MIDI and GS SoundFonts"
+url="https://salsa.debian.org/multimedia-team/fluid-soundfont"
+arch="noarch"
+license="MIT"
+options="!check" # data only
+subpackages="$pkgname-gm:_gm $pkgname-gs:_gs"
+source="https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_$pkgver.orig.tar.gz"
+builddir="$srcdir/fluid-soundfont-$pkgver"
+
+package() {
+	# The SoundFonts are in the subpackages, which come with this one by install_if (a depends on
+	# the own subpackages is a cycle for pmbootstrap); each can be installed alone
+	install -Dm644 COPYING README -t "$pkgdir"/usr/share/licenses/$pkgname/
+}
+
+_sf2() {
+	local f=$1
+	install -Dm644 "$builddir/$f" "$subpkgdir/usr/share/sounds/sf2/$f"
+	mkdir -p "$subpkgdir"/usr/share/zynthian/zynthian-data/soundfonts/sf2
+	ln -s /usr/share/sounds/sf2/$f "$subpkgdir"/usr/share/zynthian/zynthian-data/soundfonts/sf2/$f
+}
+
+_gm() {
+	pkgdesc="Fluid (R3) General MIDI SoundFont"
+	depends=""
+	install_if="$pkgname=$pkgver-r$pkgrel"
+	_sf2 FluidR3_GM.sf2
+}
+
+_gs() {
+	pkgdesc="Fluid (R3) GS SoundFont (the GS drum kits and variations)"
+	depends=""
+	install_if="$pkgname=$pkgver-r$pkgrel"
+	_sf2 FluidR3_GS.sf2
+}
+
+sha512sums="
+014394752ac50d3162c87903d9dd6b38d199ddfab10e2dea3b2a96d02ddcb876a792cc20bc0e83be5ac15eb0c7e261612eedcd792a3f0ff85a7d032a7dd24f29  fluid-soundfont_3.1.orig.tar.gz
+"

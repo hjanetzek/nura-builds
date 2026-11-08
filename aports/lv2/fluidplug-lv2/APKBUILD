@@ -6,7 +6,7 @@
 pkgname=fluidplug-lv2
 _commit=697be3d063da50c05962ade38588b99f97955205
 pkgver=0_git20210207
-pkgrel=2
+pkgrel=3
 pkgdesc="SoundFonts as LV2 instrument plugins (FluidPlug)"
 url="https://github.com/zynthian/FluidPlug"
 arch="all"
@@ -55,6 +55,15 @@ data() {
 	cd "$pkgdir"
 	for f in usr/lib/lv2/*/FluidPlug.sf2; do
 		amove "$f"
+	done
+	# zynthian's fluidsynth engine lists them as SoundFonts too (System banks), as ZynthianOS links
+	# them into zynthian-data's soundfonts/sf2: <Bundle>.sf2 -> the bundle's FluidPlug.sf2
+	local b
+	mkdir -p "$subpkgdir"/usr/share/zynthian/zynthian-data/soundfonts/sf2
+	for b in "$subpkgdir"/usr/lib/lv2/*.lv2; do
+		b=${b##*/}
+		ln -s /usr/lib/lv2/$b/FluidPlug.sf2 \
+			"$subpkgdir"/usr/share/zynthian/zynthian-data/soundfonts/sf2/${b%.lv2}.sf2
 	done
 }
 sha512sums="
