@@ -84,6 +84,16 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
 
 Workflow artifacts (packages per stage, images) stay for a few days for debugging.
 
+### Testing the amd64 image on a desktop
+
+`tools/run-qemu.sh` downloads the latest `zynthian-qemu-amd64.img.zst` (to `~/.cache/nura-builds`)
+and runs it in QEMU with KVM, OpenGL through virgl (`virtio-vga-gl`: the guest renders on the
+desktop's GPU), PipeWire audio (virtio-sound), SSH on `localhost:2222` and webconf on
+`localhost:8080`; `-U VID:PID` passes a USB MIDI controller through, `-r` starts from a fresh copy,
+`-u` fetches a newer image. It needs QEMU's GL, display and audio modules (it names the missing
+ones; on Arch `qemu-hw-display-virtio-vga-gl qemu-hw-display-virtio-gpu-gl qemu-ui-opengl
+qemu-ui-gtk qemu-audio-pipewire`, and `qemu-hw-usb-host` for passthrough) and OVMF (`edk2-ovmf`).
+
 ## Building single packages
 
 `packages.yml` (by hand) builds named packages, e.g. new recipes on a branch, without the whole
