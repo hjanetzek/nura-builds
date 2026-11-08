@@ -1,5 +1,7 @@
 # Packaging plugins and engines for Nura: problems and patterns
 
+Fixes that belong upstream (patches, `sed` in recipes): log them in [upstream-candidates.md](upstream-candidates.md).
+
 Status: 2026-11-06. What went wrong while packaging zynthian's LV2 plugins, Pure Data externals
 and engines for Nura (postmarketOS, aarch64, musl, GCC 15), and how the packages in `aports/lv2/`,
 `aports/pd/` and `aports/engines/` deal with it. Read this before packaging the next plugin; the
