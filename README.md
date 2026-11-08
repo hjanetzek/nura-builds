@@ -89,7 +89,7 @@ Workflow artifacts (packages per stage, images) stay for a few days for debuggin
 `tools/run-qemu.sh` downloads the latest `zynthian-qemu-amd64.img.zst` (to `~/.cache/nura-builds`)
 and runs it in QEMU with KVM, OpenGL through virgl (`virtio-vga-gl`: the guest renders on the
 desktop's GPU), PipeWire audio (virtio-sound), SSH on `localhost:2222` and webconf on
-`localhost:8080` (or the next free ports; it prints them); `-U VID:PID` passes a USB MIDI controller through, `-r` starts from a fresh copy,
+`localhost:8080` (or the next free ports; it prints them); `-R WxH` sets the screen (default 1280x800), `-U VID:PID` passes a USB MIDI controller through, `-r` starts from a fresh copy,
 `-u` fetches a newer image. It needs QEMU's GL, display and audio modules (it names the missing
 ones; on Arch `qemu-hw-display-virtio-{gpu,gpu-gl,gpu-pci,gpu-pci-gl,vga,vga-gl} qemu-ui-opengl
 qemu-ui-gtk qemu-audio-pipewire`, and `qemu-hw-usb-host` for passthrough) and OVMF (`edk2-ovmf`).

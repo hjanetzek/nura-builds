@@ -15,6 +15,8 @@
 #               disk at the first boot)
 #   -m MEM      memory (default 4G)
 #   -c CPUS     virtual CPUs (default: half of this machine's)
+#   -R WxH      the screen's resolution (default 1280x800: 16:10 as the Duet, whose 1920x1200 at
+#               the kiosk's scale 1.5 is the same 1280x800 logical pixels), e.g. 1024x600, 800x480
 #   -D DISPLAY  gtk (default) or sdl
 #   -n          no OpenGL (software rendering in the guest: slow, for checking a GL problem)
 #   -A AUDIO    virtio (default: virtio-sound, QEMU 8.2+) or hda (emulated Intel HDA), none
@@ -32,14 +34,15 @@ usage() { sed -n '2,/^set -eu/{/^set -eu/d;s/^# \{0,1\}//;p}' "$0"; exit "${1:-0
 
 url=https://github.com/hjanetzek/nura-builds/releases/download/zynthian-latest/zynthian-qemu-amd64.img.zst
 cache=${XDG_CACHE_HOME:-$HOME/.cache}/nura-builds
-update=0 reset=0 size=8G mem=4G cpus= display=gtk gl=on audio=virtio usb= ssh_port= web_port=
-while getopts urs:m:c:D:nA:U:p:w:d:h opt; do
+update=0 reset=0 size=8G mem=4G cpus= res=1280x800 display=gtk gl=on audio=virtio usb= ssh_port= web_port=
+while getopts urs:m:c:R:D:nA:U:p:w:d:h opt; do
 	case $opt in
 		u) update=1 ;;
 		r) reset=1 ;;
 		s) size=$OPTARG ;;
 		m) mem=$OPTARG ;;
 		c) cpus=$OPTARG ;;
+		R) res=$OPTARG ;;
 		D) display=$OPTARG ;;
 		n) gl=off ;;
 		A) audio=$OPTARG ;;
@@ -173,10 +176,12 @@ else
 	echo "warning: no access to /dev/kvm, QEMU emulates the CPU (slow)" >&2
 fi
 
+# The screen: the guest's preferred mode (virtio-gpu's EDID)
+xres=${res%x*} yres=${res#*x}
 if [ "$gl" = on ]; then
-	set -- "$@" -device virtio-vga-gl -display "$display,gl=on,show-cursor=on"
+	set -- "$@" -device "virtio-vga-gl,xres=$xres,yres=$yres" -display "$display,gl=on,show-cursor=on"
 else
-	set -- "$@" -device virtio-vga -display "$display,show-cursor=on"
+	set -- "$@" -device "virtio-vga,xres=$xres,yres=$yres" -display "$display,show-cursor=on"
 fi
 
 # Audio through the desktop's PipeWire (or PulseAudio)
@@ -201,6 +206,9 @@ if [ -n "$usb" ]; then
 	done
 fi
 
-echo "disk $disk; ssh -p $ssh_port <user>@localhost; webconf http://localhost:$web_port"
+echo "disk:    $disk"
+echo "screen:  ${xres}x${yres}"
+echo "ssh:     ssh -p $ssh_port <user>@localhost"
+echo "webconf: http://localhost:$web_port"
 echo "serial console here (Ctrl-A x quits QEMU, Ctrl-A c the monitor)"
 exec qemu-system-x86_64 "$@"
