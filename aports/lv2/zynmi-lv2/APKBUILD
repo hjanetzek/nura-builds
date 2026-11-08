@@ -40,8 +40,13 @@ prepare() {
 	for d in "$builddir" "$srcdir/zynMI-$_commit_mutated" "$srcdir/zynMI-$_commit_chaos"; do
 		rm -rf "$d"/aarch64-build "$d"/x86_64-build
 	done
-	# f09300b's src/stmlib has only utils/: the rest from ecab611 (Mutable Instruments' stmlib)
-	cp -rn "$srcdir/zynMI-$_commit_chaos"/src/eurorack/stmlib/. "$srcdir/zynMI-$_commit_mutated"/src/stmlib/
+	# f09300b's src/stmlib has only utils/: the rest from ecab611 (Mutable Instruments' stmlib), the
+	# upload's own files kept over it (BusyBox cp -n doesn't merge into an existing directory)
+	local m="$srcdir/zynMI-$_commit_mutated"/src
+	mv "$m"/stmlib "$m"/stmlib.own
+	cp -r "$srcdir/zynMI-$_commit_chaos"/src/eurorack/stmlib "$m"/stmlib
+	cp -r "$m"/stmlib.own/. "$m"/stmlib/
+	rm -rf "$m"/stmlib.own
 }
 
 # The repository's Makefile; ARCH=x86_64 is its native build (plain g++), ARCH_FLAGS empty: no
