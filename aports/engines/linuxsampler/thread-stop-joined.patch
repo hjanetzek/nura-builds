@@ -1,0 +1,15 @@
+--- a/src/common/Thread.cpp	2026-11-08 19:59:01.462441211 +0100
++++ b/src/common/Thread.cpp	2026-11-08 19:59:01.473529549 +0100
+@@ -259,6 +259,12 @@
+         pthread_join(__thread_id, NULL);
+         #endif
+         RunningCondition.Lock();
++        #if !defined(WIN32)
++        // Joined: its resources are released, so it must not be detached below as well (glibc
++        // returns an error for that, on musl pthread_detach() of a joined thread is a use after
++        // free and crashes)
++        state = NOT_RUNNING;
++        #endif
+     }
+     // If the thread terminated on its own (i.e. returned from Main()) without
+     // any thread calling StopThread() yet, then the OS blocks termination of
