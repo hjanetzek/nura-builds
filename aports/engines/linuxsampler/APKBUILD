@@ -11,7 +11,8 @@ pkgdesc="Software audio sampler (GIG, SFZ, SF2)"
 url="https://www.linuxsampler.org/"
 arch="all"
 license="custom"
-makedepends="alsa-lib-dev jack-dev libgig-dev libsndfile-dev sqlite-dev"
+# flex, bison, perl, perl-xml-parser: required by configure (configure.ac:46-63)
+makedepends="alsa-lib-dev bison flex jack-dev libgig-dev libsndfile-dev perl perl-xml-parser sqlite-dev"
 subpackages="$pkgname-dev $pkgname-doc"
 source="https://download.linuxsampler.org/packages/linuxsampler-$pkgver.tar.bz2"
 options="!check" # no tests
