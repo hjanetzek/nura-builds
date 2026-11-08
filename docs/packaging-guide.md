@@ -99,7 +99,13 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
 
 ## Build: what to switch off
 
-- **GUIs**: zynthian doesn't open plugin GUIs, and GUI toolkits drag in X11, GTK, NTK or Qt.
+- **GUIs: build them too, as a `-ui` subpackage** (policy since 2026-11-09). The main package stays
+  DSP-only (headless images); `<pkg>-ui` depends on it and adds the plugin's own UI, which zynthian's
+  desktop/VNC session shows. Where the UI must be declared in the plugin's manifest, give it its own
+  bundle (`<name>_ui.lv2` whose manifest states `<plugin> ui:ui <#ui>`): lilv merges the bundles
+  (`zynmi-lv2`'s `mi_mutated_ui.lv2`). UI build dependencies only as the build shows them. The
+  DSP-only recipes below (DPF `lv2_dsp`, DISTRHO-Ports headless, Fabla, Aether...) are a backlog to
+  convert; the switches, for a DSP-only main build:
   - DPF: build `lv2_dsp` per plugin (`make -C plugins/X NOOPT=true HAVE_OPENGL=false lv2_dsp`),
     then `make -C dpf/utils/lv2-ttl-generator` and `dpf/utils/generate-ttl.sh`. If the plugin
     declares `DISTRHO_PLUGIN_HAS_UI 1`, set it to 0 in `prepare()`, or the TTL names a UI binary
@@ -109,6 +115,8 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
   - JUCE plugins (CMake): the GUI is part of the plugin binary and can't be left out, so the X11,
     freetype and fontconfig headers are build dependencies (JUCE loads libX11 only when the editor
     opens). Build only the `<Target>_LV2` target and set the `FORMATS` list to LV2.
+- **No libGLX**: Alpine's mesa is built without glvnd, GLX is in `libGL`. Makefiles linking
+  `-lGLX` (zynMI's UI) fail with `cannot find -lGLX`: override the link flags without it.
 - **modgui**: MOD's web GUI resources (images, HTML) are useless on Nura; remove the `modgui/`
   directories in `package()` (70 MB for Guitarix and GxPlugins), keep `modgui.ttl` (the manifest
   refers to it).
@@ -194,6 +202,9 @@ differently:
   ("faust include files not found"); set `FAUSTINC=/usr/include/faust FAUSTLIB=/usr/share/faust`.
 - `sed` with a `$` anchor doesn't match in CRLF files (JUCE's sources, Monique): leave the anchor out
   and check the edit on a copy of the source.
+- `cp -rn src/. dest/` doesn't merge into an existing directory with BusyBox `cp` (GNU cp does):
+  zynmi-lv2's stmlib merge copied nothing (`No rule to make target 'src/stmlib/dsp/atan.cc'`).
+  Move the target aside, copy the complete tree, copy the files to keep back over it.
 - When a generated file is broken, look at it (`cat -A`) before suspecting the compiler.
 
 ## Pure Data externals
