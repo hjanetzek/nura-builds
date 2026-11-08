@@ -89,7 +89,12 @@ build() {
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
 		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
 	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
-	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -Dgearmulator_BUILD_JUCEPLUGIN_LV2=ON -Dgearmulator_BUILD_JUCEPLUGIN_VST2=OFF -Dgearmulator_BUILD_JUCEPLUGIN_VST3=OFF -Dgearmulator_BUILD_JUCEPLUGIN_CLAP=OFF -Dgearmulator_BUILD_JUCEPLUGIN_AU=OFF -Dgearmulator_SYNTH_VAVRA=OFF -Dgearmulator_SYNTH_XENIA=OFF -Dgearmulator_SYNTH_NODALRED2X=OFF -Dgearmulator_SYNTH_JE8086=OFF -Dgearmulator_SYNTH_88EMU=OFF -Dgearmulator_COMPONENT_DSPBRIDGE=OFF -Dgearmulator_BUILD_INSTALLER=OFF -DBUILD_TESTING=OFF
+	# GCC 15: uint32_t without <cstdint> (juceRmlUi)
+	export CXXFLAGS="$CXXFLAGS -include cstdint"
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+		-Dgearmulator_BUILD_JUCEPLUGIN_LV2=ON -Dgearmulator_BUILD_JUCEPLUGIN_VST2=OFF -Dgearmulator_BUILD_JUCEPLUGIN_VST3=OFF -Dgearmulator_BUILD_JUCEPLUGIN_CLAP=OFF -Dgearmulator_BUILD_JUCEPLUGIN_AU=OFF \
+		-Dgearmulator_SYNTH_VAVRA=OFF -Dgearmulator_SYNTH_XENIA=OFF -Dgearmulator_SYNTH_NODALRED2X=OFF -Dgearmulator_SYNTH_JE8086=OFF -Dgearmulator_SYNTH_88EMU=OFF \
+		-Dgearmulator_COMPONENT_DSPBRIDGE=OFF -Dgearmulator_BUILD_INSTALLER=OFF -DBUILD_TESTING=OFF
 	# at most 3 jobs: the JUCE translation units need ~1 GB each
 	cmake --build build --parallel 3 --target osirusJucePlugin_LV2 osTIrusJucePlugin_LV2
 }
