@@ -12,7 +12,7 @@ url="https://www.linuxsampler.org/"
 arch="all"
 license="custom"
 makedepends="alsa-lib-dev jack-dev libgig-dev libsndfile-dev sqlite-dev"
-subpackages="$pkgname-dev"
+subpackages="$pkgname-dev $pkgname-doc"
 source="https://download.linuxsampler.org/packages/linuxsampler-$pkgver.tar.bz2"
 options="!check" # no tests
 

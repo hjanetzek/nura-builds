@@ -10,7 +10,7 @@ arch="all"
 license="GPL-2.0-or-later"
 # linux-headers: linux/cdrom.h (the Akai CD-ROM reader)
 makedepends="libsndfile-dev linux-headers util-linux-dev"
-subpackages="$pkgname-dev gigtools:_tools"
+subpackages="$pkgname-dev $pkgname-doc gigtools:_tools"
 source="https://download.linuxsampler.org/packages/libgig-$pkgver.tar.bz2"
 options="!check" # no tests
 
