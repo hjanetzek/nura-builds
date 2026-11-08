@@ -84,6 +84,10 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
 
 Workflow artifacts (packages per stage, images) stay for a few days for debugging.
 
+The zynthian image leaves out large data from elsewhere (SoundFonts, sample packs); after the first
+boot, `zynthian-factory-content` on the device installs what ZynthianOS' image comes with, so that
+all factory snapshots load: [docs/factory-content.md](docs/factory-content.md).
+
 ### Testing the amd64 image on a desktop
 
 `tools/run-qemu.sh` downloads the latest `zynthian-qemu-amd64.img.zst` (to `~/.cache/nura-builds`)

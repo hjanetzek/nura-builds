@@ -229,9 +229,13 @@ SoundFonts, Vaporizer2's small wavetables and presets), optional data is `<pkg>-
 pulls it in (Surge XT's `-data-3rdparty`, 327 MB; Vaporizer2's `-data-extra`, ~910 MB). FluidPlug (284 MB) and AVL drums (145 MB) are built but not in the meta
 package, so not in images; `apk add avldrums-lv2` installs a working instrument with its data.
 
+- **What ZynthianOS' image comes with** and Nura's leaves out (FluidR3, FluidPlug, Vaporizer2's
+  extra data, the preinstalled zynthian-packages packs): `zynthian-factory-content` on the device,
+  see [factory-content.md](factory-content.md).
 - **TBD: admin menu entry** in zynthian to install (and remove) optional data packages on the
   device (apk, with progress and the download size), then rescan the LV2 plugins
-  (`zynthian_lv2.py engines`). Until then: `apk add` over ssh.
+  (`zynthian_lv2.py engines`). Until then: `apk add` over ssh, or webconf's Extra Packs for the
+  zynthian-packages packs.
 - **Other heavy packages** (installed sizes on the Duet): `zynaddsubfx` 53 MB (34 MB of it the generated LV2 preset TTLs, plus a VST build; zynthian's engine uses the program and its 1.1 MB of banks: candidates for a separate package or removal),
   `pd-cyclone` 22 MB, `mod-caps-lv2` 26 MB, and `zynthian-data` 616 MB:
 - **TBD: split `zynthian-data`** into essential (or too small to matter) and extra data. Measured
