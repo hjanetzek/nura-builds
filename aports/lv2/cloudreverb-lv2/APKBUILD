@@ -1,0 +1,70 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# CloudReverb: algorithmic reverb (port of CloudSeed), JUCE, with its GUI. Disabled in zynthian's config (one shared snapshot uses it).
+# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
+# only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
+# loads X11 only when the editor opens).
+pkgname=cloudreverb-lv2
+pkgver=0.5
+pkgrel=0
+_commit=92804eda8439d058a018dad606ebd1c403c37b90
+_juce=d6181bde38d858c283c3b7bf699ce6340c050b5d
+pkgdesc="CloudReverb algorithmic reverb (LV2, with GUI)"
+url="https://github.com/xunil-cloud/CloudReverb"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+makedepends="
+	alsa-lib-dev
+	cmake
+	fontconfig-dev
+	freetype-dev
+	libx11-dev
+	libxcursor-dev
+	libxext-dev
+	libxinerama-dev
+	libxrandr-dev
+	samurai
+	"
+source="$pkgname-$_commit.tar.gz::https://github.com/xunil-cloud/CloudReverb/archive/$_commit.tar.gz
+	juce-${_juce}.tar.gz::https://github.com/juce-framework/JUCE/archive/${_juce}.tar.gz
+	"
+builddir="$srcdir/CloudReverb-$_commit"
+options="!check" # no tests
+
+prepare() {
+	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF
+	# git submodules (outer ones first)
+	rm -rf JUCE && mv "$srcdir"/JUCE-${_juce} JUCE
+	default_prepare
+	# LV2 only
+	sed -i 's/FORMATS AU VST3 LV2 Standalone/FORMATS LV2/' CMakeLists.txt
+}
+
+build() {
+	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
+	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "")
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE \
+		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
+		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+	# at most 3 jobs: the JUCE translation units need ~1 GB each
+	cmake --build build --parallel 3 --target CloudReverb_LV2
+}
+
+package() {
+	local d
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	for d in $(find build -type d -path '*/LV2/*.lv2' -prune); do
+		cp -r "$d" "$pkgdir"/usr/lib/lv2/
+	done
+}
+sha512sums="
+fe969f255bc3a1c85f216fa18c8d881497e3ff226e0fc1c12c80977d96650fa1d75bb1b09e4a892213136d20badebb324095bc076a8fe319a4814b936b1b8a85  cloudreverb-lv2-92804eda8439d058a018dad606ebd1c403c37b90.tar.gz
+b3d6c3585c6c9dc3866edef2c8c8fff49e49d441747b24e666c689f474d46b46755f7461b527fd50dd1cc8b43aa9055718c40ea8afe05674558d32bb962b3ddb  juce-d6181bde38d858c283c3b7bf699ce6340c050b5d.tar.gz
+"

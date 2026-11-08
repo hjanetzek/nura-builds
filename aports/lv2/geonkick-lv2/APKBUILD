@@ -1,0 +1,28 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Geonkick: percussion synthesizer, LV2 (Geonkick and Geonkick Single, which zynthian's shared
+# snapshots use) with its GUI (Redkite, bundled: X11 and cairo). Not in zynthian's engine config:
+# the rescan adds it disabled. No standalone (it would need JACK), no VST.
+pkgname=geonkick-lv2
+pkgver=3.9.0
+pkgrel=0
+pkgdesc="Geonkick percussion synthesizer (LV2, with GUI)"
+url="https://github.com/Geonkick-Synthesizer/geonkick"
+arch="all"
+license="GPL-3.0-or-later"
+makedepends="cairo-dev cmake libsndfile-dev libx11-dev lv2-dev rapidjson-dev samurai"
+source="geonkick-$pkgver.tar.gz::https://github.com/Geonkick-Synthesizer/geonkick/archive/v$pkgver.tar.gz"
+builddir="$srcdir/geonkick-$pkgver"
+options="!check" # no tests
+
+build() {
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+		-DGKICK_STANDALONE=OFF -DGKICK_PLUGIN_VST=OFF -DGKICK_DOCUMENTATION=OFF
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+sha512sums="
+68cb2c8b3515e6deb53e40a4c9e1838bd9f8014ab026b1057d4b67363eebface6ec82682ca3fb996c73a84d14ce916173293beabb8d6630f0b7c2ea1a47101e9  geonkick-3.9.0.tar.gz
+"

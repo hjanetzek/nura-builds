@@ -1,0 +1,59 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# Aeolus pipe organ synthesizer, zynthian's fork (branch zynthian: OSC control, the "Ready" prompt
+# zynthian's AE engine waits for), as ZynthianOS' install_aeolus.sh. With its X11 interface
+# (aeolus_x11.so, used when zynthian has a display for engine GUIs; else the text interface, -t).
+# The stops come from zynthian-data (aeolus/stops; the engine passes -S). Fons Adriaensen's
+# clthreads and clxclient aren't in Alpine: built here as shared libraries and installed with it.
+pkgname=aeolus
+pkgver=0.10.4_git20240522
+pkgrel=0
+_commit=0f543acedc8a4386d2ea3cdabcd0fd32e9fc0d77
+_clthreads=2.4.2
+_clxclient=3.9.2
+pkgdesc="Aeolus pipe organ synthesizer (zynthian's fork, with OSC)"
+url="https://github.com/zynthian/aeolus"
+arch="all"
+license="GPL-3.0-or-later"
+makedepends="alsa-lib-dev freetype-dev jack-dev libx11-dev libxft-dev readline-dev"
+source="aeolus-$_commit.tar.gz::https://github.com/zynthian/aeolus/archive/$_commit.tar.gz
+	https://kokkinizita.linuxaudio.org/linuxaudio/downloads/clthreads-$_clthreads.tar.bz2
+	https://kokkinizita.linuxaudio.org/linuxaudio/downloads/clxclient-$_clxclient.tar.bz2
+	"
+builddir="$srcdir/aeolus-$_commit"
+options="!check" # no tests
+
+prepare() {
+	default_prepare
+	sed -i 's/-march=native//' source/Makefile "$srcdir"/clthreads-$_clthreads/source/Makefile \
+		"$srcdir"/clxclient-$_clxclient/source/Makefile
+}
+
+build() {
+	local inc="$srcdir"/inc lib="$srcdir"/lib
+	mkdir -p "$inc" "$lib"
+	# the libraries' own make targets (no install: it runs ldconfig); headers and development
+	# links for the build only. Flags from the environment: the Makefiles append to them.
+	make -C "$srcdir"/clthreads-$_clthreads/source
+	cp "$srcdir"/clthreads-$_clthreads/source/clthreads.h "$inc"/
+	cp "$srcdir"/clthreads-$_clthreads/source/libclthreads.so.$_clthreads "$lib"/
+	ln -sf libclthreads.so.$_clthreads "$lib"/libclthreads.so.${_clthreads%%.*}
+	ln -sf libclthreads.so.$_clthreads "$lib"/libclthreads.so
+	CPPFLAGS="$CPPFLAGS -I$inc" LDFLAGS="$LDFLAGS -L$lib" make -C "$srcdir"/clxclient-$_clxclient/source
+	cp "$srcdir"/clxclient-$_clxclient/source/clxclient.h "$inc"/
+	cp "$srcdir"/clxclient-$_clxclient/source/libclxclient.so.$_clxclient "$lib"/
+	ln -sf libclxclient.so.$_clxclient "$lib"/libclxclient.so.${_clxclient%%.*}
+	ln -sf libclxclient.so.$_clxclient "$lib"/libclxclient.so
+	CPPFLAGS="$CPPFLAGS -I$inc" LDFLAGS="$LDFLAGS -L$lib" make -C source PREFIX=/usr LIBDIR=/usr/lib
+}
+
+package() {
+	install -Dm755 source/aeolus "$pkgdir"/usr/bin/aeolus
+	install -Dm755 source/aeolus_x11.so "$pkgdir"/usr/lib/aeolus_x11.so
+	install -Dm755 source/aeolus_txt.so "$pkgdir"/usr/lib/aeolus_txt.so
+	cp -P "$srcdir"/lib/libclthreads.so.* "$srcdir"/lib/libclxclient.so.* "$pkgdir"/usr/lib/
+}
+sha512sums="
+f46d6bf11091b75a7db6e2b4f9cdce25c62fe77c73fd31ab8a253b452e6a99633532cedd9d754fbb14fb010525b3c0a88734f1b39bd5b50360a44bd08de05baa  aeolus-0f543acedc8a4386d2ea3cdabcd0fd32e9fc0d77.tar.gz
+a91de7a287c2cb9b2ce17e4c158db79bbaeccb278510d11e6c05fcbe9295c26b4d0231fa97800b265decd1d0886b7425f7b5d4cbcb18758be540356408e72131  clthreads-2.4.2.tar.bz2
+38c2782e58df24c2dfcb936fc9cfe4d44016055fb1aa52ef8e789bf8ec327f45f2f7a91f18012e4b0c6f253f6f10329d6d1e9fc341017ace3f2b6fa050592049  clxclient-3.9.2.tar.bz2
+"
