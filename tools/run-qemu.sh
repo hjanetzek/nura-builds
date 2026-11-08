@@ -58,6 +58,17 @@ for cmd in qemu-system-x86_64 zstd; do
 	command -v "$cmd" >/dev/null || { echo "$cmd not found" >&2; exit 1; }
 done
 
+# The release file through GitHub's API (when the download URL fails: seen with HTTP 504 for
+# release downloads while the API's asset URL worked); without authentication (60 API calls/hour)
+download_api() {
+	echo "retrying through the GitHub API" >&2
+	api=https://api.github.com/repos/hjanetzek/nura-builds/releases/tags/zynthian-latest
+	asset=$(curl -fsL "$api" | tr '{},' '\n\n\n' | grep -B8 '"name": *"zynthian-qemu-amd64.img.zst"' |
+		sed -n 's|.*"url": *"\(https://api.github.com/[^"]*/assets/[0-9]*\)".*|\1|p' | tail -n 1)
+	[ -n "$asset" ] || { echo "no zynthian-qemu-amd64.img.zst in the release" >&2; return 1; }
+	curl -fLR --progress-bar "$@" -H "Accept: application/octet-stream" -o "$zst.part" "$asset"
+}
+
 # The disk: a given .img as it is; a .img.zst (given or downloaded) unpacked to the cache
 mkdir -p "$cache"
 if [ $# -eq 1 ] && [ "${1%.zst}" = "$1" ]; then
@@ -76,7 +87,7 @@ else
 			else
 				set --
 			fi
-			if ! curl -fLR --progress-bar "$@" -o "$zst.part" "$url"; then
+			if ! curl -fLR --progress-bar "$@" -o "$zst.part" "$url" && ! download_api "$@"; then
 				rm -f "$zst.part"
 				echo "can't download the image: is it published yet? (the release zynthian-latest gets it" >&2
 				echo "from Run workflow > architecture x86_64 with images)" >&2
