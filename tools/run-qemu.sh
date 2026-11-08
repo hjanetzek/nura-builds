@@ -20,8 +20,8 @@
 #   -A AUDIO    virtio (default: virtio-sound, QEMU 8.2+) or hda (emulated Intel HDA), none
 #   -U VID:PID  pass a USB device through (repeatable), e.g. -U 17cc:1140 (Maschine Mk2). Needs
 #               write access to its /dev/bus/usb node (a udev rule, or run as root)
-#   -p PORT     host port for the VM's SSH (default 2222: ssh -p 2222 user@localhost)
-#   -w PORT     host port for the VM's webconf (default 8080: http://localhost:8080)
+#   -p PORT     host port for the VM's SSH (default 2222, or the next free one: ssh -p PORT user@localhost)
+#   -w PORT     host port for the VM's webconf (default 8080, or the next free one: http://localhost:PORT)
 #   -d DIR      cache directory (default ~/.cache/nura-builds)
 #
 # Needs qemu-system-x86_64 (with the virtio-vga-gl device: QEMU's GL/virglrenderer support),
@@ -32,7 +32,7 @@ usage() { sed -n '2,/^set -eu/{/^set -eu/d;s/^# \{0,1\}//;p}' "$0"; exit "${1:-0
 
 url=https://github.com/hjanetzek/nura-builds/releases/download/zynthian-latest/zynthian-qemu-amd64.img.zst
 cache=${XDG_CACHE_HOME:-$HOME/.cache}/nura-builds
-update=0 reset=0 size=8G mem=4G cpus= display=gtk gl=on audio=virtio usb= ssh_port=2222 web_port=8080
+update=0 reset=0 size=8G mem=4G cpus= display=gtk gl=on audio=virtio usb= ssh_port= web_port=
 while getopts urs:m:c:D:nA:U:p:w:d:h opt; do
 	case $opt in
 		u) update=1 ;;
@@ -147,6 +147,17 @@ fi
 
 [ -n "$cpus" ] || cpus=$(( $(nproc) / 2 ))
 [ "$cpus" -ge 1 ] || cpus=1
+
+# Host ports: the given ones, else the first free one from the default on
+port_free() { ! ss -Hltn "sport = :$1" 2>/dev/null | grep -q .; }
+free_port() {
+	p=$1
+	while ! port_free "$p"; do p=$((p + 1)); done
+	echo "$p"
+}
+[ -n "$ssh_port" ] || ssh_port=$(free_port 2222)
+[ -n "$web_port" ] || web_port=$(free_port 8080)
+[ "$web_port" != "$ssh_port" ] || web_port=$(free_port $((web_port + 1)))
 
 set -- -nodefaults -machine q35 -smp "$cpus" -m "$mem" \
 	-drive "if=pflash,format=raw,readonly=on,file=$ovmf" \
