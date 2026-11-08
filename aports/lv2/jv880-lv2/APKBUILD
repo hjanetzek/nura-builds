@@ -41,7 +41,8 @@ prepare() {
 	EOF
 	rm -rf JUCE && mv "$srcdir"/JUCE-$_juce JUCE
 	default_prepare
-	# the .jucer's settings (VirtualJV.jucer: codes, characteristics, modules, JUCEOPTIONS, C++17)
+	# the .jucer's settings (VirtualJV.jucer: codes, characteristics, modules, JUCEOPTIONS, C++17,
+	# addUsingNamespaceToJuceHeader=0: its own Button class clashes with juce::Button otherwise)
 	cat > CMakeLists.txt <<-'EOF'
 	cmake_minimum_required(VERSION 3.22)
 	project(VirtualJV VERSION 1.0.1 LANGUAGES C CXX)
@@ -62,7 +63,8 @@ prepare() {
 	target_sources(VirtualJV PRIVATE ${SRC})
 	target_compile_definitions(VirtualJV PUBLIC
 	    JUCE_STRICT_REFCOUNTEDPOINTER=1 JUCE_VST3_CAN_REPLACE_VST2=0
-	    JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_DISPLAY_SPLASH_SCREEN=0)
+	    JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_DISPLAY_SPLASH_SCREEN=0
+	    DONT_SET_USING_JUCE_NAMESPACE=1)
 	target_link_libraries(VirtualJV PRIVATE
 	    juce::juce_audio_basics juce::juce_audio_devices juce::juce_audio_formats
 	    juce::juce_audio_plugin_client juce::juce_audio_processors juce::juce_audio_utils

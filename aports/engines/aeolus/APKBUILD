@@ -38,7 +38,8 @@ build() {
 	cp "$srcdir"/clthreads-$_clthreads/source/libclthreads.so.$_clthreads "$lib"/
 	ln -sf libclthreads.so.$_clthreads "$lib"/libclthreads.so.${_clthreads%%.*}
 	ln -sf libclthreads.so.$_clthreads "$lib"/libclthreads.so
-	CPPFLAGS="$CPPFLAGS -I$inc" LDFLAGS="$LDFLAGS -L$lib" make -C "$srcdir"/clxclient-$_clxclient/source
+	# (clxclient's sources include <clxclient.h>, its Makefile has no -I.)
+	CPPFLAGS="$CPPFLAGS -I$inc -I." LDFLAGS="$LDFLAGS -L$lib" make -C "$srcdir"/clxclient-$_clxclient/source
 	cp "$srcdir"/clxclient-$_clxclient/source/clxclient.h "$inc"/
 	cp "$srcdir"/clxclient-$_clxclient/source/libclxclient.so.$_clxclient "$lib"/
 	ln -sf libclxclient.so.$_clxclient "$lib"/libclxclient.so.${_clxclient%%.*}

@@ -15,7 +15,7 @@ builddir="$srcdir/geonkick-$pkgver"
 options="!check" # no tests
 
 build() {
-	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib \
 		-DGKICK_STANDALONE=OFF -DGKICK_PLUGIN_VST=OFF -DGKICK_DOCUMENTATION=OFF
 	cmake --build build
 }
