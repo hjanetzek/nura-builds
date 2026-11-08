@@ -31,8 +31,9 @@ prepare() {
 build() {
 	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat"
 	# libgig is in /usr/lib/libgig: without its libtool .la (packages drop them) libtool loses the
-	# -L of gig.pc and links no runtime path, so both explicitly
-	export LDFLAGS="$LDFLAGS -L/usr/lib/libgig -Wl,-rpath,/usr/lib/libgig" LIBS="-lgig"
+	# -L of gig.pc, links no runtime path and leaves -lgig out of liblinuxsampler.so, so all three
+	# explicitly (-lgig for make only: with LIBS set, configure's compiler test failed in CI)
+	export LDFLAGS="$LDFLAGS -L/usr/lib/libgig -Wl,-rpath,/usr/lib/libgig"
 	# HAVE_UNIX98: configure's UNIX98 test fails on musl, which has pthread_mutexattr_settype(),
 	# the call it is about (configure says to set it then). NPTL bug check: a test for an old glibc
 	# pthread bug, which doesn't apply to musl.
@@ -46,7 +47,7 @@ build() {
 		--disable-static \
 		--disable-nptl-bug-check \
 		--disable-arts-driver
-	make
+	make LIBS="-lgig"
 }
 
 package() {
