@@ -1,37 +1,114 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
-# zynMI: Mutable Instruments' Braids, Plaits and Marbles as LV2 plugins, from the source on the
-# BraidsPlaitsMarbles branch (main has only a README). zynthian installs the newer prebuilt release
-# (Braids and Plaits combined as "Mutated Instruments", URI https://github.com/PatttF/zynMI/plugins/mutated),
-# whose source isn't published: these have the branch's URIs
-# (http://mutable-instruments.net/plugins/{braids,plaits,marbles}), which zynthian's rescan adds.
+# zynMI (PatttF): Mutable Instruments based LV2 plugins, from the repository's history. The source was
+# deleted on 2025-11-22 (main has only a README since); the release BraidsPlaitsMarbles, which
+# ZynthianOS downloads (zynMI.zip, install_zynMI_prebuilt.sh), has binaries only. What is built here:
+# - from f09300b (2025-11-22, the last commit with src/): Mutated Sequences (DFAM style sequencer,
+#   identical TTL to the release) and Mutated Instruments (Braids + Plaits synth). Mutated
+#   Instruments is an OLDER version than the release's binary (59 controls against 127: three
+#   modulation slots instead of the 33-source matrix, no Airwindows effects), with the same URI:
+#   snapshots load it, controls of the newer version are missing. The newer source isn't published.
+#   That upload lacks most of stmlib (only utils/): the full stmlib comes from the ecab611 tree.
+#   The ImGui/OpenGL UI in -ui: its own bundle mi_mutated_ui.lv2 adds the UI to the plugin (lilv
+#   merges all bundles), the main bundle stays DSP only as in the release's zynMI.zip.
+# - from ecab611 (2025-11-06): Chaos Engine (Marbles, random MIDI; identical TTL to the release).
+# - from the tag BraidsPlaitsMarbles (f42c531, 2025-10-27): separate Braids, Plaits and Marbles
+#   plugins (URIs http://mutable-instruments.net/plugins/{braids,plaits,marbles}), older stand-ins.
 # The repository's prebuilt binaries (aarch64-build, x86_64-build) are removed before building.
 pkgname=zynmi-lv2
 _commit=f42c53193cbbd48271551c79f40fb235f881ec07
-pkgver=0_git20251027
+_commit_mutated=f09300b5789184c96dbb4db20ca3574701f87a96
+_commit_chaos=ecab611c36468d4ba0e669c735b085106dfeec32
+pkgver=0_git20251122
 pkgrel=0
-pkgdesc="Mutable Instruments Braids, Plaits, Marbles (zynMI, LV2)"
-url="https://github.com/PatttF/zynMI/tree/BraidsPlaitsMarbles"
+pkgdesc="zynMI LV2 plugins: Mutated Instruments, Mutated Sequences, Chaos Engine, Braids, Plaits, Marbles"
+url="https://github.com/PatttF/zynMI"
 arch="all"
 license="GPL-3.0-or-later AND MIT"
-makedepends="lv2-dev"
-source="$pkgname-$_commit.tar.gz::https://github.com/PatttF/zynMI/archive/$_commit.tar.gz"
+# mesa-dev, glu-dev, libx11-dev: the UI (-lGL -lGLU -lGLX -lX11, <GL/...>)
+makedepends="glu-dev libx11-dev lv2-dev mesa-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/PatttF/zynMI/archive/$_commit.tar.gz
+	$pkgname-$_commit_mutated.tar.gz::https://github.com/PatttF/zynMI/archive/$_commit_mutated.tar.gz
+	$pkgname-$_commit_chaos.tar.gz::https://github.com/PatttF/zynMI/archive/$_commit_chaos.tar.gz
+	"
 builddir="$srcdir/zynMI-$_commit"
+subpackages="$pkgname-ui:_ui"
 options="!check" # no tests
 
 prepare() {
 	default_prepare
-	rm -rf aarch64-build x86_64-build
+	local d
+	for d in "$builddir" "$srcdir/zynMI-$_commit_mutated" "$srcdir/zynMI-$_commit_chaos"; do
+		rm -rf "$d"/aarch64-build "$d"/x86_64-build
+	done
+	# f09300b's src/stmlib has only utils/: the rest from ecab611 (Mutable Instruments' stmlib)
+	cp -rn "$srcdir/zynMI-$_commit_chaos"/src/eurorack/stmlib/. "$srcdir/zynMI-$_commit_mutated"/src/stmlib/
+}
+
+# The repository's Makefile; ARCH=x86_64 is its native build (plain g++), ARCH_FLAGS empty: no
+# -march=native; explicit file targets where a plugin's default target would build the UI
+_make() {
+	make ARCH=x86_64 CXX="${CXX:-g++}" ARCH_FLAGS= BUILD_DIR=out "$@"
 }
 
 build() {
-	# ARCH=x86_64 is the native build (plain g++); ARCH_FLAGS empty: no -march=native
-	make plugins ARCH=x86_64 CXX="${CXX:-g++}" ARCH_FLAGS= BUILD_DIR=./out
+	_make plugins
+
+	cd "$srcdir/zynMI-$_commit_mutated"
+	_make out/mi_mutated.lv2/mutated.so out/mi_mutated.lv2/mutated.ttl \
+		out/mi_mutated_sequences.lv2/mutated_sequences.so \
+		out/mi_mutated_sequences.lv2/mutated_sequences.ttl \
+		out/mi_mutated_sequences.lv2/manifest.ttl
+	# The UI (the Makefile builds it on x86_64 only; it is plain OpenGL 2 and X11)
+	_make out/mi_mutated.lv2/mutated_ui.so out/mi_mutated.lv2/mutated_ui.ttl
+	# Without the UI: the manifest as in the release's zynMI.zip
+	cat > out/mi_mutated.lv2/manifest.ttl <<-'EOT'
+	@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+	@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+	<https://github.com/PatttF/zynMI/plugins/mutated>
+	    a lv2:Plugin ;
+	    lv2:binary <mutated.so> ;
+	    rdfs:seeAlso <mutated.ttl> .
+	EOT
+
+	cd "$srcdir/zynMI-$_commit_chaos"
+	_make out/mi_chaosengine.lv2/marbles.so out/mi_chaosengine.lv2/marbles.ttl \
+		out/mi_chaosengine.lv2/manifest.ttl
 }
 
 package() {
 	mkdir -p "$pkgdir"/usr/lib/lv2
 	cp -r out/mi_braids.lv2 out/mi_plaits.lv2 out/mi_marbles.lv2 "$pkgdir"/usr/lib/lv2/
+	cp -r "$srcdir/zynMI-$_commit_mutated"/out/mi_mutated.lv2 \
+		"$srcdir/zynMI-$_commit_mutated"/out/mi_mutated_sequences.lv2 \
+		"$srcdir/zynMI-$_commit_chaos"/out/mi_chaosengine.lv2 \
+		"$pkgdir"/usr/lib/lv2/
+	rm -f "$pkgdir"/usr/lib/lv2/mi_mutated.lv2/mutated_ui.so "$pkgdir"/usr/lib/lv2/mi_mutated.lv2/mutated_ui.ttl
+}
+
+_ui() {
+	pkgdesc="$pkgdesc (Mutated Instruments' UI)"
+	depends="$pkgname=$pkgver-r$pkgrel"
+	local d="$subpkgdir"/usr/lib/lv2/mi_mutated_ui.lv2
+	mkdir -p "$d"
+	install -m755 "$srcdir/zynMI-$_commit_mutated"/out/mi_mutated.lv2/mutated_ui.so "$d"/
+	install -m644 "$srcdir/zynMI-$_commit_mutated"/out/mi_mutated.lv2/mutated_ui.ttl "$d"/
+	cat > "$d"/manifest.ttl <<-'EOT'
+	@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+	@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+	@prefix ui:   <http://lv2plug.in/ns/extensions/ui#> .
+
+	<https://github.com/PatttF/zynMI/plugins/mutated>
+	    ui:ui <https://github.com/PatttF/zynMI/plugins/mutated#ui> .
+
+	<https://github.com/PatttF/zynMI/plugins/mutated#ui>
+	    a ui:X11UI ;
+	    ui:binary <mutated_ui.so> ;
+	    rdfs:seeAlso <mutated_ui.ttl> .
+	EOT
 }
 sha512sums="
 251d1909b2212dee2058ecd1a9d09e12f967170fb8726f342c5747d51cc1c60b3cb9a40b6847a0780e6568770c1581e85adc192ea86c4d88b49af9dbf3a5cce7  zynmi-lv2-f42c53193cbbd48271551c79f40fb235f881ec07.tar.gz
+6ff24ad9a29d3ed98c9d2dc9e7cf0a25ba408f5ad2edf7695cf903b11984dea9240497695665deaed88c7bd03ad6640de846f5bef5b9c1a6572f401915124310  zynmi-lv2-f09300b5789184c96dbb4db20ca3574701f87a96.tar.gz
+0b033027a7b9de357925e1abfe807e3d18f2c513959d9c5f45bcc6648bdcbcd9938a1d19b51647e70756c601652d97d03f7184e086bc6dd0293f5f57c65ef2e7  zynmi-lv2-ecab611c36468d4ba0e669c735b085106dfeec32.tar.gz
 "
