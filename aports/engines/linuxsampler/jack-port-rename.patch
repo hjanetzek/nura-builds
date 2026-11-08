@@ -1,0 +1,13 @@
+--- a/src/drivers/audio/AudioOutputDeviceJack.cpp	2026-11-08 20:31:17.008665144 +0100
++++ b/src/drivers/audio/AudioOutputDeviceJack.cpp	2026-11-08 20:31:17.019207926 +0100
+@@ -45,7 +45,9 @@
+     }
+ 
+     void AudioOutputDeviceJack::AudioChannelJack::ParameterName::OnSetValue(String s) {
+-        if (jack_port_set_name(pChannel->hJackPort, s.c_str())) throw AudioOutputException("Failed to rename JACK port");
++        // jack_port_rename(): jack_port_set_name() is deprecated, and PipeWire's JACK library
++        // returns success without renaming
++        if (jack_port_rename(pChannel->pDevice->hJackClient, pChannel->hJackPort, s.c_str())) throw AudioOutputException("Failed to rename JACK port");
+     }
+ 
+ 

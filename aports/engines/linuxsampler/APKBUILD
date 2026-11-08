@@ -6,7 +6,7 @@
 # JACK and ALSA drivers, GIG/SFZ/SF2 engines, the instruments database; no LV2/DSSI plugin.
 pkgname=linuxsampler
 pkgver=2.5.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Software audio sampler (GIG, SFZ, SF2)"
 url="https://www.linuxsampler.org/"
 arch="all"
@@ -19,9 +19,13 @@ subpackages="$pkgname-dev $pkgname-doc"
 # on musl (crash on every RESET CHANNEL of an SFZ channel, i.e. when zynthian removes the chain);
 # thread-sched-self.patch: a new thread set its scheduling through __thread_id, which musl's
 # pthread_create() stores only after the thread may have started (crash at LOAD ENGINE, at times)
+# jack-port-rename.patch: the JACK output ports are renamed with jack_port_set_name(), deprecated, and
+# PipeWire's JACK library returns success without renaming: zynthian's out<N>_l/_r names (its
+# routing finds the chains' outputs by them) stayed 0, 1, ...; jack_port_rename() instead
 source="https://download.linuxsampler.org/packages/linuxsampler-$pkgver.tar.bz2
 	thread-stop-joined.patch
 	thread-sched-self.patch
+	jack-port-rename.patch
 	"
 options="!check" # no tests
 
@@ -67,4 +71,5 @@ sha512sums="
 bafa1f1e61a5ed67aba94ccad3a13597fce7fbade371e4071511a99f5cf5e3d02ed0357273e82cf8df8e869005a54a79083b76a2024c34761664f3744a301773  linuxsampler-2.5.0.tar.bz2
 48490c9829594538c60360502b8905afafe382c97a0f59bbe0409124483b0223830c1e0e4486bfd07a477c548879fbdf71eda7e1d0a7d4505282f7ede5781775  thread-stop-joined.patch
 01a38703b6a023b3ad11daa1a4c448376f0c823b0c3892365755eb76e61b6286b52283587904fbdc4c0710f55ea75b809213377c3e59194c2c0e20ff8a1eab42  thread-sched-self.patch
+646c797dd4958da8f385ed4a5382617939f7f6462f071288bff36c3c6f62e05033e8d76b1c5b2241fea6d914e6e8f73d1350c1fb5c6fb432f4f4eed608ba82b8  jack-port-rename.patch
 "
