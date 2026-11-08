@@ -6,7 +6,7 @@
 # JACK and ALSA drivers, GIG/SFZ/SF2 engines, the instruments database; no LV2/DSSI plugin.
 pkgname=linuxsampler
 pkgver=2.5.0
-pkgrel=0
+pkgrel=1
 pkgdesc="Software audio sampler (GIG, SFZ, SF2)"
 url="https://www.linuxsampler.org/"
 arch="all"
@@ -14,7 +14,11 @@ license="custom"
 # flex, bison, perl, perl-xml-parser: required by configure (configure.ac:46-63)
 makedepends="alsa-lib-dev bison flex jack-dev libgig-dev libsndfile-dev perl perl-xml-parser sqlite-dev"
 subpackages="$pkgname-dev $pkgname-doc"
-source="https://download.linuxsampler.org/packages/linuxsampler-$pkgver.tar.bz2"
+# thread-stop-joined.patch: Thread::StopThread() detached a thread after joining it, a use after free
+# on musl (crash on every RESET CHANNEL of an SFZ channel, i.e. when zynthian removes the chain)
+source="https://download.linuxsampler.org/packages/linuxsampler-$pkgver.tar.bz2
+	thread-stop-joined.patch
+	"
 options="!check" # no tests
 
 prepare() {
@@ -57,4 +61,5 @@ package() {
 
 sha512sums="
 bafa1f1e61a5ed67aba94ccad3a13597fce7fbade371e4071511a99f5cf5e3d02ed0357273e82cf8df8e869005a54a79083b76a2024c34761664f3744a301773  linuxsampler-2.5.0.tar.bz2
+48490c9829594538c60360502b8905afafe382c97a0f59bbe0409124483b0223830c1e0e4486bfd07a477c548879fbdf71eda7e1d0a7d4505282f7ede5781775  thread-stop-joined.patch
 "
