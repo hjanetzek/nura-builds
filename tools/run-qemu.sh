@@ -76,7 +76,13 @@ else
 			else
 				set --
 			fi
-			curl -fLR --progress-bar "$@" -o "$zst.part" "$url" || { rm -f "$zst.part"; exit 1; }
+			if ! curl -fLR --progress-bar "$@" -o "$zst.part" "$url"; then
+				rm -f "$zst.part"
+				echo "can't download the image: is it published yet? (the release zynthian-latest gets it" >&2
+				echo "from Run workflow > architecture x86_64 with images)" >&2
+				[ -f "$zst" ] || exit 1
+				echo "using the downloaded $zst" >&2
+			fi
 			set --
 			if [ -s "$zst.part" ]; then
 				mv "$zst.part" "$zst"
