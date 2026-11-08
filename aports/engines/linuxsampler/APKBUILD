@@ -1,0 +1,41 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# LinuxSampler: the sampler of zynthian's LS engine (linuxsampler --lscp-port, LSCP over a socket).
+# ZynthianOS installs it (Debian's linuxsampler), and six of its factory snapshots play SFZ
+# instruments with it. Not in Alpine: its licence is the GPL with an exception, it may not be used
+# in commercial software or hardware products without the authors' written permission (README).
+# JACK and ALSA drivers, GIG/SFZ/SF2 engines, the instruments database; no LV2/DSSI plugin.
+pkgname=linuxsampler
+pkgver=2.5.0
+pkgrel=0
+pkgdesc="Software audio sampler (GIG, SFZ, SF2)"
+url="https://www.linuxsampler.org/"
+arch="all"
+license="custom"
+makedepends="alsa-lib-dev jack-dev libgig-dev libsndfile-dev sqlite-dev"
+subpackages="$pkgname-dev"
+source="https://download.linuxsampler.org/packages/linuxsampler-$pkgver.tar.bz2"
+options="!check" # no tests
+
+build() {
+	# NPTL bug check: a test for an old glibc pthread bug, which doesn't apply to musl
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--mandir=/usr/share/man \
+		--localstatedir=/var \
+		--disable-static \
+		--disable-nptl-bug-check \
+		--disable-arts-driver
+	make
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+	install -Dm644 README COPYING -t "$pkgdir"/usr/share/licenses/$pkgname/
+}
+
+sha512sums="
+bafa1f1e61a5ed67aba94ccad3a13597fce7fbade371e4071511a99f5cf5e3d02ed0357273e82cf8df8e869005a54a79083b76a2024c34761664f3744a301773  linuxsampler-2.5.0.tar.bz2
+"

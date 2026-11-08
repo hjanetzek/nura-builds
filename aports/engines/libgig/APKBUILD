@@ -1,0 +1,39 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# libgig: Gigasampler/GigaStudio, DLS, SoundFont and KORG file library (linuxsampler's), and its
+# command line tools (gigtools, which ZynthianOS installs with linuxsampler). Not in Alpine.
+pkgname=libgig
+pkgver=4.6.0
+pkgrel=0
+pkgdesc="C++ library for Gigasampler/GigaStudio, DLS, SoundFont and KORG sound files"
+url="https://www.linuxsampler.org/libgig/"
+arch="all"
+license="GPL-2.0-or-later"
+makedepends="libsndfile-dev util-linux-dev"
+subpackages="$pkgname-dev gigtools:_tools"
+source="https://download.linuxsampler.org/packages/libgig-$pkgver.tar.bz2"
+options="!check" # no tests
+
+build() {
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr \
+		--sysconfdir=/etc \
+		--mandir=/usr/share/man \
+		--localstatedir=/var \
+		--disable-static
+	make
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+_tools() {
+	pkgdesc="Tools for Gigasampler/GigaStudio, DLS, SoundFont and KORG files (libgig)"
+	amove usr/bin
+}
+
+sha512sums="
+c5c0a4f36fd6b62baefdacbc2250a65de2f095aecd70242b860fb406a6f983a9b871096d725d4a83808e13f2522de1913eea9618abd6fea3146ee820df77eef0  libgig-4.6.0.tar.bz2
+"
