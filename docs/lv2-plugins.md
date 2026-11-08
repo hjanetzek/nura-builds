@@ -127,7 +127,7 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 | ChaosChimp | 2014 JUCE project (teragonaudio) | an old JUCE with an LV2 wrapper |
 | SAFE EQ | 2015 JUCE project (semanticaudio), with its own JUCE modules | as ChaosChimp |
 | SO-kl5 | uses the obsolete LV2 event extension (`ev:EventPort`): jalv 1.10 and zynthian's jalv refuse it | port the MIDI input to atoms |
-| Mutated Instruments | the prebuilt release's source isn't published; stand-in `zynmi-lv2` (Braids, Plaits, Marbles from the `BraidsPlaitsMarbles` branch, other URIs) | the source of the release |
+| Mutated Instruments | one plugin (Braids + Plaits synth with filters, effects, mod matrix), released only as prebuilt glibc binaries; stand-in `zynmi-lv2` (separate Braids, Plaits, Marbles from an older source, other URIs) | the source of the release (see "Wanted by shared snapshots") |
 | GxVoxTonebender | source not found (in neither Guitarix 0.47 nor GxPlugins 1.0) | the source |
 | FluidGM | no SoundFont in zynthian's FluidPlug fork | a GM SoundFont |
 
@@ -143,7 +143,8 @@ default configuration, so they are wanted by users, not by the defaults:
 
 | Plugin / engine | Chains | zynthian default | Source / what it takes |
 |---|---|---|---|
-| Mutated Instruments (`https://github.com/PatttF/zynMI/plugins/mutated`) | 55 (all but one in one generated set) | enabled | the newer zynMI release whose source isn't published; `zynmi-lv2` (Braids, Plaits, Marbles) is the stand-in under other URIs |
+| Mutated Instruments (`https://github.com/PatttF/zynMI/plugins/mutated`) | 55 (all but one in one generated set) | enabled | **one plugin**, a complete synth (ZynthianOS' `mi_mutated.lv2`, 127 ports): Braids and Plaits macro oscillators, ADSR, a dual filter cascade, Airwindows effects (MatrixVerb, TapeDelay2, BitGlitter, ToTape8, GlitchShifter) and a 33-source modulation matrix. Only prebuilt (glibc) binaries: ZynthianOS downloads `zynMI.zip` from the zynMI release `BraidsPlaitsMarbles` (`install_zynMI_prebuilt.sh`); the repository has only a README since (the `BraidsPlaitsMarbles` branch is gone; `zynmi-lv2`'s pinned commit f42c531 is still fetchable). `zynmi-lv2`'s separate Braids, Plaits and Marbles plugins (other URIs, other controls) don't replace it for snapshots. Takes: the author publishing the source |
+| Chaos Engine (`.../zynMI/plugins/marbles`), Mutated Sequences (`.../zynMI/plugins/mutated_sequences`) | 0 | disabled | the zynMI release's two MIDI tools: a Marbles port (random MIDI with tempo sync) and a DFAM-style sequencer; prebuilt only, as above |
 | Pianoteq (engine PT, and Pianoteq 6/7 as LV2) | 21 (+5 LV2) | engine | proprietary, prebuilt glibc binaries (x86-64, aarch64): no package. Maybe runnable through Alpine's `gcompat` or a small glibc runtime (untested); licensed per user, so at most a download helper, never redistributed |
 | VirtualJV (`https://github.com/giulioz/jv880_juce.git`) | 7 | disabled | JV-880 emulation (JUCE) by giulioz; needs the user's JV-880 ROMs |
 | Geonkick Single | 7 | not in the config | [geonkick](https://github.com/Geonkick-Synthesizer/geonkick) drum synth (LV2), not in Alpine |
