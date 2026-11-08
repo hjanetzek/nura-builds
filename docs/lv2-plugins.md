@@ -133,6 +133,32 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 
 (The full list, plugin by plugin: regenerate with the measurement above; the table groups it.)
 
+## Wanted by shared snapshots (TODO)
+
+366 snapshots collected from the forum, issue tracker, Patchstorage and one GitHub project, loaded in
+the QEMU VM on 2026-11-08 with zynthian-ui's `nura/tools/test_factory_snapshots.py` (snapshots not in
+this repository: see zynthian-ui's docs/upstream-candidates.md for the converter errors). Engines and
+plugins they use that Nura doesn't have, by number of snapshot chains; most are disabled in zynthian's
+default configuration, so they are wanted by users, not by the defaults:
+
+| Plugin / engine | Chains | zynthian default | Source / what it takes |
+|---|---|---|---|
+| Mutated Instruments (`https://github.com/PatttF/zynMI/plugins/mutated`) | 55 (all but one in one generated set) | enabled | the newer zynMI release whose source isn't published; `zynmi-lv2` (Braids, Plaits, Marbles) is the stand-in under other URIs |
+| Pianoteq (engine PT, and Pianoteq 6/7 as LV2) | 21 (+5 LV2) | engine | proprietary, prebuilt glibc binaries (x86-64, aarch64): no package. Maybe runnable through Alpine's `gcompat` or a small glibc runtime (untested); licensed per user, so at most a download helper, never redistributed |
+| VirtualJV (`https://github.com/giulioz/jv880_juce.git`) | 7 | disabled | JV-880 emulation (JUCE) by giulioz; needs the user's JV-880 ROMs |
+| Geonkick Single | 7 | not in the config | [geonkick](https://github.com/Geonkick-Synthesizer/geonkick) drum synth (LV2), not in Alpine |
+| OsTIrus / Osirus (`http://theusualsuspects.lv2/...`) | 3 | disabled | gearmulator's DSP563xx emulations (Virus TI / Virus); need the user's ROMs |
+| Example Fifths (`http://lv2plug.in/plugins/eg-fifths`) | 2 | disabled | LV2's example plugins (lv2's meson option for the examples), not in Alpine's `lv2` package |
+| Aeolus (engine AE) | 2 | engine | not packaged (its data is in zynthian-data) |
+| Moog LPF (`http://github.com/blablack/ams-lv2/mooglpf`) | 1 | disabled | AMS: `ams-lv2` builds only Bitgrinder so far; build more of its plugins |
+| CloudReverb (`http://github.com/xunil-cloud/CloudReverb`) | 1 | disabled | DPF plugin by xunil-cloud |
+| FluidGM, Calf Wavetable, Triceratops (old URI) | 1 each | enabled | see "Missing" above (Triceratops: zynthian's rescan adds the new URI; old snapshots still name the old one) |
+| PitchedDelay (`http://code.google.com/p/lkjb-dc12/`) | 1 | disabled | in `distrho-ports-lv2` r1 since 2026-11-08: check it is found (the VM had the older package) |
+
+Not plugins, but in the same results: Pure Data patches from the users' own data (8 snapshots, the
+puredata engine doesn't start without the patch) and SF2/SFZ/GIG/LV2 presets from other machines'
+`zynthian-my-data` (64 snapshots): expected, nothing to package.
+
 ## Plan
 
 ### Principles
