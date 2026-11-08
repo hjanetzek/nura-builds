@@ -17,9 +17,23 @@ subpackages="$pkgname-dev $pkgname-doc"
 source="https://download.linuxsampler.org/packages/linuxsampler-$pkgver.tar.bz2"
 options="!check" # no tests
 
+prepare() {
+	default_prepare
+	# musl: no execinfo.h (backtrace() only for the Mutex debug info): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF2'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF2
+}
+
 build() {
-	# NPTL bug check: a test for an old glibc pthread bug, which doesn't apply to musl
-	./configure \
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat"
+	# HAVE_UNIX98: configure's UNIX98 test fails on musl, which has pthread_mutexattr_settype(),
+	# the call it is about (configure says to set it then). NPTL bug check: a test for an old glibc
+	# pthread bug, which doesn't apply to musl.
+	HAVE_UNIX98=1 ./configure \
 		--build=$CBUILD \
 		--host=$CHOST \
 		--prefix=/usr \
