@@ -93,6 +93,9 @@ desktop's GPU), PipeWire audio (virtio-sound), SSH on `localhost:2222` and webco
 `-u` fetches a newer image. It needs QEMU's GL, display and audio modules (it names the missing
 ones; on Arch `qemu-hw-display-virtio-{gpu,gpu-gl,gpu-pci,gpu-pci-gl,vga,vga-gl} qemu-ui-opengl
 qemu-ui-gtk qemu-audio-pipewire`, and `qemu-hw-usb-host` for passthrough) and OVMF (`edk2-ovmf`).
+Headless (`-D none`, serial console and PID file in the cache directory) for agents and tests;
+`tools/qemu-setup.sh` installs an SSH key and passwordless sudo in a fresh VM. How zynthian's agents
+test in a VM: zynthian-ui's [docs/qemu-testing.md](https://github.com/hjanetzek/zynthian-ui/blob/nura/docs/qemu-testing.md).
 
 ## Building single packages
 

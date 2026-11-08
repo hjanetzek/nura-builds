@@ -17,7 +17,10 @@
 #   -c CPUS     virtual CPUs (default: half of this machine's)
 #   -R WxH      the screen's resolution (default 1280x800: 16:10 as the Duet, whose 1920x1200 at
 #               the kiosk's scale 1.5 is the same 1280x800 logical pixels), e.g. 1024x600, 800x480
-#   -D DISPLAY  gtk (default) or sdl
+#   -D DISPLAY  gtk (default), sdl, or none: no window (agents, tests; screenshots with grim in the
+#               guest): OpenGL through egl-headless if QEMU has it (qemu-ui-egl-headless), else
+#               software rendering in the guest. Headless (or without a terminal) the serial console
+#               goes to serial.log in the cache directory, QEMU's PID to qemu.pid
 #   -n          no OpenGL (software rendering in the guest: slow, for checking a GL problem)
 #   -A AUDIO    virtio (default: virtio-sound, QEMU 8.2+) or hda (emulated Intel HDA), none
 #   -U VID:PID  pass a USB device through (repeatable), e.g. -U 17cc:1140 (Maschine Mk2). Needs
@@ -129,13 +132,19 @@ audiodevs=$(qemu-system-x86_64 -audiodev help 2>/dev/null)
 displays=$(qemu-system-x86_64 -display help 2>/dev/null)
 missing=
 has_device() { echo "$devices" | grep -q "name \"$1\""; }
-if [ "$gl" = on ]; then
+if [ "$gl" = on ] && [ "$display" != none ]; then
 	# (the -gl modules need the plain virtio-gpu/-vga ones too: without them QEMU lists none)
 	has_device virtio-vga-gl || missing="$missing qemu-hw-display-virtio-gpu qemu-hw-display-virtio-gpu-gl qemu-hw-display-virtio-gpu-pci qemu-hw-display-virtio-gpu-pci-gl qemu-hw-display-virtio-vga qemu-hw-display-virtio-vga-gl qemu-ui-opengl"
 else
 	has_device virtio-vga || missing="$missing qemu-hw-display-virtio-vga qemu-hw-display-virtio-gpu"
 fi
-echo "$displays" | grep -qx "$display" || missing="$missing qemu-ui-$display"
+if [ "$display" = none ]; then
+	# Headless: OpenGL only through egl-headless
+	echo "$displays" | grep -qx egl-headless || gl=off
+	has_device virtio-vga-gl || gl=off
+else
+	echo "$displays" | grep -qx "$display" || missing="$missing qemu-ui-$display"
+fi
 if [ "$audio" != none ]; then
 	echo "$audiodevs" | grep -qx -e pipewire -e pa || missing="$missing qemu-audio-pipewire"
 fi
@@ -167,8 +176,7 @@ set -- -nodefaults -machine q35 -smp "$cpus" -m "$mem" \
 	-drive "file=$disk,format=raw,if=virtio" \
 	-device virtio-tablet-pci -device virtio-keyboard-pci \
 	-netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22,hostfwd=tcp:127.0.0.1:$web_port-:8080" \
-	-device virtio-net-pci,netdev=net \
-	-serial mon:stdio
+	-device virtio-net-pci,netdev=net
 
 if [ -w /dev/kvm ]; then
 	set -- "$@" -enable-kvm -cpu host
@@ -178,11 +186,27 @@ fi
 
 # The screen: the guest's preferred mode (virtio-gpu's EDID)
 xres=${res%x*} yres=${res#*x}
-if [ "$gl" = on ]; then
+if [ "$display" = none ]; then
+	if [ "$gl" = on ]; then
+		set -- "$@" -device "virtio-vga-gl,xres=$xres,yres=$yres" -display egl-headless
+	else
+		set -- "$@" -device "virtio-vga,xres=$xres,yres=$yres" -display none
+	fi
+elif [ "$gl" = on ]; then
 	set -- "$@" -device "virtio-vga-gl,xres=$xres,yres=$yres" -display "$display,gl=on,show-cursor=on"
 else
 	set -- "$@" -device "virtio-vga,xres=$xres,yres=$yres" -display "$display,show-cursor=on"
 fi
+
+# Serial console: here, or (headless, no terminal) in a file; the PID for stopping a background VM
+serial_log=
+if [ "$display" = none ] || [ ! -t 0 ]; then
+	serial_log=$cache/serial.log
+	set -- "$@" -serial "file:$serial_log"
+else
+	set -- "$@" -serial mon:stdio
+fi
+set -- "$@" -pidfile "$cache/qemu.pid"
 
 # Audio through the desktop's PipeWire (or PulseAudio)
 if [ "$audio" != none ]; then
@@ -210,5 +234,10 @@ echo "disk:    $disk"
 echo "screen:  ${xres}x${yres}"
 echo "ssh:     ssh -p $ssh_port <user>@localhost"
 echo "webconf: http://localhost:$web_port"
-echo "serial console here (Ctrl-A x quits QEMU, Ctrl-A c the monitor)"
+echo "opengl:  $gl"
+if [ -n "$serial_log" ]; then
+	echo "serial:  $serial_log; stop: kill \$(cat $cache/qemu.pid)"
+else
+	echo "serial console here (Ctrl-A x quits QEMU, Ctrl-A c the monitor)"
+fi
 exec qemu-system-x86_64 "$@"
