@@ -64,7 +64,8 @@ build() {
 		out/mi_mutated_sequences.lv2/mutated_sequences.ttl \
 		out/mi_mutated_sequences.lv2/manifest.ttl
 	# The UI (the Makefile builds it on x86_64 only; it is plain OpenGL 2 and X11)
-	_make out/mi_mutated.lv2/mutated_ui.so out/mi_mutated.lv2/mutated_ui.ttl
+	# GLX is in Alpine's libGL (mesa without glvnd): no libGLX
+	_make UI_LDFLAGS="-shared -lGL -lGLU -lX11 -lm" out/mi_mutated.lv2/mutated_ui.so out/mi_mutated.lv2/mutated_ui.ttl
 	# Without the UI: the manifest as in the release's zynMI.zip
 	cat > out/mi_mutated.lv2/manifest.ttl <<-'EOT'
 	@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
