@@ -80,8 +80,12 @@ engine, plugin and referenced file):
 | 014-Useless | Salamander Drumkit, Factory SFZs |
 | 004, 005, 007, 015 | nothing beyond the image (DJ EQ and SC4 are disabled by default, as on ZynthianOS, and load from snapshots all the same) |
 
-Checked: every referenced engine and plugin is installed and every referenced file exists after
-`zynthian-factory-content`. To do: load each snapshot and compare the chains with ZynthianOS.
+Tested 2026-11-08 on the Duet: all 15 factory snapshots load completely after
+`zynthian-factory-content` (every processor of the file there with its engine running and its
+preset loaded; 003, in the old layers format, with its 16 FluidR3 GM chains). The test is
+zynthian-ui's `nura/tools/test_factory_snapshots.py`, run in the running zynthian with
+`nura/tools/zyninject.sh -t 1500 test_factory_snapshots.py` (it restores the state afterwards).
+It needed two fixes of LinuxSampler's thread handling on musl (upstream-candidates.md).
 
 ## Maintenance
 
