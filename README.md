@@ -7,7 +7,7 @@ Targets so far:
 
 | Target | What | Devices |
 |---|---|---|
-| `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss, dbm-nihost), the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
+| `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss, dbm-nihost), zynthian-packages (the content pack catalogue), the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
 
 Next: the Google Pixel 3 (`google-blueline`), see [docs/google-blueline.md](docs/google-blueline.md):
 device status, USB OTG (missing on all SDM845 phones; patches on the kernel lists), plan.
@@ -53,7 +53,7 @@ zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2`
 `qt3` (qtwayland), `pyside` (PySide6 6.12), `plugins`
 (zynthian's jalv, the LV2 plugins and Pure Data externals of `aports/lv2` and `aports/pd` through
 their meta packages, zynaddsubfx, setBfree, SooperLooper), `zynthian`
-(zyncoder, zynthian-ui and DrivenByMoss from their checkouts, zynthian-data, postmarketos-ui-zynthian; always
+(zyncoder, zynthian-ui, DrivenByMoss and zynthian-packages from their checkouts, zynthian-data, postmarketos-ui-zynthian; always
 rebuilt). The Qt modules are separate stages because their recipes ask for the other modules
 without a version, which Alpine's 6.11 would satisfy.
 
