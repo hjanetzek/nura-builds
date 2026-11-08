@@ -7,6 +7,7 @@ zynthian-ui https://github.com/hjanetzek/zynthian-ui nura nura
 zyncoder    https://github.com/hjanetzek/zyncoder    nura -
 drivenbymoss-rust https://github.com/hjanetzek/drivenbymoss-rust main nura
 zynthian-packages https://github.com/hjanetzek/zynthian-packages nura nura
+zynthian-webconf https://github.com/hjanetzek/zynthian-webconf nura nura
 "
 
 # Stages, built in this order; each one a list of pmbootstrap build arguments, separated by ";".
@@ -31,7 +32,7 @@ STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx 
 # the distfiles cache first. DrivenByMoss (its zynthian controller drivers, and dbm-nihost for the
 # NI Maschine Mk2/JAM) from its checkout too, first (no dependency on the others; the Rust build
 # fails early); its recipe fetches the Rust crates itself. The kiosk package depends on both.
-STAGE_zynthian="--src=@drivenbymoss-rust drivenbymoss; --src=@drivenbymoss-rust dbm-nihost; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; postmarketos-ui-zynthian"
+STAGE_zynthian="--src=@drivenbymoss-rust drivenbymoss; --src=@drivenbymoss-rust dbm-nihost; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
 SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
 
 # Recipe directories whose contents decide whether a stage's cached packages are still valid
