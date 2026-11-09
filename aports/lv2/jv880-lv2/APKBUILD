@@ -1,0 +1,99 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# VirtualJV: Roland JV-880 emulation (giulioz, after Nuked-SC55), JUCE 8.0.7 (the version upstream's
+# CI uses), with its GUI. Upstream has only a Projucer project: a CMakeLists.txt with the same
+# settings is written in prepare(). LV2 URI as on ZynthianOS (https://github.com/giulioz/jv880_juce.git:
+# zynthian's config, its preset generator and shared snapshots use it; the .jucer has another).
+# Needs the user's JV-880 ROMs in ~/.config/JV880 (not packaged). Disabled in zynthian's config.
+pkgname=jv880-lv2
+pkgver=1.0.1_git20250904
+pkgrel=0
+_commit=bc141fc8b7a5039e909807e85ff1070d5727584b
+_juce=8.0.7
+pkgdesc="VirtualJV: Roland JV-880 emulation (LV2, with GUI; ROMs not included)"
+url="https://github.com/giulioz/jv880_juce"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+makedepends="
+	alsa-lib-dev
+	cmake
+	fontconfig-dev
+	freetype-dev
+	libx11-dev
+	libxcursor-dev
+	libxext-dev
+	libxinerama-dev
+	libxrandr-dev
+	samurai
+	"
+source="$pkgname-$_commit.tar.gz::https://github.com/giulioz/jv880_juce/archive/$_commit.tar.gz
+	juce-$_juce.tar.gz::https://github.com/juce-framework/JUCE/archive/$_juce.tar.gz
+	"
+builddir="$srcdir/jv880_juce-$_commit"
+options="!check" # no tests
+
+prepare() {
+	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF
+	rm -rf JUCE && mv "$srcdir"/JUCE-$_juce JUCE
+	default_prepare
+	# the .jucer's settings (VirtualJV.jucer: codes, characteristics, modules, JUCEOPTIONS, C++17,
+	# addUsingNamespaceToJuceHeader=0: its own Button class clashes with juce::Button otherwise)
+	cat > CMakeLists.txt <<-'EOF'
+	cmake_minimum_required(VERSION 3.22)
+	project(VirtualJV VERSION 1.0.1 LANGUAGES C CXX)
+	set(CMAKE_CXX_STANDARD 17)
+	add_subdirectory(JUCE)
+	juce_add_plugin(VirtualJV
+	    PRODUCT_NAME "jv880"
+	    COMPANY_NAME "Giulio Zausa"
+	    PLUGIN_MANUFACTURER_CODE GlZs
+	    PLUGIN_CODE VRJV
+	    IS_SYNTH TRUE
+	    NEEDS_MIDI_INPUT TRUE
+	    DESCRIPTION "VirtualJV"
+	    LV2URI "https://github.com/giulioz/jv880_juce.git"
+	    FORMATS LV2)
+	juce_generate_juce_header(VirtualJV)
+	file(GLOB_RECURSE SRC CONFIGURE_DEPENDS Source/*.cpp Source/*.c)
+	target_sources(VirtualJV PRIVATE ${SRC})
+	target_compile_definitions(VirtualJV PUBLIC
+	    JUCE_STRICT_REFCOUNTEDPOINTER=1 JUCE_VST3_CAN_REPLACE_VST2=0
+	    JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_DISPLAY_SPLASH_SCREEN=0
+	    DONT_SET_USING_JUCE_NAMESPACE=1)
+	target_link_libraries(VirtualJV PRIVATE
+	    juce::juce_audio_basics juce::juce_audio_devices juce::juce_audio_formats
+	    juce::juce_audio_plugin_client juce::juce_audio_processors juce::juce_audio_utils
+	    juce::juce_core juce::juce_data_structures juce::juce_events juce::juce_graphics
+	    juce::juce_gui_basics juce::juce_gui_extra
+	    PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
+	EOF
+}
+
+build() {
+	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
+	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "")
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE \
+		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
+		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+	# at most 3 jobs: the JUCE translation units need ~1 GB each
+	cmake --build build --parallel 3 --target VirtualJV_LV2
+}
+
+package() {
+	local d
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	for d in $(find build -type d -path '*/LV2/*.lv2' -prune); do
+		cp -r "$d" "$pkgdir"/usr/lib/lv2/
+	done
+}
+sha512sums="
+0224b27ec446f4ee1150e67f5c6259608b0972bfb73d262686221a07b90588947995021a3d95ca7c5572c49991a55435664c5e9db7c2db7e56452f301e5d6a72  jv880-lv2-bc141fc8b7a5039e909807e85ff1070d5727584b.tar.gz
+ca404d94f8f79d9644f391342807dde279d1d313ef597a5d7fa88760e0459f2639cb98b6523c3ae71b2641357df63353c1f32e9b33dd9f050f5651fba470ec33  juce-8.0.7.tar.gz
+"

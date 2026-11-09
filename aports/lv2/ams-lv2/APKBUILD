@@ -1,19 +1,19 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
 # AMS LV2 plugins (blablack's port of Alsa Modular Synth modules; ZynthianOS has KXStudio's ams-lv2,
-# zynthian enables only Bitgrinder, URI http://github.com/blablack/ams-lv2/bitgrinder). Only
-# Bitgrinder, compiled directly: the waf build requires gtkmm 2 for the GUIs and lvtk 1, which
-# isn't packaged; lvtk 1.2.0's headers and its one-file plugin library (as for Dexed) are a second
-# source. The bundle gets a manifest with only Bitgrinder; its GTK UI (in bitgrinder.ttl) isn't
-# built, which hosts skip.
+# zynthian enables only Bitgrinder; shared snapshots also use the Moog LPF). All 66 plugins, without
+# GUIs: the GUIs are GTK 2/gtkmm 2.4 (not in Alpine, and GTK 2 UIs can't be embedded in a GTK 3
+# host). Compiled directly with the wscript's flags (its bundled waf doesn't run on current Python,
+# and lvtk 1 isn't packaged: lvtk 1.2.0's headers and its one-file plugin library are a second
+# source); the GUI entries are removed from the TTLs.
 pkgname=ams-lv2
 pkgver=1.2.2
 _lvtk=1.2.0
-pkgrel=0
-pkgdesc="AMS LV2 plugins: Bitgrinder (no GUI)"
+pkgrel=2
+pkgdesc="AMS LV2 plugins (Alsa Modular Synth modules, no GUIs)"
 url="https://github.com/blablack/ams-lv2"
 arch="all"
 license="GPL-2.0-or-later"
-makedepends="lv2-dev"
+makedepends="fftw-dev lv2-dev"
 source="$pkgname-$pkgver.tar.gz::https://github.com/blablack/ams-lv2/archive/v$pkgver.tar.gz
 	lvtk-$_lvtk.tar.gz::https://github.com/lvtk/lvtk/archive/$_lvtk.tar.gz"
 builddir="$srcdir/ams-lv2-$pkgver"
@@ -24,24 +24,61 @@ prepare() {
 	# the sources include <lvtk-1/lvtk/...>
 	mkdir -p "$srcdir"/inc/lvtk-1
 	ln -s "$srcdir"/lvtk-$_lvtk/lvtk "$srcdir"/inc/lvtk-1/lvtk
+	# no GUIs: drop the UI descriptions and the plugins' references to them
+	sed -i -e '/^<[^>]*\/gui>[[:space:]]*$/,/guiext:binary/d' -e '/guiext:ui </d' ams.lv2/*.ttl
+}
+
+# _plugin <name> <source> <std> [extra flags and objects...]; libraries in $_libs (after the
+# sources: with --as-needed a library before them is dropped)
+_plugin() {
+	local name=$1 src=$2 std=$3
+	shift 3
+	${CXX:-g++} $CXXFLAGS -fPIC -std=$std -I"$srcdir"/inc -I"$srcdir"/lvtk-$_lvtk -I. -Isrc \
+		-DPLUGIN_CLASS=$name -DURI_PREFIX='"http://github.com/blablack/ams-lv2/"' \
+		-DPLUGIN_URI_SUFFIX="\"$name\"" -DPLUGIN_HEADER="\"src/${src%.cpp}.hpp\"" \
+		"$@" src/$src -shared $LDFLAGS -o out/$name.so lvtk_plugin.o $_libs -lm
 }
 
 build() {
-	local inc="-I$srcdir/inc -I$srcdir/lvtk-$_lvtk -I. -Isrc"
-	${CXX:-g++} $CXXFLAGS -fPIC $inc -c "$srcdir"/lvtk-$_lvtk/src/plugin.cpp -o lvtk_plugin.o
-	${CXX:-g++} $CXXFLAGS -fPIC $inc -c src/bitgrinder.cpp -o bitgrinder.o
-	${CXX:-g++} $LDFLAGS -shared bitgrinder.o lvtk_plugin.o -o bitgrinder.so -lm
-	# the manifest's prefixes and Bitgrinder's entry only
-	{
-		grep '^@prefix' ams.lv2/manifest.ttl
-		echo
-		sed -n '/^<http:\/\/github.com\/blablack\/ams-lv2\/bitgrinder>/,/^$/p' ams.lv2/manifest.ttl
-	} > manifest.ttl
+	local p n
+	mkdir -p out
+	${CXX:-g++} $CXXFLAGS -fPIC -I"$srcdir"/inc -I"$srcdir"/lvtk-$_lvtk \
+		-c "$srcdir"/lvtk-$_lvtk/src/plugin.cpp -o lvtk_plugin.o
+	${CXX:-g++} $CXXFLAGS -fPIC -std=c++11 -I"$srcdir"/inc -I"$srcdir"/lvtk-$_lvtk -I. -Isrc \
+		-c src/synthdata.cpp -o synthdata.o
+	for p in absolute advenv amp amplitude analogmemory bitgrinder controltocv cvs cvtocontrol \
+			delay env haas hysteresis hztovc inv lfo2_tempo lfo2_freq lfo mixer_8ch mixer_4ch \
+			mixer_2ch mooglpf multiphase_lfo noise2 percussiveenv ringmodulator samplehold slew \
+			stereomixer_2ch stereomixer_4ch stereomixer_8ch transport vcalin vcdelay vcenv \
+			vcpanning vcswitch vctohz; do
+		_plugin $p $p.cpp c++11
+	done
+	_libs=-lfftw3 _plugin fftvocoder fftvocoder.cpp c++98
+	for p in vcaexp vcdoubledecay vcenvii vcf vco2 vco3; do
+		_plugin $p $p.cpp c++11 synthdata.o
+	done
+	for n in 2 4 6; do
+		_plugin ad_$n ad.cpp c++11 -DOUT_COUNT=$n synthdata.o
+	done
+	for n in 4 6 8; do
+		for p in dynamicwaves vcorgan dynamicwaves2 vcorgan2; do
+			_plugin ${p}_$n $p.cpp c++11 -DOSC_COUNT=$n synthdata.o
+		done
+	done
+	for n in 8 12 16 24 32; do
+		_plugin seq_$n seq.cpp c++11 -DSTEP_COUNT=$n synthdata.o
+	done
 }
 
 package() {
-	install -Dm755 bitgrinder.so "$pkgdir"/usr/lib/lv2/ams.lv2/bitgrinder.so
-	install -m644 manifest.ttl ams.lv2/bitgrinder.ttl "$pkgdir"/usr/lib/lv2/ams.lv2/
+	local b
+	mkdir -p "$pkgdir"/usr/lib/lv2/ams.lv2
+	install -m755 out/*.so "$pkgdir"/usr/lib/lv2/ams.lv2/
+	install -m644 ams.lv2/*.ttl "$pkgdir"/usr/lib/lv2/ams.lv2/
+	# every binary the manifest names was built
+	for b in $(grep -o 'lv2:binary <[^>]*>' ams.lv2/manifest.ttl | sed 's/.*<//; s/>//' | sort -u); do
+		[ -e "$pkgdir"/usr/lib/lv2/ams.lv2/$b ] || die "$b not built"
+	done
 }
 sha512sums="
 6c1c6f3179a851f67e162d225a761c38678159d9f178d9bfa3991b84b84ea557f5a44882ea710626204f158c40ae18f0e87f24faec0a0bd6aa64e18eeb81c45f  ams-lv2-1.2.2.tar.gz
