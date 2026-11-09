@@ -123,6 +123,12 @@ prepare() {
 	# 900 s without output in CI
 	sed -i 's/^if (ipo_supported)/if (FALSE)/' CMakeLists.txt
 	grep -q '^if (FALSE)' CMakeLists.txt
+	# Pd plans its FFTs with FFTW_MEASURE (times candidate algorithms) when a patch or the plugin
+	# starts: JUCE's LV2 helper instantiates the plugin at build time, which then takes more than
+	# pmbootstrap's 900 s without output under QEMU in CI, and every plugdata instance in zynthian
+	# would pay for it at start. FFTW_ESTIMATE plans without measuring.
+	sed -i 's/FFTW_MEASURE)/FFTW_ESTIMATE)/' Libraries/pure-data/src/d_fft_fftw.c
+	! grep -q 'FFTW_MEASURE)' Libraries/pure-data/src/d_fft_fftw.c
 }
 
 build() {
