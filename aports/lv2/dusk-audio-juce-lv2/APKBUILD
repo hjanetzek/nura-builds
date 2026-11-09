@@ -8,9 +8,9 @@
 # only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
 # loads X11 only when the editor opens).
 pkgname=dusk-audio-juce-lv2
-pkgver=0_git20261105
+pkgver=0_git20261108
 pkgrel=0
-_commit=e96abd98d25abaf53f2a2d93abc8c3399fed30d2
+_commit=c3546a58aabd688f76804d786883b01ac5dfee57
 _external_neuralampmodelercore=29763dce4d8247ab70787b5b3b28e86b752d1472
 _external_neuralampmodelercore_dependencies_audiodsptools=0827c6c2fc0deced568536142ea86f189e0b98a1
 _external_clap_juce_extensions=e8de9e8571626633b8541a54c2406fccc4272767
@@ -23,6 +23,9 @@ pkgdesc="Dusk Audio JUCE LV2 plugins (DuskVerb, DuskAmp, Multi-Q, ...)"
 url="https://github.com/dusk-audio/dusk-audio-plugins"
 arch="aarch64 x86_64"
 license="GPL-3.0-or-later"
+# With their GUIs (X11, embedded by the host). Dusk's JUCE-wayland fork (for Dusk Studio) uses
+# Wayland only for standalone JUCE applications; plugins fall back to X11 there too, so the
+# plugins keep JUCE 8.0.4 as Dusk's CI builds them.
 # linux-headers: xsimd (bundled in RTNeural/chowdsp_utils) includes <asm/hwcap.h>; JUCE uses
 # kernel headers too
 makedepends="
@@ -98,7 +101,7 @@ package() {
 	find build -type d -path '*/LV2/*.lv2' -prune -exec cp -r {} "$pkgdir"/usr/lib/lv2/ \;
 }
 sha512sums="
-4837c379ed8231c31a58c378e1a27f2f324da6c3c67db0858270dbc2cf509551754c25f45fe63bbe41b4a3623b315dc6c03576f51135abb20e7cca3ea3ac90d7  dusk-audio-juce-lv2-e96abd98d25abaf53f2a2d93abc8c3399fed30d2.tar.gz
+5a79ed6ccfdad142941eef64ccac8870df05f75b985f2d37b3a948b936265c34fc9a015bb27c5a563b2ab5ccab7dc045e4fbae9e314c0edcccb2fe88a3903f84  dusk-audio-juce-lv2-c3546a58aabd688f76804d786883b01ac5dfee57.tar.gz
 19bace71e24067b9bb7b436108ebb86ac564f06478244e67243395dcb793ae04f763b4c351f217acc2c32558343ad27225079efb6f12337aad6f95b56bc14cfa  external_neuralampmodelercore-29763dce4d8247ab70787b5b3b28e86b752d1472.tar.gz
 4dc0668571ba4e7d597d017c3ceebad2a7c6fe2599a8de5924d369a252ed55f61ca1ca93c0d39d0889963d25da808f61cb431cc21f8baee2f95b09715f0b81f1  external_neuralampmodelercore_dependencies_audiodsptools-0827c6c2fc0deced568536142ea86f189e0b98a1.tar.gz
 e9d3ee830226842ff2c54159db188aaa1a73ee1d8d935b7c865be77b5ebc0f75f6aef5d3c1399c2ad91113e0052ddf7386ac71e23f4a9c24012e41122495ab22  external_clap_juce_extensions-e8de9e8571626633b8541a54c2406fccc4272767.tar.gz
