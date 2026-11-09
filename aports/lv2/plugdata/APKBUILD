@@ -117,8 +117,8 @@ prepare() {
 	default_prepare
 	# no LTO: the final links (standalone, two LV2 plugins) take longer than pmbootstrap's
 	# 900 s without output in CI
-	sed -i 's/^if (ipo_supported)$/if (FALSE)/' CMakeLists.txt
-	grep -q '^if (FALSE)$' CMakeLists.txt
+	sed -i 's/^if (ipo_supported)/if (FALSE)/' CMakeLists.txt
+	grep -q '^if (FALSE)' CMakeLists.txt
 }
 
 build() {
