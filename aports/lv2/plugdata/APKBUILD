@@ -142,21 +142,18 @@ build() {
 	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQUICK_BUILD=ON
 	# at most 3 jobs: the JUCE translation units need ~1 GB each
 	cmake --build build --parallel 3 --target plugdata_standalone plugdata_LV2 plugdata_fx_LV2
-	# DEBUG: the LV2 helper by hand, with a backtrace of all threads if it still runs after 90 s
-	local so pid
+	# DEBUG: the LV2 helper by hand under gdb; interrupted after 90 s for a backtrace of all threads
+	local so hp
 	for so in Plugins/LV2/plugdata.lv2/libplugdata.so; do
 		ls -la "$so" build/juce_lv2_helper
-		build/juce_lv2_helper "$so" > "$srcdir"/helper.log 2>&1 &
-		pid=$!
+		gdb -batch -ex "set pagination off" -ex run -ex "info threads" -ex "thread apply all bt 25" \
+			--args build/juce_lv2_helper "$so" > "$srcdir"/gdb.log 2>&1 &
 		sleep 90
-		if kill -0 $pid 2>/dev/null; then
-			echo "=== helper still running after 90 s"
-			gdb -batch -p $pid -ex "info threads" -ex "thread apply all bt 25" 2>&1 | tail -n 200
-			kill -9 $pid
-		else
-			wait $pid; echo "=== helper exited: $?"
-		fi
-		echo "=== helper output"; tail -n 50 "$srcdir"/helper.log
+		hp=$(pgrep -f "^$PWD/build/juce_lv2_helper|^build/juce_lv2_helper" | head -n 1)
+		echo "=== helper pid after 90 s: ${hp:-none}"
+		[ -n "$hp" ] && kill -INT $hp
+		sleep 20
+		echo "=== gdb output"; grep -v "^\[New Thread\|^\[Thread .* exited" "$srcdir"/gdb.log | tail -n 250
 	done
 	return 1
 }
