@@ -1,0 +1,46 @@
+From b59b0a7b8e9cc0272abcb0979b6aee0aaf32d625 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Thu, 5 Nov 2026 17:20:43 +0100
+Subject: [PATCH 25/26] zynseq: read uint8_t results as unsigned
+
+Functions returning uint8_t had no restype, so ctypes read an int whose upper bits
+are undefined. getControlValue() returned -1 for steps without a CC event (255), so
+'value <= 127' held for every step: the CC editor removed instead of adding events
+and set values of events that don't exist. Declare c_uint8 for all of them (those
+missing in a build, as getMidiLearnSequence, are skipped).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 6a073863eb33faa6a524345b889aaeb99b9c93a9)
+---
+ zynlibs/zynseq/zynseq.py | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/zynlibs/zynseq/zynseq.py b/zynlibs/zynseq/zynseq.py
+index 6468ba98..a52d57d1 100644
+--- a/zynlibs/zynseq/zynseq.py
++++ b/zynlibs/zynseq/zynseq.py
+@@ -255,6 +255,21 @@ class zynseq(zynthian_engine):
+             self.libseq.convertPattern.argtypes = [ctypes.c_char_p]
+             self.libseq.convertPattern.restype = ctypes.c_char_p
+ 
++            # Functions returning uint8_t: without restype ctypes reads an int, whose upper bits
++            # aren't defined; "no value" (255) came back as -1, so getControlValue() <= 127 was
++            # true for steps without a CC event
++            for func in ("getNoteVelocity", "getControlValue", "getControlValueEnd", "getNoteStutterSpeed",
++                         "getNoteStutterVelfx", "getNoteStutterRamp", "getNotePlayFreq", "getNoteStutterFreq",
++                         "getProgramChange", "getNoteAtIndex", "getInputRest", "getTonic", "getRefNote",
++                         "getQuantizeNotes", "getScene", "getNumScenes", "getTrackOutput", "getChannel",
++                         "getSequenceMode", "getPlayState", "getSequenceRepeat", "getSequenceGroup",
++                         "getTimeSigAt", "getMidiLearnSequence", "getBpb", "getDefaultBpb", "getMetronomeMode",
++                         "getExtClockPPQN", "getNumPhrases", "getPhraseBPB"):
++                try:
++                    getattr(self.libseq, func).restype = ctypes.c_uint8
++                except AttributeError:
++                    pass   # declared in zynseq.h but not in every build (getMidiLearnSequence)
++
+             # Sequence functions
+             self.libseq.setSequenceTempo.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_float]
+             self.libseq.getSequenceTempo.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
+-- 
+2.56.0
+

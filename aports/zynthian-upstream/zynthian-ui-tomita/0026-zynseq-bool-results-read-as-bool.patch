@@ -1,0 +1,40 @@
+From 7c94167d7a9fae0e15785d0b71485e7c622e53c6 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 6 Nov 2026 03:01:27 +0100
+Subject: [PATCH 26/26] zynseq: bool results read as bool
+
+The libseq functions returning bool (isMidiRecord, undoPattern,
+isPatternModified, isPatternEmpty, ...) had no restype: ctypes read an int
+whose upper bits are undefined (only the low byte is set), so false could
+come back as non-zero, as with the uint8_t functions (6a073863).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 35d77428cb7d2ef21eb23f4fbd4f5e87ab6bdc46)
+---
+ zynlibs/zynseq/zynseq.py | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/zynlibs/zynseq/zynseq.py b/zynlibs/zynseq/zynseq.py
+index b85d15bf..8b6c08bd 100644
+--- a/zynlibs/zynseq/zynseq.py
++++ b/zynlibs/zynseq/zynseq.py
+@@ -269,6 +269,16 @@ class zynseq(zynthian_engine):
+                     getattr(self.libseq, func).restype = ctypes.c_uint8
+                 except AttributeError:
+                     pass   # declared in zynseq.h but not in every build (getMidiLearnSequence)
++            # Functions returning bool: the same (only the low byte is defined)
++            for func in ("isModified", "setState", "load", "undoPattern", "redoPattern", "undoPatternAll",
++                         "redoPatternAll", "isMidiRecord", "addNote", "addControl", "addProgramChange",
++                         "isPatternModified", "isPatternEmpty", "getInterpolateCC", "setScene", "addPattern",
++                         "isMuted", "isEmpty", "hasSequenceChanged", "selectSequence", "isSolo",
++                         "isChannelEnabled"):
++                try:
++                    getattr(self.libseq, func).restype = ctypes.c_bool
++                except AttributeError:
++                    pass
+ 
+             # Sequence functions
+             self.libseq.setSequenceTempo.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_float]
+-- 
+2.56.0
+

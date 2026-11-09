@@ -14,7 +14,7 @@
 pkgname=zynthian-ui-vangelis
 _commit=fcbd1694bcf08b04c19afd2ddd1d68d14fc4e400
 pkgver=0_git20261106
-pkgrel=1
+pkgrel=2
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream vangelis, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
 arch="aarch64 x86_64"
@@ -134,6 +134,8 @@ source="
 	0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
 	0023-Audio-recorder-find-jack_capture-in-PATH.patch
 	0024-desktop-launcher-environment-setup-and-install-scrip.patch
+	0025-zynseq-read-uint8_t-results-as-unsigned.patch
+	0026-zynseq-bool-results-read-as-bool.patch
 	"
 builddir="$srcdir/zynthian-ui-$_commit"
 
@@ -219,4 +221,6 @@ fdfd83f8daa1537830f505a3371db22eac39ccf8df7f102a59bcec4e5340a96deffb43eefffa7c81
 9cdc2bc9362b0a9f43e5ddcbd554e0814c4edc3a5bd3ee7b2e2cb7c9f416ebe53b80c2fe95e30c96a22dc11176e0cbcab35e8048c2334315e81329eda13aef45  0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
 89c6f675d95fc61f7b5f09e8e8843e05c1283607f5ad7fc39278a353012348496a4b7a03b73bfb9e39a96a8af724bef58739c18723a68b2550e18d0598c4db42  0023-Audio-recorder-find-jack_capture-in-PATH.patch
 32ee3b544a54aab154c3ebad34ca29fdbe1c435e973866daaaadb56e3b337fcca92704ceecbe0eeb5937c2cc7e93b158bf7b3886ff9a63b645c225e0230310a0  0024-desktop-launcher-environment-setup-and-install-scrip.patch
+f9cb652b2807f2e854c9c1cb2965adc1c0dd6aa00bbc63fd3b77cc5a1dcc7b39c6cb27a55ae2dc79015fb4d2af67733e2e8e3cada3f4844bb6aa28f972d6b9f7  0025-zynseq-read-uint8_t-results-as-unsigned.patch
+584d05a07c2a7da43dc60d317d49bf7c70ad1c8de8c0ebbe6c19a011111d53e53fd7be818c3e8077de67e2da2161fb6d2560c184d7a38d07210aa703f41182f9  0026-zynseq-bool-results-read-as-bool.patch
 "

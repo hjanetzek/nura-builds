@@ -14,7 +14,7 @@
 pkgname=zynthian-ui-tomita
 _commit=322e9079ac44ed31a1473ba765d5f7c80a9bdf5f
 pkgver=0_git20261107
-pkgrel=1
+pkgrel=2
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream tomita, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
 arch="aarch64 x86_64"
@@ -134,6 +134,8 @@ source="
 	0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
 	0023-Audio-recorder-find-jack_capture-in-PATH.patch
 	0024-desktop-launcher-environment-setup-and-install-scrip.patch
+	0025-zynseq-read-uint8_t-results-as-unsigned.patch
+	0026-zynseq-bool-results-read-as-bool.patch
 	"
 builddir="$srcdir/zynthian-ui-$_commit"
 
@@ -219,4 +221,6 @@ bffefe7d323f2e69794a6d5339231d91b571ad32b6af2b9a1a64cc2467a430b45e0099d5ee5609da
 9cdc2bc9362b0a9f43e5ddcbd554e0814c4edc3a5bd3ee7b2e2cb7c9f416ebe53b80c2fe95e30c96a22dc11176e0cbcab35e8048c2334315e81329eda13aef45  0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
 89c6f675d95fc61f7b5f09e8e8843e05c1283607f5ad7fc39278a353012348496a4b7a03b73bfb9e39a96a8af724bef58739c18723a68b2550e18d0598c4db42  0023-Audio-recorder-find-jack_capture-in-PATH.patch
 32ee3b544a54aab154c3ebad34ca29fdbe1c435e973866daaaadb56e3b337fcca92704ceecbe0eeb5937c2cc7e93b158bf7b3886ff9a63b645c225e0230310a0  0024-desktop-launcher-environment-setup-and-install-scrip.patch
+d0f170ebfcb841ac1c706ac5d5c137343265f49fc1e689f7a52512dc9cb05d0ec6809c65f8eaa0c4c6c0ab210643b4b83da8f42679f67566a29dc155ccab0f3f  0025-zynseq-read-uint8_t-results-as-unsigned.patch
+4b6cc3339040645dc970bbd7b0e4b61b14e8cc692e5c10ea5c7bd6053ceaeaefc2c393d6dd37c84e4d9d89a5225f3b6670be6c6326ae824816ac895b93e8e627  0026-zynseq-bool-results-read-as-bool.patch
 "
