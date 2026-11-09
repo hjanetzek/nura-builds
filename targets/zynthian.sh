@@ -36,6 +36,9 @@ STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx 
 # support in zynthian's process included) from its checkout too, first (no dependency on the others;
 # the Rust build fails early); its recipe fetches the Rust crates itself. The kiosk package depends on it.
 STAGE_zynthian="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
+# zynthian hardware (the kits on a Raspberry Pi: zynthian-kit, the kits' zyncoder builds; aarch64 only,
+# after zyncoder and zynthian-data, see docs/zynthian-rpi.md)
+[ "${NURA_ARCH:-aarch64}" != aarch64 ] || STAGE_zynthian="$STAGE_zynthian; zynthian-hw"
 SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
 # zynthian-ui from upstream's branches (vangelis, tomita) with the port patches, the Tk UI, for
 # those who want zynthian as upstream ships it (aports/zynthian-upstream, docs/zynthian-upstream.md).
