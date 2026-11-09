@@ -128,6 +128,12 @@ prepare() {
 	sed -i 's/COMMAND juce_lv2_helper "\$<TARGET_FILE:\${target_name}>"/COMMAND true/' \
 		Libraries/JUCE/extras/Build/CMake/JUCEUtils.cmake
 	grep -n 'COMMAND true' Libraries/JUCE/extras/Build/CMake/JUCEUtils.cmake
+	# Pd plans its FFTs with FFTW_MEASURE (times candidate algorithms) when a patch or the plugin
+	# starts: JUCE's LV2 helper instantiates the plugin at build time, which then takes more than
+	# pmbootstrap's 900 s without output under QEMU in CI, and every plugdata instance in zynthian
+	# would pay for it at start. FFTW_ESTIMATE plans without measuring.
+	sed -i 's/FFTW_MEASURE)/FFTW_ESTIMATE)/' Libraries/pure-data/src/d_fft_fftw.c
+	! grep -q 'FFTW_MEASURE)' Libraries/pure-data/src/d_fft_fftw.c
 }
 
 build() {
