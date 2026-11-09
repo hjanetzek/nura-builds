@@ -141,11 +141,11 @@ build() {
 	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -DHAVE_OFF64_T=1"
 	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQUICK_BUILD=ON
 	# at most 3 jobs: the JUCE translation units need ~1 GB each
-	cmake --build build --parallel 3 --target plugdata_standalone plugdata_LV2 plugdata_fx_LV2
+	cmake --build build --parallel 3 --target plugdata_standalone plugdata_LV2 plugdata_fx_LV2 juce_lv2_helper
 	# DEBUG: the LV2 helper by hand under gdb; interrupted after 90 s for a backtrace of all threads
 	local so hp
 	for so in Plugins/LV2/plugdata.lv2/libplugdata.so; do
-		ls -la "$so" build/juce_lv2_helper
+		ls -la "$so" build/juce_lv2_helper || true
 		gdb -batch -ex "set pagination off" -ex run -ex "info threads" -ex "thread apply all bt 25" \
 			--args build/juce_lv2_helper "$so" > "$srcdir"/gdb.log 2>&1 &
 		sleep 90
