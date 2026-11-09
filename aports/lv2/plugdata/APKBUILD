@@ -4,6 +4,9 @@
 # JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
 # only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
 # loads X11 only when the editor opens).
+# keyboard-layout-eof.patch: OSUtils::getKeyboardLayout() reads setxkbmap's output in an endless
+# loop (no end at EOF); glibc's popen() refuses its mode "rb" so it never got there, musl's doesn't.
+# The editor calls it, and JUCE's LV2 helper creates the editor at build time: the build hung.
 # libxi-dev, libxcomposite-dev: its JUCE fork includes XInput2.h and Xcomposite.h.
 pkgname=plugdata
 pkgver=0.9.4_git20261103
@@ -81,6 +84,7 @@ source="$pkgname-$_commit.tar.gz::https://github.com/plugdata-team/plugdata/arch
 	libraries_libwebp-${_libraries_libwebp}.tar.gz::https://github.com/webmproject/libwebp/archive/${_libraries_libwebp}.tar.gz
 	libraries_xz-${_libraries_xz}.tar.gz::https://github.com/tukaani-project/xz/archive/${_libraries_xz}.tar.gz
 	fuzzysearchdatabase-${_libraries_fuzzysearchdatabase}.tar.gz::https://bitbucket.org/j_norberg/fuzzysearchdatabase/get/${_libraries_fuzzysearchdatabase}.tar.gz
+	keyboard-layout-eof.patch
 	"
 builddir="$srcdir/plugdata-$_commit"
 options="!check" # no tests
@@ -179,4 +183,5 @@ fc782a49f894f8974ab911d44b0c21ff777d7e4aec1294901fe7260d68b28b7b9ce62dd9e8ea2f3f
 0545988a223666987bc6348c6707d7a8106d80879f0bff9137e4d2286e23b0971a6090ea4f123f1a2d3781f0e17dc4e6baeb8f9f44d802eeef35e9057aa97ce7  libraries_libwebp-8c815d82d71f4296150c03d98ee90430d3cf1213.tar.gz
 18f5ac4239a3086dc501bce8e4ddd4be8c055daa79fa5b12fcfdbf708fdbd68f5e4623062cc865e262951d6a0d339311ddea682e3112d79e089bfbcd90105303  libraries_xz-dd4a1b259936880e04669b43e778828b60619860.tar.gz
 b4725501b79803eba3f1d1ad01e481e1536766de7f8c514a473f995383920472aaafb201181ca67af7da3ec44948c2b48909bf5c27bfa80c6ccb7bf9878dcf29  fuzzysearchdatabase-23122d1ff60d936fd766361a30210c954e0c5449.tar.gz
+d037f514c4337177fa4041fe078e68783bf0c64cb77d9386a55b4b7db128e3e0212075d41dbd7abe6f57f58379e72754f82af3211b5979fc3a6145d0bad25e22  keyboard-layout-eof.patch
 "
