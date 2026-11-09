@@ -90,7 +90,7 @@ all factory snapshots load: [docs/factory-content.md](docs/factory-content.md).
 
 ### Testing the amd64 image on a desktop
 
-`tools/run-qemu.sh` downloads the latest `zynthian-qemu-amd64.img.zst` (to `~/.cache/nura-builds`)
+zynthian-ui's `nura/tools/run_qemu.sh` (moved there from this repository's `tools/`) downloads the latest `zynthian-qemu-amd64.img.zst` (to `~/.cache/nura-builds`)
 and runs it in QEMU with KVM, OpenGL through virgl (`virtio-vga-gl`: the guest renders on the
 desktop's GPU), PipeWire audio (virtio-sound), SSH on `localhost:2222` and webconf on
 `localhost:8080` (or the next free ports; it prints them); `-R WxH` sets the screen (default 1280x800), `-U VID:PID` passes a USB MIDI controller through, `-r` starts from a fresh copy,
@@ -99,8 +99,9 @@ ones; on Arch `qemu-hw-display-virtio-{gpu,gpu-gl,gpu-pci,gpu-pci-gl,vga,vga-gl}
 qemu-ui-gtk qemu-audio-pipewire`, and `qemu-hw-usb-host` for passthrough) and OVMF (`edk2-ovmf`).
 Headless (`-D none`, serial console and PID file in the cache directory) for agents and tests,
 with `-A silent` (a sound card without host output: `-A none` can stall PipeWire's graph);
-`tools/qemu-setup.sh` installs an SSH key and passwordless sudo in a fresh VM. How zynthian's agents
-test in a VM: zynthian-ui's [docs/qemu-testing.md](https://github.com/hjanetzek/zynthian-ui/blob/nura/docs/qemu-testing.md).
+`nura/tools/qemu_setup.sh` installs an SSH key and passwordless sudo in a fresh VM, and
+`nura/tools/qemu_compare.sh` runs upstream zynthian (Tk) and the Qt port side by side at the V5 kit's
+800x480. How zynthian's agents test in a VM: zynthian-ui's [docs/qemu-testing.md](https://github.com/hjanetzek/zynthian-ui/blob/nura/docs/qemu-testing.md).
 
 ## Building single packages
 

@@ -55,6 +55,6 @@ REBUILD_STAGES="qt1 qt2 qt3 pyside"
 # Images: pmbootstrap UI and the devices (pmaports device names)
 UI=zynthian
 DEVICES="google-kukui"
-# amd64: the QEMU virtual machine (tools/run-qemu.sh), for testing on a desktop
+# amd64: the QEMU virtual machine (zynthian-ui's nura/tools/run_qemu.sh), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
 # raspberry-pi4 is in pmaports' "downstream" category; add it here once tested

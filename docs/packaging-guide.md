@@ -249,7 +249,7 @@ differently:
 
 ## Testing
 
-- `tools/lv2-coverage.py --missing --load` on the device: which of zynthian's enabled plugins
+- zynthian-ui's `nura/tools/lv2_coverage.py --missing --load` on the device: which of zynthian's enabled plugins
   are installed, and a `dlopen(RTLD_NOW)` of every LV2 library (finds unresolved symbols).
 - lilv's instantiate without host features fails for every plugin that requires `urid:map` or
   `options` (most DPF, JUCE, x42 plugins): that says nothing. Start those in jalv on PipeWire:
