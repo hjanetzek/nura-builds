@@ -186,6 +186,23 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
   `find ... -exec cp -r {} dest \;`, not `for d in $(find ...)`.
 - Optional parts of a build can reference targets that are switched off (Surge XT's pluginval
   targets query the effects bank, `SURGE_BUILD_FX=OFF`): comment out the include.
+- `Packages must not put anything under /usr/lib64`: CMake's `GNUInstallDirs` picks `lib64` on
+  aarch64 outside Debian: `-DCMAKE_INSTALL_LIBDIR=lib` (Geonkick).
+- Libraries named on the compiler line before the sources are dropped by `--as-needed` ("symbol
+  not found" when the plugin loads, e.g. `fftw_free`): put them after the sources and objects (AMS'
+  fftvocoder, Vaporizer2's `-lbsd`).
+- Programs that call `mlockall(MCL_CURRENT | MCL_FUTURE)`: under the normal user's memlock limit
+  (8 MB) later mappings fail once the limit is reached; libpipewire then crashes in its protocol
+  thread while connecting (Aeolus). Lock only without a limit (patch), or raise the limit.
+- Projucer-only projects (a `.jucer`, no CMake): write a `CMakeLists.txt` with the `.jucer`'s
+  settings in `prepare()` (VirtualJV). `addUsingNamespaceToJuceHeader="0"` in the `.jucer` means
+  `DONT_SET_USING_JUCE_NAMESPACE=1`, or the project's own classes clash with JUCE's ("reference to
+  'Button' is ambiguous").
+- Submodules outside GitHub aren't found by `tools/gh-submodule-sources.py` (plugdata's
+  fuzzysearchdatabase on Bitbucket): add them by hand from `git/trees/<ref>:<dir>` (the commit) and
+  the host's archive URL.
+- Big recipes go on their own `plugin-*` branch: a push cancels and restarts all jobs of a branch,
+  so a fix to a small recipe would restart a two-hour build.
 
 ## BusyBox
 

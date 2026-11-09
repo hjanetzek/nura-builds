@@ -99,7 +99,11 @@ Packaged in `aports/lv2/` (phase 1, built and tested on the Duet):
 | `mod-arpeggiator-lv2` | 1 | MOD Arpeggiator (DPF in the repository, static TTLs); patched: `run()` copied a 150 KB buffer onto the audio thread's stack, which musl makes 128 KB |
 | `triceratops-lv2` | 1 | Triceratops, current DPF version (URI `http://thunderox.com/triceratops`, zynthian's config has the old waf version's), DSP only, with its presets; glibc `uint` replaced |
 | `granulator-lv2` | 1 | Granulator (Faust, `faust2lv2` from Alpine's faust-tools; `FAUSTINC`/`FAUSTLIB` set, as faust2lv2 derives them wrongly from `/usr/sbin/faust`) |
-| `ams-lv2` | 1 | AMS Bitgrinder only, compiled directly against lvtk 1.2.0's headers (the waf build wants gtkmm 2) |
+| `ams-lv2` | 1 | AMS, all 66 plugins (zynthian enables Bitgrinder; snapshots use the Moog LPF), compiled directly with the wscript's flags against lvtk 1.2.0's headers; no GUIs (GTK 2/gtkmm 2.4, not in Alpine and not embeddable in a GTK 3 host) |
+| `geonkick-lv2` | (not in the config) | Geonkick 3.9.0 and Geonkick Single with their GUI (not in zynthian's config: the rescan adds them disabled) |
+| `cloudreverb-lv2` | (disabled) | CloudReverb 0.5 (JUCE), with GUI |
+| `jv880-lv2` | (disabled) | VirtualJV (JUCE 8.0.7), with GUI; upstream has only a Projucer project, the recipe writes a CMakeLists.txt; ZynthianOS' URI `https://github.com/giulioz/jv880_juce.git`; needs the user's ROMs in `~/.config/JV880` |
+| `lv2-examples` | (disabled) | the LV2 specification's example plugins (eg-fifths, eg-sampler, ...), same version as Alpine's lv2, without the GTK 2 UIs |
 | `neural-amp-modeler-lv2` | 1 | Neural Amp Modeler 0.2.3 (NeuralAudio, NAM core, RTNeural; submodules as sources) |
 | `aida-x-lv2` | 1 | AIDA-X 1.1.0 (release source with submodules; DPF, RTNeural) |
 | `helm-lv2` | 1 | Helm 0.9.0 (its old JUCE: no `JUCE_PACKED`, `-fpermissive` for current FreeType) |
@@ -147,13 +151,13 @@ default configuration, so they are wanted by users, not by the defaults:
 | Mutated Instruments (`https://github.com/PatttF/zynMI/plugins/mutated`) | 55 (all but one in one generated set) | enabled | **one plugin**, a complete synth (ZynthianOS' `mi_mutated.lv2`, 127 ports): Braids and Plaits macro oscillators, ADSR, a dual filter cascade, Airwindows effects (MatrixVerb, TapeDelay2, BitGlitter, ToTape8, GlitchShifter) and a 33-source modulation matrix. Only prebuilt (glibc) binaries: ZynthianOS downloads `zynMI.zip` from the zynMI release `BraidsPlaitsMarbles` (`install_zynMI_prebuilt.sh`); the repository has only a README since 2025-11-22 (5016446); the tag `BraidsPlaitsMarbles` keeps f42c531 (the old separate plugins), the later sources stay fetchable by commit. The release binaries match no commit: the last source of Mutated Instruments (f09300b) has 59 controls, the release 127. `zynmi-lv2` builds f09300b under the same URI, so snapshots load the chain, but controls the old version lacks are dropped. Takes: the author publishing the source ([zynMI#4](https://github.com/PatttF/zynMI/issues/4)) |
 | Chaos Engine (`.../zynMI/plugins/marbles`), Mutated Sequences (`.../zynMI/plugins/mutated_sequences`) | 0 | disabled | the zynMI release's two MIDI tools: a Marbles port (random MIDI with tempo sync) and a DFAM-style sequencer; built by `zynmi-lv2` from ecab611 and f09300b, whose TTLs match the release |
 | Pianoteq (engine PT, and Pianoteq 6/7 as LV2) | 21 (+5 LV2) | engine | proprietary, prebuilt glibc binaries (x86-64, aarch64): no package. Maybe runnable through Alpine's `gcompat` or a small glibc runtime (untested); licensed per user, so at most a download helper, never redistributed |
-| VirtualJV (`https://github.com/giulioz/jv880_juce.git`) | 7 | disabled | JV-880 emulation (JUCE) by giulioz; needs the user's JV-880 ROMs |
-| Geonkick Single | 7 | not in the config | [geonkick](https://github.com/Geonkick-Synthesizer/geonkick) drum synth (LV2), not in Alpine |
-| OsTIrus / Osirus (`http://theusualsuspects.lv2/...`) | 3 | disabled | gearmulator's DSP563xx emulations (Virus TI / Virus); need the user's ROMs |
-| Example Fifths (`http://lv2plug.in/plugins/eg-fifths`) | 2 | disabled | LV2's example plugins (lv2's meson option for the examples), not in Alpine's `lv2` package |
-| Aeolus (engine AE) | 2 | engine | not packaged (its data is in zynthian-data) |
-| Moog LPF (`http://github.com/blablack/ams-lv2/mooglpf`) | 1 | disabled | AMS: `ams-lv2` builds only Bitgrinder so far; build more of its plugins |
-| CloudReverb (`http://github.com/xunil-cloud/CloudReverb`) | 1 | disabled | DPF plugin by xunil-cloud |
+| VirtualJV (`https://github.com/giulioz/jv880_juce.git`) | 7 | disabled | **done**: `jv880-lv2` (loads; needs the user's JV-880 ROMs in `~/.config/JV880`) |
+| Geonkick Single | 7 | not in the config | **done**: `geonkick-lv2` (Geonkick and Geonkick Single, with GUI; sound tested) |
+| OsTIrus / Osirus (`http://theusualsuspects.lv2/...`) | 3 | disabled | gearmulator's DSP563xx emulations (Virus TI / Virus); need the user's ROMs. In progress: `gearmulator-lv2` on the `plugin-gearmulator` branch |
+| Example Fifths (`http://lv2plug.in/plugins/eg-fifths`) | 2 | disabled | **done**: `lv2-examples` |
+| Aeolus (engine AE) | 2 | engine | **done**: `aeolus` (zynthian's fork, with clthreads/clxclient; patched: no `mlockall(MCL_FUTURE)` under a memlock limit, which crashed libpipewire). zynthian-ui c1ba3f2d: the engine uses a copy of the stops in my-data (Aeolus saves into them) |
+| Moog LPF (`http://github.com/blablack/ams-lv2/mooglpf`) | 1 | disabled | **done**: `ams-lv2` r2 builds all AMS plugins |
+| CloudReverb (`http://github.com/xunil-cloud/CloudReverb`) | 1 | disabled | **done**: `cloudreverb-lv2` (JUCE, with GUI) |
 | FluidGM, Calf Wavetable, Triceratops (old URI) | 1 each | enabled | see "Missing" above (Triceratops: zynthian's rescan adds the new URI; old snapshots still name the old one) |
 | PitchedDelay (`http://code.google.com/p/lkjb-dc12/`) | 1 | disabled | in `distrho-ports-lv2` r1 since 2026-11-08: check it is found (the VM had the older package) |
 
