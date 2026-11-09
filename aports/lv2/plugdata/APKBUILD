@@ -1,0 +1,187 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# plugdata develop (0.9.4 to be; its JUCE 9 fork has a Wayland backend, used by the standalone
+# program under Wayland). plugdata: Pure Data with a JUCE GUI (pd-else, cyclone and more included), as a standalone program and as LV2 plugins (plugdata, plugdata-fx). Meant as a GUI for zynthian's Pd patches later. QUICK_BUILD: without sfizz, ffmpeg and Gem for now.
+# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
+# only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
+# loads X11 only when the editor opens).
+# keyboard-layout-eof.patch: OSUtils::getKeyboardLayout() reads setxkbmap's output in an endless
+# loop (no end at EOF); glibc's popen() refuses its mode "rb" so it never got there, musl's doesn't.
+# The editor calls it, and JUCE's LV2 helper creates the editor at build time: the build hung.
+# libxi-dev, libxcomposite-dev: its JUCE fork includes XInput2.h and Xcomposite.h.
+pkgname=plugdata
+pkgver=0.9.4_git20261103
+pkgrel=0
+_commit=9ec3ae04669246879c487a9472962c48314a8138
+_libraries_juce=650c8d9470161f80e22b59c6faebea21e153545d
+_libraries_pure_data=3d433567e787a0b78b91684462ba37c8ead76fcd
+_libraries_heavylib=01c91ac523f4c4e9be48906edc026700a8593d6a
+_libraries_pd_lua=cd01d747d7e1a4d8eadeaa276401f08671a4ac07
+_libraries_pd_lua_luas_lua_compat_5_3=9c6f75a88db1462ff655dc006588b25d3bc2a5be
+_libraries_pd_lua_luas_luajit=659a61693aa3b87661864ad0f12eee14c865cd7f
+_libraries_pd_lua_luas_lua=a5522f06d2679b8f18534fd6a9968f7eb539dc31
+_libraries_clap_juce_extensions=c1a5ad025f95d01e03267857fa8276ebeed16500
+_libraries_clap_juce_extensions_clap_libs_clap=29ffcc273be7c7c651f6c9953b99e69700e2387a
+_libraries_clap_juce_extensions_clap_libs_clap_helpers=a61bcdf0ecc2c8db1e80bfe8bf9cb7e8d9fd2bbc
+_libraries_pd_else=1bd2b108b0ccd4e1fc178e5c809ebca8eedcde8a
+_libraries_readerwriterqueue=2dee33ae3edd1e454ac34fea0a27017613355eff
+_libraries_concurrentqueue=88ab4bdc3aa5be8ed9e5514759c55b3b6310930b
+_libraries_gem=ab50ed2d5ed5e37b59b7e169b6e211e317d82f53
+_libraries_gem_freetype=7bac4d146a86482c154bf878221ff321faccac4c
+_libraries_gem_freetype_subprojects_dlg=72dfcc858c040c54a6a0b88fcb7e70ee186d3167
+_libraries_gem_ftgl=16f7667cbd4b1e988ae24128c5dea54479926f85
+_libraries_ghc_filesystem=2fc4b463759e043476fc0036da094e5877e3dd50
+_libraries_nanovg=ca35e13d8635334d6752af6b4e015439e5221d4a
+_libraries_pd_cyclone=2ce82c3ef06b7190254ac131795c31e9d40a8ce3
+_libraries_melatonin_perfetto=1fdceed03b3f83c983ab759e9b3e642792c0d0ed
+_libraries_libwebp=8c815d82d71f4296150c03d98ee90430d3cf1213
+_libraries_xz=dd4a1b259936880e04669b43e778828b60619860
+# not on GitHub (Bitbucket), so not found by gh-submodule-sources.py
+_libraries_fuzzysearchdatabase=23122d1ff60d936fd766361a30210c954e0c5449
+pkgdesc="Pure Data with a modern GUI (standalone and LV2)"
+url="https://github.com/plugdata-team/plugdata"
+arch="aarch64 x86_64"
+license="GPL-3.0-or-later"
+makedepends="
+	alsa-lib-dev
+	cmake
+	curl-dev
+	fontconfig-dev
+	freetype-dev
+	jack-dev
+	libx11-dev
+	libxcomposite-dev
+	libxcursor-dev
+	libxext-dev
+	libxi-dev
+	libxinerama-dev
+	libxrandr-dev
+	mesa-dev
+	python3
+	samurai
+	"
+source="$pkgname-$_commit.tar.gz::https://github.com/plugdata-team/plugdata/archive/$_commit.tar.gz
+	libraries_juce-${_libraries_juce}.tar.gz::https://github.com/plugdata-team/JUCE/archive/${_libraries_juce}.tar.gz
+	libraries_pure_data-${_libraries_pure_data}.tar.gz::https://github.com/plugdata-team/plugdata-pd/archive/${_libraries_pure_data}.tar.gz
+	libraries_heavylib-${_libraries_heavylib}.tar.gz::https://github.com/Wasted-Audio/heavylib/archive/${_libraries_heavylib}.tar.gz
+	libraries_pd_lua-${_libraries_pd_lua}.tar.gz::https://github.com/timothyschoen/pd-lua/archive/${_libraries_pd_lua}.tar.gz
+	libraries_pd_lua_luas_lua_compat_5_3-${_libraries_pd_lua_luas_lua_compat_5_3}.tar.gz::https://github.com/lunarmodules/lua-compat-5.3/archive/${_libraries_pd_lua_luas_lua_compat_5_3}.tar.gz
+	libraries_pd_lua_luas_luajit-${_libraries_pd_lua_luas_luajit}.tar.gz::https://github.com/LuaJIT/LuaJIT/archive/${_libraries_pd_lua_luas_luajit}.tar.gz
+	libraries_pd_lua_luas_lua-${_libraries_pd_lua_luas_lua}.tar.gz::https://github.com/lua/lua/archive/${_libraries_pd_lua_luas_lua}.tar.gz
+	libraries_clap_juce_extensions-${_libraries_clap_juce_extensions}.tar.gz::https://github.com/free-audio/clap-juce-extensions/archive/${_libraries_clap_juce_extensions}.tar.gz
+	libraries_clap_juce_extensions_clap_libs_clap-${_libraries_clap_juce_extensions_clap_libs_clap}.tar.gz::https://github.com/free-audio/clap/archive/${_libraries_clap_juce_extensions_clap_libs_clap}.tar.gz
+	libraries_clap_juce_extensions_clap_libs_clap_helpers-${_libraries_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz::https://github.com/free-audio/clap-helpers/archive/${_libraries_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz
+	libraries_pd_else-${_libraries_pd_else}.tar.gz::https://github.com/timothyschoen/pd-else/archive/${_libraries_pd_else}.tar.gz
+	libraries_readerwriterqueue-${_libraries_readerwriterqueue}.tar.gz::https://github.com/cameron314/readerwriterqueue/archive/${_libraries_readerwriterqueue}.tar.gz
+	libraries_concurrentqueue-${_libraries_concurrentqueue}.tar.gz::https://github.com/cameron314/concurrentqueue/archive/${_libraries_concurrentqueue}.tar.gz
+	libraries_gem-${_libraries_gem}.tar.gz::https://github.com/plugdata-team/plugdata-gem/archive/${_libraries_gem}.tar.gz
+	libraries_gem_freetype-${_libraries_gem_freetype}.tar.gz::https://github.com/freetype/freetype/archive/${_libraries_gem_freetype}.tar.gz
+	libraries_gem_freetype_subprojects_dlg-${_libraries_gem_freetype_subprojects_dlg}.tar.gz::https://github.com/nyorain/dlg/archive/${_libraries_gem_freetype_subprojects_dlg}.tar.gz
+	libraries_gem_ftgl-${_libraries_gem_ftgl}.tar.gz::https://github.com/ulrichard/ftgl/archive/${_libraries_gem_ftgl}.tar.gz
+	libraries_ghc_filesystem-${_libraries_ghc_filesystem}.tar.gz::https://github.com/gulrak/filesystem/archive/${_libraries_ghc_filesystem}.tar.gz
+	libraries_nanovg-${_libraries_nanovg}.tar.gz::https://github.com/timothyschoen/nanovg/archive/${_libraries_nanovg}.tar.gz
+	libraries_pd_cyclone-${_libraries_pd_cyclone}.tar.gz::https://github.com/timothyschoen/pd-cyclone/archive/${_libraries_pd_cyclone}.tar.gz
+	libraries_melatonin_perfetto-${_libraries_melatonin_perfetto}.tar.gz::https://github.com/sudara/melatonin_perfetto/archive/${_libraries_melatonin_perfetto}.tar.gz
+	libraries_libwebp-${_libraries_libwebp}.tar.gz::https://github.com/webmproject/libwebp/archive/${_libraries_libwebp}.tar.gz
+	libraries_xz-${_libraries_xz}.tar.gz::https://github.com/tukaani-project/xz/archive/${_libraries_xz}.tar.gz
+	fuzzysearchdatabase-${_libraries_fuzzysearchdatabase}.tar.gz::https://bitbucket.org/j_norberg/fuzzysearchdatabase/get/${_libraries_fuzzysearchdatabase}.tar.gz
+	keyboard-layout-eof.patch
+	"
+builddir="$srcdir/plugdata-$_commit"
+options="!check" # no tests
+
+prepare() {
+	# musl: no execinfo.h (JUCE uses backtrace() for crash reports only): a stub without backtraces
+	mkdir -p "$srcdir"/musl-compat
+	cat > "$srcdir"/musl-compat/execinfo.h <<-'EOF'
+	#pragma once
+	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
+	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	EOF
+	# git submodules (outer ones first)
+	rm -rf Libraries/JUCE && mv "$srcdir"/JUCE-${_libraries_juce} Libraries/JUCE
+	rm -rf Libraries/pure-data && mv "$srcdir"/plugdata-pd-${_libraries_pure_data} Libraries/pure-data
+	rm -rf Libraries/heavylib && mv "$srcdir"/heavylib-${_libraries_heavylib} Libraries/heavylib
+	rm -rf Libraries/pd-lua && mv "$srcdir"/pd-lua-${_libraries_pd_lua} Libraries/pd-lua
+	rm -rf Libraries/pd-lua/luas/lua-compat-5.3 && mv "$srcdir"/lua-compat-5.3-${_libraries_pd_lua_luas_lua_compat_5_3} Libraries/pd-lua/luas/lua-compat-5.3
+	rm -rf Libraries/pd-lua/luas/luajit && mv "$srcdir"/LuaJIT-${_libraries_pd_lua_luas_luajit} Libraries/pd-lua/luas/luajit
+	rm -rf Libraries/pd-lua/luas/lua && mv "$srcdir"/lua-${_libraries_pd_lua_luas_lua} Libraries/pd-lua/luas/lua
+	rm -rf Libraries/clap-juce-extensions && mv "$srcdir"/clap-juce-extensions-${_libraries_clap_juce_extensions} Libraries/clap-juce-extensions
+	rm -rf Libraries/clap-juce-extensions/clap-libs/clap && mv "$srcdir"/clap-${_libraries_clap_juce_extensions_clap_libs_clap} Libraries/clap-juce-extensions/clap-libs/clap
+	rm -rf Libraries/clap-juce-extensions/clap-libs/clap-helpers && mv "$srcdir"/clap-helpers-${_libraries_clap_juce_extensions_clap_libs_clap_helpers} Libraries/clap-juce-extensions/clap-libs/clap-helpers
+	rm -rf Libraries/pd-else && mv "$srcdir"/pd-else-${_libraries_pd_else} Libraries/pd-else
+	rm -rf Libraries/readerwriterqueue && mv "$srcdir"/readerwriterqueue-${_libraries_readerwriterqueue} Libraries/readerwriterqueue
+	rm -rf Libraries/concurrentqueue && mv "$srcdir"/concurrentqueue-${_libraries_concurrentqueue} Libraries/concurrentqueue
+	rm -rf Libraries/Gem && mv "$srcdir"/plugdata-gem-${_libraries_gem} Libraries/Gem
+	rm -rf Libraries/Gem/freetype && mv "$srcdir"/freetype-${_libraries_gem_freetype} Libraries/Gem/freetype
+	rm -rf Libraries/Gem/freetype/subprojects/dlg && mv "$srcdir"/dlg-${_libraries_gem_freetype_subprojects_dlg} Libraries/Gem/freetype/subprojects/dlg
+	rm -rf Libraries/Gem/ftgl && mv "$srcdir"/ftgl-${_libraries_gem_ftgl} Libraries/Gem/ftgl
+	rm -rf Libraries/ghc_filesystem && mv "$srcdir"/filesystem-${_libraries_ghc_filesystem} Libraries/ghc_filesystem
+	rm -rf Libraries/nanovg && mv "$srcdir"/nanovg-${_libraries_nanovg} Libraries/nanovg
+	rm -rf Libraries/pd-cyclone && mv "$srcdir"/pd-cyclone-${_libraries_pd_cyclone} Libraries/pd-cyclone
+	rm -rf Libraries/melatonin_perfetto && mv "$srcdir"/melatonin_perfetto-${_libraries_melatonin_perfetto} Libraries/melatonin_perfetto
+	rm -rf Libraries/libwebp && mv "$srcdir"/libwebp-${_libraries_libwebp} Libraries/libwebp
+	rm -rf Libraries/xz && mv "$srcdir"/xz-${_libraries_xz} Libraries/xz
+	rm -rf Libraries/fuzzysearchdatabase && mv "$srcdir"/j_norberg-fuzzysearchdatabase-${_libraries_fuzzysearchdatabase%"${_libraries_fuzzysearchdatabase#????????????}"} Libraries/fuzzysearchdatabase
+	default_prepare
+	# no LTO: the final links (standalone, two LV2 plugins) take longer than pmbootstrap's
+	# 900 s without output in CI
+	sed -i 's/^if (ipo_supported)/if (FALSE)/' CMakeLists.txt
+	grep -q '^if (FALSE)' CMakeLists.txt
+	# Pd plans its FFTs with FFTW_MEASURE (times candidate algorithms) when a patch or the plugin
+	# starts: JUCE's LV2 helper instantiates the plugin at build time, which then takes more than
+	# pmbootstrap's 900 s without output under QEMU in CI, and every plugdata instance in zynthian
+	# would pay for it at start. FFTW_ESTIMATE plans without measuring.
+	sed -i 's/FFTW_MEASURE)/FFTW_ESTIMATE)/' Libraries/pure-data/src/d_fft_fftw.c
+	! grep -q 'FFTW_MEASURE)' Libraries/pure-data/src/d_fft_fftw.c
+}
+
+build() {
+	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
+	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "")
+	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE \
+		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
+		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
+	# Pd's d_soundfile.h: with _LARGEFILE64_SOURCE off_t is __off64_t (glibc) unless HAVE_OFF64_T;
+	# musl has off64_t
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -DHAVE_OFF64_T=1"
+	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQUICK_BUILD=ON
+	# at most 3 jobs: the JUCE translation units need ~1 GB each
+	cmake --build build --parallel 3 --target plugdata_standalone plugdata_LV2 plugdata_fx_LV2
+}
+
+package() {
+	# outputs in Plugins/ (Standalone/plugdata, LV2/*.lv2). The standalone program unpacks its
+	# resources (abstractions, help, fonts) into the user's ~/Documents/plugdata on the first start.
+	install -Dm755 Plugins/Standalone/plugdata "$pkgdir"/usr/bin/plugdata
+	mkdir -p "$pkgdir"/usr/lib/lv2
+	cp -r Plugins/LV2/plugdata.lv2 Plugins/LV2/plugdata-fx.lv2 "$pkgdir"/usr/lib/lv2/
+	[ -f "$pkgdir"/usr/lib/lv2/plugdata.lv2/manifest.ttl ] || die "plugdata.lv2: no manifest.ttl"
+}
+sha512sums="
+257afea4ec32ab3c67cde4b22d89015f334012df7400fa7f24e69e381ce521f88f30aea9521837a1c219775569a974f8ad52ca940b338687d8a0f1cf1a7020e1  plugdata-9ec3ae04669246879c487a9472962c48314a8138.tar.gz
+308177b62e73b1149be53fbf5abf12b56e60cddabcf0f71ce2a5d8000f3fc63f974a102e9b4a29bc561d27138b9d314dab5a090ad1bebfd0868d2bb8cd2b14e7  libraries_juce-650c8d9470161f80e22b59c6faebea21e153545d.tar.gz
+ed6bcc56b2a904f7eb828c0f0eb849c2120ac54844bc2abde15cad9e78ca8fb7c2dada4e0ec486d1f7a7445f2ac925fa4d9e81bdf03e7b2b8a036e39e389a133  libraries_pure_data-3d433567e787a0b78b91684462ba37c8ead76fcd.tar.gz
+6c45c58d940cb80486080c12900bee74ef2f41808707c125a631199d456d9113caec1a8c0d8eba0c00730e2ae8ff0ed47c6cc458f255a9139649e543cedde2b5  libraries_heavylib-01c91ac523f4c4e9be48906edc026700a8593d6a.tar.gz
+54586d7b1168d87ab8ad31d402e194a3810b3de00f14fc255760c35bd4d536ab788232875f0feee350d62c612f274b3079e1ae7652ddd6f80de26ac887358392  libraries_pd_lua-cd01d747d7e1a4d8eadeaa276401f08671a4ac07.tar.gz
+4da06d07264467e5f31a8801502eb081e26986ba1b4b7195221803e0dc37a6aaf1629d2cd2f47348a051b9625f26179d7be42f33386737bffc673062b99cd3e7  libraries_pd_lua_luas_lua_compat_5_3-9c6f75a88db1462ff655dc006588b25d3bc2a5be.tar.gz
+b222ee14789e0017b613ff3edaccd547b30027609fbd721a1185c7f38b0cde7d83ecb7d222f0f68159a1a39ab293ce5dcfc0c66c5678e02adc31d59721472444  libraries_pd_lua_luas_luajit-659a61693aa3b87661864ad0f12eee14c865cd7f.tar.gz
+2e79960c9617fc0ae9460cdb67bd6dc8cc8c378fa691a119d8545d2d51569bef52dbc3a3a86712ee18005fc8ff3a5f481b41014db9802a0a93b7590522e87b60  libraries_pd_lua_luas_lua-a5522f06d2679b8f18534fd6a9968f7eb539dc31.tar.gz
+a879ca5d876248978c22d18d314ed03def925b4d1bb18ecde4d5c18258070a61658e87718441c61427c30e888b74690ae14798fdb1f6a361dc99eba4c10b6f10  libraries_clap_juce_extensions-c1a5ad025f95d01e03267857fa8276ebeed16500.tar.gz
+003b726551d8db673e6cda71a5b4c90e6205db17f2a7fbd8e4c8d04ac85576cbbf53a657fe6cb4823ac130ea0408da17ab394e8337be5653baa04033ca7f29f2  libraries_clap_juce_extensions_clap_libs_clap-29ffcc273be7c7c651f6c9953b99e69700e2387a.tar.gz
+ce30948ec694f1d7562adea93cff001e7ecf70ab5db5095584a38ce0b6621d2ef50f0ae407f9491939b884b6635258859c77f3879e1d29dbf4dbdf381c6e968c  libraries_clap_juce_extensions_clap_libs_clap_helpers-a61bcdf0ecc2c8db1e80bfe8bf9cb7e8d9fd2bbc.tar.gz
+1b53380f8698df347e091b9e95f17160c234ab42b724b0266ff081e9c60a97fd16da693a300c7433a643a87b3238d90bdce741ac9a984e293210062796f68da2  libraries_pd_else-1bd2b108b0ccd4e1fc178e5c809ebca8eedcde8a.tar.gz
+4a3ffa31dbe35f4b57f925698bff3c2e8687f6f5deedb682fb9156738da26f17d84082937df1185bb3b4b26dcf4c57f769076d5a9caebdf29a25fcfca0a98c34  libraries_readerwriterqueue-2dee33ae3edd1e454ac34fea0a27017613355eff.tar.gz
+67ad2d7dc846278cfa8d940c79b995a9fdc1fde2bfaaacf869512e1ccc833ddff4a2f748a69e646db83b28b6b29cbbdffb8dffc64c5c048da0669f348a791245  libraries_concurrentqueue-88ab4bdc3aa5be8ed9e5514759c55b3b6310930b.tar.gz
+df82fdc96e26f47aea29d6c65a997875a490f146701d478a19c39ea50fd50415b0ec6e34b132a8f4d1a9dd5709ee39ba420a845b686477514fb4946aa10ca315  libraries_gem-ab50ed2d5ed5e37b59b7e169b6e211e317d82f53.tar.gz
+daed0bb5db79ca75e3b3d234492d648cbf46522ca1316abfc0f877d8eed4bc7c5b306e44001af7e417c60d66d7e4c5a84a1048900593420f83157e72be3f13eb  libraries_gem_freetype-7bac4d146a86482c154bf878221ff321faccac4c.tar.gz
+05042f98b49a46f8f60c8bd4d96720b4bc4b1ae28874db0a49a59b1fd63f217e1f4f123f4341c59223ebc82ef8008a363f90d3e4fd50100daae09de16426a741  libraries_gem_freetype_subprojects_dlg-72dfcc858c040c54a6a0b88fcb7e70ee186d3167.tar.gz
+ba598883cf45be6a75b701b883cb6aebda78692a0a8272b42b393d4e49c8cc79626eb79eb76f7710e0a415dfe8958f8793afd86b0bd546d015903bea51e454e3  libraries_gem_ftgl-16f7667cbd4b1e988ae24128c5dea54479926f85.tar.gz
+57496bcb6531b1657ce26201afb0cc0d00b28c8df34cf21f1f3220f0bf201e089d41b029c6b7c314241d349b92b307eee222df42fa903965e62988e6d28cbf30  libraries_ghc_filesystem-2fc4b463759e043476fc0036da094e5877e3dd50.tar.gz
+e4f23b31b561b5ac2c5fedee28413736c94a54e1128282fc908e58a36bc68ce231d0127069e72e27e98548cc6d8232d401dba550468e0a0c5832e30d8e7eab03  libraries_nanovg-ca35e13d8635334d6752af6b4e015439e5221d4a.tar.gz
+8d63f65a051bef906845c0db809926eab6c17a55aff91cb3bb592a073284a705fc11b3976779a27be0584d932e082bba4ffc1160a7c60c3b6d8f55c60711b04f  libraries_pd_cyclone-2ce82c3ef06b7190254ac131795c31e9d40a8ce3.tar.gz
+fc782a49f894f8974ab911d44b0c21ff777d7e4aec1294901fe7260d68b28b7b9ce62dd9e8ea2f3fd0be18736431bdfdcac4cb6ec3f79021e3cac21c3b6dbadf  libraries_melatonin_perfetto-1fdceed03b3f83c983ab759e9b3e642792c0d0ed.tar.gz
+0545988a223666987bc6348c6707d7a8106d80879f0bff9137e4d2286e23b0971a6090ea4f123f1a2d3781f0e17dc4e6baeb8f9f44d802eeef35e9057aa97ce7  libraries_libwebp-8c815d82d71f4296150c03d98ee90430d3cf1213.tar.gz
+18f5ac4239a3086dc501bce8e4ddd4be8c055daa79fa5b12fcfdbf708fdbd68f5e4623062cc865e262951d6a0d339311ddea682e3112d79e089bfbcd90105303  libraries_xz-dd4a1b259936880e04669b43e778828b60619860.tar.gz
+b4725501b79803eba3f1d1ad01e481e1536766de7f8c514a473f995383920472aaafb201181ca67af7da3ec44948c2b48909bf5c27bfa80c6ccb7bf9878dcf29  fuzzysearchdatabase-23122d1ff60d936fd766361a30210c954e0c5449.tar.gz
+d037f514c4337177fa4041fe078e68783bf0c64cb77d9386a55b4b7db128e3e0212075d41dbd7abe6f57f58379e72754f82af3211b5979fc3a6145d0bad25e22  keyboard-layout-eof.patch
+"

@@ -1,0 +1,17 @@
+--- a/Source/Utility/OSUtils.cpp	2026-11-09 04:00:02.363709558 +0100
++++ b/Source/Utility/OSUtils.cpp	2026-11-09 04:00:02.375431486 +0100
+@@ -354,12 +354,11 @@
+     KeyboardLayout result = QWERTY;
+     FILE* in;
+ 
+-    in = popen("LANG=C LC_ALL=C setxkbmap -print", "rb");
++    in = popen("LANG=C LC_ALL=C setxkbmap -print", "r");
+     if (!in)
+         return QWERTY;
+ 
+-    while (1) {
+-        getline(&line, &size, in);
++    while (getline(&line, &size, in) != -1) {
+         if (strstr(line, "aliases(qwerty)"))
+             result = QWERTY;
+         if (strstr(line, "aliases(azerty)"))
