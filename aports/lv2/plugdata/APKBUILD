@@ -8,7 +8,8 @@ pkgname=plugdata
 pkgver=0.9.3.2
 pkgrel=0
 _commit=49aa12ba90548bda319f48ebe34c588e5f481b19
-_libraries_juce=db1ff7263be13b67ba4cbc6269c999d75d2c9f43
+# plugdata-team/JUCE wayland-juce8 (2026-03-02) instead of v0.9.3's JUCE: the Wayland backend
+_libraries_juce=757cf9aaed7ffaf28d0f908f8beea958bbfa67df
 _libraries_pure_data=5a2151ea6cac9154e4e1f890784804807cf9d24d
 _libraries_heavylib=56e46b3a1e62e77431336a90be45158effd616ff
 _libraries_pd_lua=4fbe18f318028ab0ab14b3c0e6e4f9b927cf07ca
@@ -47,7 +48,11 @@ makedepends="
 	libxcomposite-dev
 	libxcursor-dev
 	libxext-dev
+	libdecor-dev
 	libxi-dev
+	libxkbcommon-dev
+	linux-headers
+	wayland-dev
 	libxinerama-dev
 	libxrandr-dev
 	mesa-dev
@@ -130,6 +135,10 @@ build() {
 	# Pd's d_soundfile.h: with _LARGEFILE64_SOURCE off_t is __off64_t (glibc) unless HAVE_OFF64_T;
 	# musl has off64_t
 	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -DHAVE_OFF64_T=1"
+	# wayland-juce8: the Wayland backend is a JUCE config option (JUCE_WAYLAND; wayland-dev,
+	# libxkbcommon-dev, libdecor-dev, linux-headers for its headers). At run time it is used for
+	# the standalone program when WAYLAND_DISPLAY is set (JUCE_XWAYLAND=1: X11 instead)
+	export CXXFLAGS="$CXXFLAGS -DJUCE_WAYLAND=1"
 	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQUICK_BUILD=ON
 	# at most 3 jobs: the JUCE translation units need ~1 GB each
 	cmake --build build --parallel 3 --target plugdata_standalone plugdata_LV2 plugdata_fx_LV2
@@ -145,7 +154,7 @@ package() {
 }
 sha512sums="
 921bc9454d73126f0101adfd492af25c3bceeaf5a92a082cf475b529df47e82ed5eaad65f4b19869de4e382c29a86b433db07bf83bc61a458f9d024d4355e737  plugdata-49aa12ba90548bda319f48ebe34c588e5f481b19.tar.gz
-1d28f9f51f573e3e2252645ed3ce5984bed99046a8433e03c309f0d41517b4470a983326398eef4fce3fd119c64cfd46cf5cc5daae757f1c0058b58a80ccdfe0  libraries_juce-db1ff7263be13b67ba4cbc6269c999d75d2c9f43.tar.gz
+a33803ae589f9ba7e50d3671e180ab29ebf83ea105784aeffa01b49494681dfbd93482d31d966cab337a02ccc69f45f999cc06f19a50bbb6108db165f8898f55  libraries_juce-757cf9aaed7ffaf28d0f908f8beea958bbfa67df.tar.gz
 18a8acd71d3cfd709b6540ea2bd055b688ee3bc3a262c5bec34f35e7b3785a35087fbab4c71da95678c355c7a1186e4be72f5c71448fe0929935553940089efe  libraries_pure_data-5a2151ea6cac9154e4e1f890784804807cf9d24d.tar.gz
 fc7e965fca04a4410b9c84128ac1b8f4192ef443f5425831b10f88f931d21af1130aca206b41f9db365233f5a1b8ac31cc7eb2967cb55937e55f4a486e8777a9  libraries_heavylib-56e46b3a1e62e77431336a90be45158effd616ff.tar.gz
 19282989e6e9def6206467fa89665dadcfebc622b2ed4a9dc017192ca4cdd8ae8cc959d026310bd2a168a3b63cac331f34687988b4d405f682b1a0e6d882a16d  libraries_pd_lua-4fbe18f318028ab0ab14b3c0e6e4f9b927cf07ca.tar.gz
