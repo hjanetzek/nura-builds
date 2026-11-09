@@ -1,0 +1,83 @@
+From db72d216b314075cc9d701570ac0cca0874f7039 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Tue, 3 Nov 2026 01:12:41 +0100
+Subject: [PATCH 27/29] Touch keypad LEDs: skip unchanged colors, cache
+ recolored button images
+
+The LED update sets all buttons 5 times per second: skip a button whose
+color hasn't changed before converting and blending it. Image buttons
+(play, record) were recomposed with PIL on every blink; cache them per
+button and color.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 32d771de8cee907d7da14ecd452e5d8b6d7acba0)
+---
+ zyngui/zynthian_gui_touchkeypad_v5.py | 23 ++++++++++++++++-------
+ zyngui/zynthian_wsleds_v5touch.py     |  3 +++
+ 2 files changed, 19 insertions(+), 7 deletions(-)
+
+diff --git a/zyngui/zynthian_gui_touchkeypad_v5.py b/zyngui/zynthian_gui_touchkeypad_v5.py
+index 22753709..fa0daf1d 100644
+--- a/zyngui/zynthian_gui_touchkeypad_v5.py
++++ b/zyngui/zynthian_gui_touchkeypad_v5.py
+@@ -58,6 +58,7 @@ class zynthian_gui_touchkeypad_v5(tkinter.Canvas):
+ 
+     def __init__(self):
+ 
++        self.button_image_cache = {}  # Recolored button images, by (button, color)
+         super().__init__(zynthian_gui_config.top,
+                 width=zynthian_gui_config.display_width,
+                 height=zynthian_gui_config.display_height,
+@@ -178,6 +179,9 @@ class zynthian_gui_touchkeypad_v5(tkinter.Canvas):
+                 # store the original image for the purpose of later changes of color (useful for image icons)
+                 config[IMG] = image
+                 config[TKIMG] = ImageTk.PhotoImage(image)
++                # New image: drop the recolored versions of the old one
++                for key in [k for k in self.button_image_cache if k[0] == button]:
++                    del self.button_image_cache[key]
+                 config[IMG_ID] = self.create_image(
+                     x+self.button_width//2, y+self.button_height//2,
+                     image=config[TKIMG],
+@@ -261,13 +265,18 @@ class zynthian_gui_touchkeypad_v5(tkinter.Canvas):
+         # in case the color is still the original wsled integer number, convert it
+         label = config[LABEL]
+         if  label.startswith('_'):
+-            # image buttons must be recomposed to change the foreground color
+-            image = config[IMG]
+-            mask = image.convert("LA")
+-            bgimage = Image.new("RGBA", image.size, color)
+-            fgimage = Image.new("RGBA", image.size, (0, 0, 0, 0))
+-            composed = Image.composite(bgimage, fgimage, mask)
+-            tkimage = ImageTk.PhotoImage(composed)
++            # image buttons must be recomposed to change the foreground color; cached per
++            # color, as blinking buttons (play, record) switch between a few colors all the time
++            key = (button, color)
++            tkimage = self.button_image_cache.get(key)
++            if tkimage is None:
++                image = config[IMG]
++                mask = image.convert("LA")
++                bgimage = Image.new("RGBA", image.size, color)
++                fgimage = Image.new("RGBA", image.size, (0, 0, 0, 0))
++                composed = Image.composite(bgimage, fgimage, mask)
++                tkimage = ImageTk.PhotoImage(composed)
++                self.button_image_cache[key] = tkimage
+             config[TKIMG] = tkimage
+             self.itemconfig(config[IMG_ID], image=tkimage)
+         else:
+diff --git a/zyngui/zynthian_wsleds_v5touch.py b/zyngui/zynthian_wsleds_v5touch.py
+index 74b3218a..d66f88cf 100644
+--- a/zyngui/zynthian_wsleds_v5touch.py
++++ b/zyngui/zynthian_wsleds_v5touch.py
+@@ -52,6 +52,9 @@ class touchkeypad_button_colors:
+         self.mode_map[wsleds.wscolor_active2] = 'active2'
+ 
+     def __setitem__(self, index, color):
++        # The LED update runs 5 times per second for all buttons: skip unchanged ones
++        if self.led_status[index] == color:
++            return
+         self.led_status[index] = color
+         mode = self.mode_map.get(color, None)
+         # request color change on the onscreen touchkeypad
+-- 
+2.56.0
+

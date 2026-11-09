@@ -1,0 +1,95 @@
+From 60d3ec465219bef550bde21066c72a69a2191eda Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Tue, 3 Nov 2026 01:45:41 +0100
+Subject: [PATCH 29/29] Update the (touch keypad) LEDs right after a screen
+ change
+
+The LEDs depend on the screen, but only the status thread updated them,
+every 0.2 s: the touch keypad's buttons changed color visibly after the
+screen. show_screen() now refreshes them when the screen changed;
+refresh() doesn't advance the blink phase, and a lock keeps it from running
+alongside the status thread's update().
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 5dac9c6b9a943b308cc74c3d8ea066424697e4e3)
+---
+ zyngui/zynthian_gui.py         |  9 +++++++++
+ zyngui/zynthian_wsleds_base.py | 18 ++++++++++++++++--
+ 2 files changed, 25 insertions(+), 2 deletions(-)
+
+diff --git a/zyngui/zynthian_gui.py b/zyngui/zynthian_gui.py
+index 668a24bf..f05fabe4 100644
+--- a/zyngui/zynthian_gui.py
++++ b/zyngui/zynthian_gui.py
+@@ -731,9 +731,18 @@ class zynthian_gui:
+             if not dummy_show:
+                 self.hide_screens(exclude=screen)
+             zynsigman.send(zynsigman.S_GUI, zynsigman.SS_GUI_SHOW_SCREEN, screen=screen)
++            screen_changed = True
++        else:
++            screen_changed = False
+ 
+         self.screen_lock.release()
+ 
++        # The (touch keypad) LEDs depend on the screen: update them with it, not up to 0.2 s later
++        if screen_changed:
++            for wsleds in (self.wsleds, self.wsleds_v5touch):
++                if wsleds:
++                    wsleds.refresh()
++
+     def show_modal(self, screen=None):
+         self.show_screen(screen, hmode=zynthian_gui.SCREEN_HMODE_ADD)
+ 
+diff --git a/zyngui/zynthian_wsleds_base.py b/zyngui/zynthian_wsleds_base.py
+index fb1a391b..db097d50 100644
+--- a/zyngui/zynthian_wsleds_base.py
++++ b/zyngui/zynthian_wsleds_base.py
+@@ -24,6 +24,7 @@
+ # ******************************************************************************
+ 
+ import logging
++import threading
+ import traceback
+ 
+ # Zynthian specific modules
+@@ -68,6 +69,8 @@ class zynthian_wsleds_base:
+ 
+         self.wsled_state_enabled = True
+         self.last_wsled_state = ""
++        # update() runs in the status thread and, through refresh(), after screen changes
++        self.update_lock = threading.Lock()
+ 
+     def setup_colors(self):
+         # Predefined colors
+@@ -220,7 +223,17 @@ class zynthian_wsleds_base:
+         if self.metro_mode == 0 or (self.metro_mode == 1 and self.zynseq.playing_sequences == 0):
+             self.wsleds[self.beat_led] = self.beat_color
+ 
+-    def update(self):
++    def refresh(self):
++        """Update the LEDs for the current state right away (e.g. after a screen change),
++        without advancing the blink phase: the status thread updates them only every 0.2 s,
++        so the buttons changed visibly after the screen."""
++        self.update(advance=False)
++
++    def update(self, advance=True):
++        with self.update_lock:
++            self._update(advance)
++
++    def _update(self, advance):
+         # Ignore refreshes once end() has lighted-off the LEDs, so a late call
+         # from the status thread can't light them up again while exiting.
+         if self.ended:
+@@ -267,7 +280,8 @@ class zynthian_wsleds_base:
+                 except Exception as e:
+                     logging.error(f"Generating LED state string => {e}")
+ 
+-        self.blink_count += 1
++        if advance:
++            self.blink_count += 1
+ 
+     def reset_last_state(self):
+         self.last_wsled_state = ""
+-- 
+2.56.0
+

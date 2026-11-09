@@ -14,7 +14,7 @@
 pkgname=zynthian-ui-vangelis
 _commit=fcbd1694bcf08b04c19afd2ddd1d68d14fc4e400
 pkgver=0_git20261106
-pkgrel=2
+pkgrel=3
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream vangelis, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
 arch="aarch64 x86_64"
@@ -136,6 +136,9 @@ source="
 	0024-desktop-launcher-environment-setup-and-install-scrip.patch
 	0025-zynseq-read-uint8_t-results-as-unsigned.patch
 	0026-zynseq-bool-results-read-as-bool.patch
+	0027-Touch-keypad-LEDs-skip-unchanged-colors-cache-recolo.patch
+	0028-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
+	0029-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
 	"
 builddir="$srcdir/zynthian-ui-$_commit"
 
@@ -223,4 +226,7 @@ fdfd83f8daa1537830f505a3371db22eac39ccf8df7f102a59bcec4e5340a96deffb43eefffa7c81
 32ee3b544a54aab154c3ebad34ca29fdbe1c435e973866daaaadb56e3b337fcca92704ceecbe0eeb5937c2cc7e93b158bf7b3886ff9a63b645c225e0230310a0  0024-desktop-launcher-environment-setup-and-install-scrip.patch
 f9cb652b2807f2e854c9c1cb2965adc1c0dd6aa00bbc63fd3b77cc5a1dcc7b39c6cb27a55ae2dc79015fb4d2af67733e2e8e3cada3f4844bb6aa28f972d6b9f7  0025-zynseq-read-uint8_t-results-as-unsigned.patch
 584d05a07c2a7da43dc60d317d49bf7c70ad1c8de8c0ebbe6c19a011111d53e53fd7be818c3e8077de67e2da2161fb6d2560c184d7a38d07210aa703f41182f9  0026-zynseq-bool-results-read-as-bool.patch
+326dc5355351a5b5fe86f1ccae1654c1e7762e95d3725210782580c40c033b098ab4487f70a0e1541a5b263458b99414f4786c988a463b09e50bca886351d146  0027-Touch-keypad-LEDs-skip-unchanged-colors-cache-recolo.patch
+70f585b503725933dcb7b1b80d6871b0e8ad251be0b7d8c3970c6aa1e0ce36bb398938fe00ba80eb19640defd40a3fc4307f3a59da6953523fd563be55b2e66a  0028-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
+59188d534f7341bcdd5c9cd509e34bc4796aee7d673be2b91fad6fbb8b6a78037e45b6459d9f22b69d70d139fd7c2cd2ab184b5da509e00c05dc743bb79ea0e6  0029-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
 "

@@ -49,7 +49,9 @@ The port's essentials from the main branch (formerly nura) of hjanetzek/zynthian
 - fixes needed to run: jack_capture from PATH, engine shells with `TERM=dumb`, the audio player at
   exit, zynclippy on 64 bit, the ALSA mixer's start-up time, the help viewer without tkinterweb,
   libzynseq results read with the right C types (unsigned bytes, bools: garbage tempo values and
-  a pattern-editor crash otherwise).
+  a pattern-editor crash otherwise);
+- the touch keypad's LEDs drawn only when they change, image buttons (record, play) cached, and
+  updated right after a screen change (otherwise the keys flicker at every LED cycle).
 
 The vangelis series is the tomita series with three patches adapted (context conflicts only: autoconnect, the directories, jalv's RBPi check). The series
 shrinks as these changes go upstream (the nura branch's PR #1 and its upstream log,
