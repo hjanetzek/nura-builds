@@ -8,7 +8,7 @@
 pkgname=ams-lv2
 pkgver=1.2.2
 _lvtk=1.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="AMS LV2 plugins (Alsa Modular Synth modules, no GUIs)"
 url="https://github.com/blablack/ams-lv2"
 arch="all"
@@ -28,14 +28,15 @@ prepare() {
 	sed -i -e '/^<[^>]*\/gui>[[:space:]]*$/,/guiext:binary/d' -e '/guiext:ui </d' ams.lv2/*.ttl
 }
 
-# _plugin <name> <source> <std> [extra flags and objects...]
+# _plugin <name> <source> <std> [extra flags and objects...]; libraries in $_libs (after the
+# sources: with --as-needed a library before them is dropped)
 _plugin() {
 	local name=$1 src=$2 std=$3
 	shift 3
 	${CXX:-g++} $CXXFLAGS -fPIC -std=$std -I"$srcdir"/inc -I"$srcdir"/lvtk-$_lvtk -I. -Isrc \
 		-DPLUGIN_CLASS=$name -DURI_PREFIX='"http://github.com/blablack/ams-lv2/"' \
 		-DPLUGIN_URI_SUFFIX="\"$name\"" -DPLUGIN_HEADER="\"src/${src%.cpp}.hpp\"" \
-		"$@" src/$src -shared $LDFLAGS -o out/$name.so lvtk_plugin.o -lm
+		"$@" src/$src -shared $LDFLAGS -o out/$name.so lvtk_plugin.o $_libs -lm
 }
 
 build() {
@@ -52,7 +53,7 @@ build() {
 			vcpanning vcswitch vctohz; do
 		_plugin $p $p.cpp c++11
 	done
-	_plugin fftvocoder fftvocoder.cpp c++98 -lfftw3
+	_libs=-lfftw3 _plugin fftvocoder fftvocoder.cpp c++98
 	for p in vcaexp vcdoubledecay vcenvii vcf vco2 vco3; do
 		_plugin $p $p.cpp c++11 synthdata.o
 	done
