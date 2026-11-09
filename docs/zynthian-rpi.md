@@ -85,6 +85,23 @@ OzzMaker PiScreen (`ozzmaker,piscreen`), which `piscreen2r` suggests the panel i
 overlay of our own binding that driver (same SPI pins, DC/reset GPIOs, rotation), checked on the
 kit. The V5's DSI panel and HDMI screens are DRM already.
 
+**How to drive the 480x320 SPI panel** (to measure on the V4 kit): a full frame over SPI takes tens
+of milliseconds (about 15-30 fps), a fullscreen copy in memory (600 KB at 32 bit) well under one:
+what counts is how much goes over SPI (partial updates of the changed regions: fbtft's deferred I/O
+by pages, the DRM driver by damage rectangles), not one copy more or less. The Pi 4's GPU (V3D) can
+still render through its render node; only the copy to the panel's buffer is the CPU's.
+
+| Option | Display server | Panel driver | Notes |
+|---|---|---|---|
+| A. framebuffer, as ZynthianOS | Xorg, fbdev driver | fbtft (`piscreen2r`, /dev/fb1) | Tk UI natively; the Qt UI through xcb |
+| B. X11 on DRM | Xorg, modesetting driver (no glamor) | DRM `ili9486` (own overlay) | the same for the UIs, damage to the panel through DRM |
+| C. Wayland kiosk | cage | DRM `ili9486` | as on the Duet; the Tk UI through XWayland (one X server and compositor more) |
+| D. no display server | none: Qt's `linuxfb` | fbtft or DRM (dumb buffer) | Qt UI only, the lightest; no plugin GUIs (jalv's GTK windows need a display server) |
+
+Measure per option: frames per second of the panel at a full redraw and while scrolling a list
+(the UI's switch timing tools), CPU load of the UI and the display server/compositor
+(`nura/tools/thread_cpu.sh`), input latency of the touch panel, and xruns under audio load.
+
 ### 6. Image
 
 nura-builds' zynthian target gets the device (DEVICES `zynthian-rpi`): the kiosk image with
