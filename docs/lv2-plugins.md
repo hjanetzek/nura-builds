@@ -103,6 +103,7 @@ Packaged in `aports/lv2/` (phase 1, built and tested on the Duet):
 | `geonkick-lv2` | (not in the config) | Geonkick 3.9.0 and Geonkick Single with their GUI (not in zynthian's config: the rescan adds them disabled) |
 | `cloudreverb-lv2` | (disabled) | CloudReverb 0.5 (JUCE), with GUI |
 | `jv880-lv2` | (disabled) | VirtualJV (JUCE 8.0.7), with GUI; upstream has only a Projucer project, the recipe writes a CMakeLists.txt; ZynthianOS' URI `https://github.com/giulioz/jv880_juce.git`; needs the user's ROMs in `~/.config/JV880` |
+| `plugdata` | (not in the config) | plugdata (develop, JUCE 9 with a Wayland backend for the standalone): standalone program and LV2 plugins plugdata, plugdata-fx; in the package repository, not in the meta package (meant as a GUI for Pd patches later) |
 | `lv2-examples` | (disabled) | the LV2 specification's example plugins (eg-fifths, eg-sampler, ...), same version as Alpine's lv2, without the GTK 2 UIs |
 | `neural-amp-modeler-lv2` | 1 | Neural Amp Modeler 0.2.3 (NeuralAudio, NAM core, RTNeural; submodules as sources) |
 | `aida-x-lv2` | 1 | AIDA-X 1.1.0 (release source with submodules; DPF, RTNeural) |

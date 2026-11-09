@@ -201,6 +201,19 @@ GitHub's archive tarballs don't contain git submodules, and pmbootstrap builds h
 - Submodules outside GitHub aren't found by `tools/gh-submodule-sources.py` (plugdata's
   fuzzysearchdatabase on Bitbucket): add them by hand from `git/trees/<ref>:<dir>` (the commit) and
   the host's archive URL.
+- **A JUCE build that stops for 900 s after the last link** ("Process did not write any output for
+  900 seconds"): JUCE's LV2 helper runs after linking, instantiates the plugin and creates its
+  editor, under QEMU in CI. Not LTO (check for `-flto`). To see where it hangs: a debug branch that
+  replaces the post-build command (`COMMAND juce_lv2_helper ...` in JUCE's
+  `extras/Build/CMake/JUCEUtils.cmake`) with `true`, builds the `juce_lv2_helper` target too, and runs
+  the helper under `gdb -batch -ex run -ex "thread apply all bt"` in the background, interrupted
+  after 90 s (`kill -INT $(pgrep -x juce_lv2_helper)`; attaching with `gdb -p` isn't allowed on the
+  runners). plugdata had two: FFTW measuring its plans, and an endless read loop that only musl's
+  `popen()` reaches.
+- Build outputs outside the build directory: JUCE projects may set their own artefact paths
+  (gearmulator: `bin/plugins/Release/LV2`, plugdata: `Plugins/LV2`, `Plugins/Standalone`). An empty
+  package ("Package size: 1.0 B") means `package()` looked in the wrong place: name the bundles and
+  check for their `manifest.ttl`.
 - Big recipes go on their own `plugin-*` branch: a push cancels and restarts all jobs of a branch,
   so a fix to a small recipe would restart a two-hour build.
 

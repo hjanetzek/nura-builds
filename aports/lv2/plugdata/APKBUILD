@@ -1,9 +1,10 @@
 # Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
-# plugdata develop (0.9.4 to be; its JUCE 9 fork has a Wayland backend, used by the standalone
-# program under Wayland). plugdata: Pure Data with a JUCE GUI (pd-else, cyclone and more included), as a standalone program and as LV2 plugins (plugdata, plugdata-fx). Meant as a GUI for zynthian's Pd patches later. QUICK_BUILD: without sfizz, ffmpeg and Gem for now.
-# JUCE and the other git submodules are extra sources (nura/tools/gh-submodule-sources.py). LV2
-# only. The plugin has its JUCE GUI built in, so it needs X11 and freetype headers to build (JUCE
-# loads X11 only when the editor opens).
+# plugdata: Pure Data with a JUCE GUI (pd-else, cyclone and more included), as a standalone program
+# (/usr/bin/plugdata) and as LV2 plugins (plugdata, plugdata-fx). Meant as a GUI for zynthian's Pd
+# patches later. The develop branch (0.9.4 to be): its JUCE 9 fork has a Wayland backend, used by the
+# standalone program under Wayland (plugins stay X11). QUICK_BUILD: without sfizz, ffmpeg and Gem for
+# now. JUCE and the other git submodules are extra sources (tools/gh-submodule-sources.py; the
+# Bitbucket one by hand).
 # keyboard-layout-eof.patch: OSUtils::getKeyboardLayout() reads setxkbmap's output in an endless
 # loop (no end at EOF); glibc's popen() refuses its mode "rb" so it never got there, musl's doesn't.
 # The editor calls it, and JUCE's LV2 helper creates the editor at build time: the build hung.
