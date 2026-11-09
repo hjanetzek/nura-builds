@@ -14,7 +14,7 @@ zynthian-webconf https://github.com/hjanetzek/zynthian-webconf nura nura
 # @<repo> stands for the checkout of a repository (for --src builds). The Qt stages are separate
 # because the recipes ask for the other Qt modules without a version: Alpine's Qt 6.11 would
 # satisfy that, so the 6.12 packages of a stage must be in the local repository before the next.
-STAGES="qt1 qt2 qt3 pyside plugins zynthian"
+STAGES="qt1 qt2 qt3 pyside plugins zynthian upstream"
 STAGE_qt1="qt6-qtbase qt6-qtshadertools qt6-qtsvg qt6-qtlanguageserver"
 STAGE_qt2="qt6-qtdeclarative"
 STAGE_qt3="qt6-qtwayland"
@@ -37,6 +37,11 @@ STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx 
 # the Rust build fails early); its recipe fetches the Rust crates itself. The kiosk package depends on it.
 STAGE_zynthian="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
 SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
+# zynthian-ui from upstream's branches (vangelis, tomita) with the port patches, the Tk UI, for
+# those who want zynthian as upstream ships it (aports/zynthian-upstream, docs/zynthian-upstream.md).
+# After the zynthian stage: they need zyncoder, which is only built from its checkout there.
+# Not in images; they provide zynthian-ui, so the kiosk package works with either.
+STAGE_upstream="zynthian-ui-vangelis zynthian-ui-tomita"
 
 # Recipe directories whose contents decide whether a stage's cached packages are still valid
 # (paths below the nura-builds checkout, or @<repo>/<path>)
@@ -46,6 +51,7 @@ INPUTS_qt3="aports/qt6/qt6-qtwayland"
 INPUTS_pyside="aports/pyside6"
 INPUTS_plugins="aports/zynthian-jalv aports/lv2 aports/pd aports/engines"
 INPUTS_zynthian=""   # always rebuilt: built from the checkouts
+INPUTS_upstream="aports/zynthian-upstream"
 
 # Stages the weekly run (and the dispatch input "rebuild") builds from scratch: Qt and PySide
 # replace Alpine's versions and link against its libraries, so an soname change there breaks them

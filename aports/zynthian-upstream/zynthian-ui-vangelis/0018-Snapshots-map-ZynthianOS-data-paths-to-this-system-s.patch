@@ -1,0 +1,68 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Thu, 5 Nov 2026 17:50:28 +0100
+Subject: [PATCH] Snapshots: map ZynthianOS data paths to this system's
+
+Snapshots made on ZynthianOS store absolute paths under /zynthian/zynthian-data and
+/zynthian/zynthian-my-data (soundfonts, samples, presets). On the desktop and the
+Nura package those directories are elsewhere, so the factory snapshots' FluidSynth,
+sfizz, ... chains loaded without their files. zynthian_paths.remap_os_paths() maps
+them when a snapshot is loaded (nothing changes where the paths are the ZynthianOS
+ones).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 9fc6ec02bbca3a3cf2037bb08ead9a734c22cc9a)
+---
+ zynconf/zynthian_paths.py         | 28 ++++++++++++++++++++++++++++
+ zyngine/zynthian_state_manager.py |  2 +-
+ 2 files changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/zynconf/zynthian_paths.py b/zynconf/zynthian_paths.py
+index 0956cf6d..dac7058a 100644
+--- a/zynconf/zynthian_paths.py
++++ b/zynconf/zynthian_paths.py
+@@ -65,3 +65,31 @@ def native_lib(fname, build_dir):
+         if os.path.isfile(fpath):
+             return fpath
+     return os.path.join(build_dir, fname)
++
++
++# Snapshots made on ZynthianOS store absolute paths under /zynthian (soundfonts, samples,
++# presets). Where the directories are elsewhere (desktop, distribution packages), map them.
++_OS_PATHS = (("/zynthian/zynthian-my-data/", "zynthian-my-data"), ("/zynthian/zynthian-data/", "zynthian-data"))
++
++
++def remap_os_paths(obj):
++    """obj (a decoded snapshot) with ZynthianOS data paths replaced by this system's"""
++    mapping = [(prefix, (my_data_dir if name == "zynthian-my-data" else data_dir).rstrip("/") + "/")
++               for prefix, name in _OS_PATHS]
++    mapping = [(a, b) for a, b in mapping if a != b]
++    if not mapping:
++        return obj
++
++    def remap(value):
++        if isinstance(value, str):
++            for a, b in mapping:
++                if value.startswith(a):
++                    return b + value[len(a):]
++            return value
++        if isinstance(value, dict):
++            return {remap(k): remap(v) for k, v in value.items()}
++        if isinstance(value, list):
++            return [remap(v) for v in value]
++        return value
++
++    return remap(obj)
+diff --git a/zyngine/zynthian_state_manager.py b/zyngine/zynthian_state_manager.py
+index 8b68d8e5..a1a08bae 100644
+--- a/zyngine/zynthian_state_manager.py
++++ b/zyngine/zynthian_state_manager.py
+@@ -1117,7 +1117,7 @@ class zynthian_state_manager:
+ 
+         mute = self.zynmixer_bus.get_mute(0)
+         try:
+-            snapshot = JSONDecoder().decode(json)
++            snapshot = zynthian_paths.remap_os_paths(JSONDecoder().decode(json))
+             self.set_busy_details("fixing legacy snapshot")
+             converter = zynthian_legacy_snapshot(self)
+             state = converter.convert_state(snapshot)

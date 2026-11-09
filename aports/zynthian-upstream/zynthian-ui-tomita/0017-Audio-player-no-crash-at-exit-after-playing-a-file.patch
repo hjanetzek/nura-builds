@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Thu, 5 Nov 2026 14:36:02 +0100
+Subject: [PATCH] Audio player: no crash at exit after playing a file
+
+chain_manager.remove_processor(None, proc), used for the processors
+without chain (audio player, tempo, ALSA mixer), didn't remove the
+processor from its engine, so the audio player engine was never stopped
+and its player never removed: once a file had been loaded, its file
+thread outlived the interpreter and crashed calling the Python state
+callback at exit (SIGSEGV in file_thread_fn, Tk and Qt UI alike).
+Remove it from the engine as zynthian_chain.remove_processor does.
+
+With the engine now stopped, zynaudioplayer.stop() ran and failed:
+it called libaudioplayer.lib_stop, which doesn't exist (player.c's
+function is stop()), so the jack client was never closed; that seems to
+be the cause of a rare PipeWire abort at exit ("source->loop ==
+&impl->loop"). Call stop(); the engine's start() opens the client again
+(init() is idempotent), should an audio player be created after that.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 0da55c55a0c1b2f3a0f9abeba6bf6e7191cb1d48)
+---
+ zyngine/zynthian_chain_manager.py        | 5 +++++
+ zyngine/zynthian_engine_audioplayer.py   | 2 ++
+ zynlibs/zynaudioplayer/zynaudioplayer.py | 7 ++++++-
+ 3 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/zyngine/zynthian_chain_manager.py b/zyngine/zynthian_chain_manager.py
+index 2434cd95..989e848c 100644
+--- a/zyngine/zynthian_chain_manager.py
++++ b/zyngine/zynthian_chain_manager.py
+@@ -1270,6 +1270,11 @@ class zynthian_chain_manager:
+                 break
+ 
+         if chain_id is None:
++            # A processor without chain (audio player, tempo, ALSA mixer): remove it from its
++            # engine, as zynthian_chain.remove_processor does, so the engine is stopped when unused.
++            # Otherwise the audio player's file thread outlived the interpreter and crashed at exit.
++            if processor.engine:
++                processor.engine.remove_processor(processor)
+             success = True
+         else:
+             success = self.chains[chain_id].remove_processor(processor)
+diff --git a/zyngine/zynthian_engine_audioplayer.py b/zyngine/zynthian_engine_audioplayer.py
+index 0007b736..80922073 100644
+--- a/zyngine/zynthian_engine_audioplayer.py
++++ b/zyngine/zynthian_engine_audioplayer.py
+@@ -94,6 +94,8 @@ class zynthian_engine_audioplayer(zynthian_engine):
+     # ---------------------------------------------------------------------------
+ 
+     def start(self):
++        # The jack client is closed when the engine stops (unused), opened again here
++        zynaudioplayer.init()
+         self.jackname = zynaudioplayer.get_jack_client_name()
+         zynsigman.register_queued(zynsigman.S_AUDIO_RECORDER, zynsigman.SS_AUDIO_RECORDER_STATE, self.update_rec)
+         zynsigman.register_queued(zynsigman.S_AUDIO_PLAYER, zynsigman.SS_AUDIO_PLAYER_STATE, self.update_play)
+diff --git a/zynlibs/zynaudioplayer/zynaudioplayer.py b/zynlibs/zynaudioplayer/zynaudioplayer.py
+index 2392b8f2..4f0f6201 100644
+--- a/zynlibs/zynaudioplayer/zynaudioplayer.py
++++ b/zynlibs/zynaudioplayer/zynaudioplayer.py
+@@ -78,8 +78,13 @@ except Exception as e:
+     libaudioplayer = None
+     logging.error(f"Can't initialise zynaudioplayer library: {e}")
+ 
++def init():
++    """Open the library's jack client if it isn't open (after stop())"""
++    return libaudioplayer.init(cb_handler)
++
+ def stop():
+-    libaudioplayer.lib_stop()
++    """Close the library's jack client (stop() in player.c; there is no lib_stop)"""
++    libaudioplayer.stop()
+     # dlclose(libaudioplayer._id)
+ 
+ def is_codec_supported(codec):

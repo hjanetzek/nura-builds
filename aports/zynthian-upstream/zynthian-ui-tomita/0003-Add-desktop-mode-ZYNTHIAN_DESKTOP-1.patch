@@ -1,0 +1,303 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 21:35:37 +0100
+Subject: [PATCH] Add desktop mode (ZYNTHIAN_DESKTOP=1)
+
+When zynthian runs as an application on a desktop or Nura system it doesn't
+own the system. In desktop mode it doesn't start or stop system services
+(Bluetooth, VNC, network MIDI, aubionotes, headphones), call
+powersave_control.sh, poll the Wi-Fi status or check for software updates,
+and the admin menu hides Wi-Fi, VNC, Bluetooth, RBPi headphones and
+touchscreen calibration. is_service_active() reports the host's services as
+inactive.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 1a554d6ccfd31b03b66eb52c7c4307763445df19)
+---
+ zynconf/zynthian_config.py        |  8 +++++++
+ zyngine/zynthian_state_manager.py | 38 ++++++++++++++++++++++++++++---
+ zyngui/zynthian_gui_admin.py      | 37 ++++++++++++++++--------------
+ 3 files changed, 63 insertions(+), 20 deletions(-)
+
+diff --git a/zynconf/zynthian_config.py b/zynconf/zynthian_config.py
+index 7001d94a..4640b3df 100755
+--- a/zynconf/zynthian_config.py
++++ b/zynconf/zynthian_config.py
+@@ -172,6 +172,11 @@ config_dir = zynthian_paths.config_dir
+ my_data_dir = zynthian_paths.my_data_dir
+ config_fpath = config_dir + "/zynthian_envars.sh"
+ 
++# Running as an application on a desktop (or Nura) system instead of ZynthianOS:
++# zynthian doesn't own the system there, so it must not start or stop system
++# services, change power, display or network settings, or update the system.
++desktop_mode = os.environ.get("ZYNTHIAN_DESKTOP", "0") == "1"
++
+ # -------------------------------------------------------------------------------
+ # Config management
+ # -------------------------------------------------------------------------------
+@@ -541,6 +546,9 @@ def is_process_running(procname):
+ 
+ 
+ def is_service_active(service):
++    if desktop_mode:
++        # The system's services are not zynthian's
++        return False
+     cmd = "systemctl is-active %s" % service
+     try:
+         result = check_output(cmd, shell=True).decode('utf-8', 'ignore')
+diff --git a/zyngine/zynthian_state_manager.py b/zyngine/zynthian_state_manager.py
+index f4443b8f..2083ee1e 100644
+--- a/zyngine/zynthian_state_manager.py
++++ b/zyngine/zynthian_state_manager.py
+@@ -69,6 +69,19 @@ zynthian_dir = zynthian_paths.zynthian_dir
+ ui_dir = zynthian_paths.ui_dir
+ my_data_dir = zynthian_paths.my_data_dir
+ ex_data_dir = zynthian_paths.ex_data_dir
++
++
++def system_service(method):
++    """Decorator for methods that start or stop system services.
++    In desktop mode they do nothing: the services belong to the host system."""
++    def wrapper(*args, **kwargs):
++        if zynconf.desktop_mode:
++            logging.debug(f"Desktop mode: skipping {method.__name__}")
++            return None
++        return method(*args, **kwargs)
++    wrapper.__name__ = method.__name__
++    wrapper.__doc__ = method.__doc__
++    return wrapper
+ capture_dir_sdc = my_data_dir + "/capture"
+ 
+ MAIN_MIXBUS_ID = -1
+@@ -929,13 +942,15 @@ class zynthian_state_manager:
+             self.last_event_flag = False
+             self.last_event_ts = monotonic() - zynthian_gui_config.power_save_secs
+             try:
+-                check_output("powersave_control.sh on", shell=True)
++                if not zynconf.desktop_mode:
++                    check_output("powersave_control.sh on", shell=True)
+             except Exception as e:
+                 logging.error(e)
+         else:
+             logging.info("Power Save Mode: OFF")
+             try:
+-                check_output("powersave_control.sh off", shell=True)
++                if not zynconf.desktop_mode:
++                    check_output("powersave_control.sh off", shell=True)
+             except Exception as e:
+                 logging.error(e)
+             self.ctrldev_manager.sleep_off()
+@@ -2474,6 +2489,7 @@ class zynthian_state_manager:
+     # Core Network Services
+     # ---------------------------------------------------------------------------
+ 
++    @system_service
+     def start_vncserver(self, save_config=True):
+         if not self.root_access:
+             return
+@@ -2521,6 +2537,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("start_vncserver")
+ 
++    @system_service
+     def stop_vncserver(self, save_config=True):
+         if not self.root_access:
+             return
+@@ -2586,6 +2603,7 @@ class zynthian_state_manager:
+         else:
+             self.stop_netump(False)
+ 
++    @system_service
+     def start_netump(self, save_config=True, wait=0):
+         service = "jacknetumpd"
+         if zynconf.is_service_active(service):
+@@ -2613,6 +2631,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("start_netump")
+ 
++    @system_service
+     def stop_netump(self, save_config=True, wait=0):
+         service = "jacknetumpd"
+         if not zynconf.is_service_active(service):
+@@ -2646,6 +2665,7 @@ class zynthian_state_manager:
+         else:
+             self.stop_rtpmidi(False)
+ 
++    @system_service
+     def start_rtpmidi(self, save_config=True, wait=0):
+         service = "jackrtpmidid"
+         if zynconf.is_service_active(service):
+@@ -2673,6 +2693,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("start_rtpmidi")
+ 
++    @system_service
+     def stop_rtpmidi(self, save_config=True, wait=0):
+         service = "jackrtpmidid"
+         if not zynconf.is_service_active(service):
+@@ -2699,6 +2720,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("stop_rtpmidi")
+ 
++    @system_service
+     def start_qmidinet(self, save_config=True, wait=0):
+         service = "qmidinet"
+         if zynconf.is_service_active(service):
+@@ -2726,6 +2748,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("start_qmidinet")
+ 
++    @system_service
+     def stop_qmidinet(self, save_config=True, wait=0):
+         service = "qmidinet"
+         if not zynconf.is_service_active(service):
+@@ -2758,6 +2781,7 @@ class zynthian_state_manager:
+         else:
+             self.stop_qmidinet(False)
+ 
++    @system_service
+     def start_touchosc2midi(self, save_config=True, wait=0):
+         service = "touchosc2midi"
+         if zynconf.is_service_active(service):
+@@ -2785,6 +2809,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("start_touchosc2midi")
+ 
++    @system_service
+     def stop_touchosc2midi(self, save_config=True, wait=0):
+         service = "touchosc2midi"
+         if not zynconf.is_service_active(service):
+@@ -2818,6 +2843,7 @@ class zynthian_state_manager:
+             self.stop_touchosc2midi(False)
+ 
+     # Unblock all soft-blocked bluetooth controllers
++    @system_service
+     def unblock_bluetooth_controllers(self):
+         self.start_busy("Unblock Bluetooth Controllers")
+         for row in check_output("rfkill -n", shell=True, encoding="utf-8").split("\n"):
+@@ -2827,6 +2853,7 @@ class zynthian_state_manager:
+                 check_output(f"rfkill unblock {parts[0].strip()}", shell=True)
+         self.end_busy("Unblock Bluetooth Controllers")
+ 
++    @system_service
+     def select_bluetooth_controller(self, controller):
+         if controller.count(":") != 5:
+             logging.error(f"Bad controller address ({controller})!")
+@@ -2848,6 +2875,7 @@ class zynthian_state_manager:
+             "ZYNTHIAN_MIDI_BLE_CONTROLLER": zynthian_gui_config.ble_controller
+         })
+ 
++    @system_service
+     def start_bluetooth(self, save_config=True, wait=0):
+         service = "bluetooth"
+         if zynconf.is_service_active(service):
+@@ -2877,6 +2905,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("start_bluetooth")
+ 
++    @system_service
+     def stop_bluetooth(self, save_config=True, wait=0):
+         service = "bluetooth"
+         if not zynconf.is_service_active(service):
+@@ -2909,6 +2938,7 @@ class zynthian_state_manager:
+         else:
+             self.stop_bluetooth(False)
+ 
++    @system_service
+     def start_aubionotes(self, save_config=True, wait=0):
+         service = "aubionotes"
+         if zynconf.is_service_active(service):
+@@ -2937,6 +2967,7 @@ class zynthian_state_manager:
+ 
+         self.end_busy("start_aubionotes")
+ 
++    @system_service
+     def stop_aubionotes(self, save_config=True, wait=0):
+         service = "aubionotes"
+         if not zynconf.is_service_active(service):
+@@ -2986,7 +3017,8 @@ class zynthian_state_manager:
+             return False
+ 
+     def check_for_updates(self):
+-        if self.checking_for_updates:
++        if self.checking_for_updates or zynconf.desktop_mode:
++            # On a desktop, zynthian is updated by the package manager
+             return
+         self.checking_for_updates = True
+ 
+diff --git a/zyngui/zynthian_gui_admin.py b/zyngui/zynthian_gui_admin.py
+index 632dafdf..65c0ddea 100644
+--- a/zyngui/zynthian_gui_admin.py
++++ b/zyngui/zynthian_gui_admin.py
+@@ -67,7 +67,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+ 
+         self.state_manager = self.zyngui.state_manager
+ 
+-        if self.state_manager.allow_rbpi_headphones():
++        if not zynconf.desktop_mode and self.state_manager.allow_rbpi_headphones():
+             self.default_rbpi_headphones()
+ 
+     def refresh_status(self):
+@@ -89,7 +89,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+ 
+     def build_view(self):
+         self.update_available = self.state_manager.update_available
+-        if not self.refresh_wifi_thread:
++        if not self.refresh_wifi_thread and not zynconf.desktop_mode:
+             self.refresh_wifi = True
+             self.refresh_wifi_thread = Thread(target=self.refresh_wifi_task, name="wifi_refresh")
+             self.refresh_wifi_thread.start()
+@@ -163,7 +163,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+         #self.list_data.append((self.audio_levels, 0, "Audio Levels", ["Show audio levels view.", "meters.png"]))
+         self.list_data.append((self.pfl, 0, f"PFL Output ({zynthian_gui_config.pfl_output})", ["Select the audio output device for pre-fader listening.", "headphones.png"]))
+         self.list_data.append((self.show_tts, 0, "ZynVoice", ["Text to speech accessibility options", "audio_options.png"]))
+-        if self.state_manager.allow_rbpi_headphones():
++        if not zynconf.desktop_mode and self.state_manager.allow_rbpi_headphones():
+             if zynthian_gui_config.rbpi_headphones:
+                 self.list_data.append((self.stop_rbpi_headphones, 0, "\u2612 RBPi Headphones",
+                                        ["RBPi onboard headphone output (Lo-Fi) is enabled", "headphones.png"]))
+@@ -194,17 +194,19 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+ 
+         self.list_data.append((self.network_info, 0, "Network Info",
+                                ["Show network details, e.g. IP address, etc.", "network.png"]))
+-        self.list_data.append((self.wifi_config, 0, f"Wi-Fi Config ({self.wifi_status})",
+-                               ["Configure Wi-Fi connections.", "wifi.png"]))
+-        self.wifi_index = len(self.list_data) - 1
+-        if zynconf.is_service_active("vncserver0"):
+-            self.list_data.append((self.state_manager.stop_vncserver, 0, "\u2612 VNC Server",
+-                                   ["Display zynthian UI and processors' native GUI via VNC.\n This uses more CPU. It is advised to disable during performance.", "network.png"]))
+-        else:
+-            self.list_data.append((self.state_manager.start_vncserver, 0, "\u2610 VNC Server",
+-                                   ["Display zynthian UI and processors' native GUI via VNC.\n This uses more CPU. It is advised to disable during performance.", "network.png"]))
+-        self.list_data.append((self.bluetooth, 0, "Bluetooth",
+-                               ["Scan, enable and configure Bluetooth devices.\n\nMust enable Bluetooth here to access BLE MIDI devices. Also supports HID devices.", "bluetooth.png"]))
++        # On a desktop, Wi-Fi, VNC and Bluetooth are managed by the host system
++        if not zynconf.desktop_mode:
++            self.list_data.append((self.wifi_config, 0, f"Wi-Fi Config ({self.wifi_status})",
++                                   ["Configure Wi-Fi connections.", "wifi.png"]))
++            self.wifi_index = len(self.list_data) - 1
++            if zynconf.is_service_active("vncserver0"):
++                self.list_data.append((self.state_manager.stop_vncserver, 0, "\u2612 VNC Server",
++                                       ["Display zynthian UI and processors' native GUI via VNC.\n This uses more CPU. It is advised to disable during performance.", "network.png"]))
++            else:
++                self.list_data.append((self.state_manager.start_vncserver, 0, "\u2610 VNC Server",
++                                       ["Display zynthian UI and processors' native GUI via VNC.\n This uses more CPU. It is advised to disable during performance.", "network.png"]))
++            self.list_data.append((self.bluetooth, 0, "Bluetooth",
++                                   ["Scan, enable and configure Bluetooth devices.\n\nMust enable Bluetooth here to access BLE MIDI devices. Also supports HID devices.", "bluetooth.png"]))
+ 
+         self.list_data.append((None, 0, "> USER INTERFACE"))
+         self.list_data.append((self.visible_chains, 0, f"Visible Chains ({zynthian_gui_config.visible_mixer_strips})",
+@@ -237,9 +239,10 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+         if "brightness_config" in self.zyngui.screens and self.zyngui.screens["brightness_config"].get_num_zctrls() > 0:
+             self.list_data.append((self.zyngui.brightness_config, 0, "Brightness",
+                                    ["Adjust display and LED brightness.", "bright_settings.png"]))
+-        self.list_data.append((self.zyngui.calibrate_touchscreen, 0, "Calibrate Touchscreen",
+-                               ["Show touchscreen calibration.\nTouch each crosshair until it changes color.\nScreen closes after 15s of inactivity.",
+-                                "settings.png"]))
++        if not zynconf.desktop_mode:  # Writes the system's X11 configuration
++            self.list_data.append((self.zyngui.calibrate_touchscreen, 0, "Calibrate Touchscreen",
++                                   ["Show touchscreen calibration.\nTouch each crosshair until it changes color.\nScreen closes after 15s of inactivity.",
++                                    "settings.png"]))
+         self.list_data.append((self.zyngui.cuia_screen_clean, 0, "Clean Screen",
+                                ["10s countdown with no touch trigger. Allows screen to be cleaned without triggering any action.", "settings.png"]))
+ 

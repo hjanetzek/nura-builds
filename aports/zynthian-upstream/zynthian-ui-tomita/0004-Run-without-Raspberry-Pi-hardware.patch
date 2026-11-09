@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 21:35:37 +0100
+Subject: [PATCH] Run without Raspberry Pi hardware
+
+- jalv: don't fail when RBPI_VERSION is unset; treat the machine as a Pi 4.
+- wsleds: import board/neopixel_spi only when opening the LED strip. The
+  touch keypad's LED emulation (wsleds_v5touch) inherits the base class and
+  failed to import without the SPI libraries.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit efdf4fd303aaac766ad2bb970c70e73a834e066d)
+---
+ zyngine/zynthian_engine_jalv.py | 5 +++--
+ zyngui/zynthian_wsleds_base.py  | 6 ++++--
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/zyngine/zynthian_engine_jalv.py b/zyngine/zynthian_engine_jalv.py
+index 86e33724..9636ee0b 100644
+--- a/zyngine/zynthian_engine_jalv.py
++++ b/zyngine/zynthian_engine_jalv.py
+@@ -611,8 +611,9 @@ class zynthian_engine_jalv(zynthian_engine_jalv_base):
+     # Custom plugin info
+     # ------------------------------------------------------------------------------
+ 
+-    rbpi_version = os.environ.get('RBPI_VERSION', '')
+-    if "Raspberry Pi 4" in rbpi_version:
++    rbpi_version = os.environ.get('RBPI_VERSION', "")
++    if not rbpi_version or "Raspberry Pi 4" in rbpi_version:
++        # Not a Raspberry Pi (desktop) => as capable as a Pi 4
+         rpi = "RPi4"
+     elif "Raspberry Pi 3" in rbpi_version:
+         rpi = "RPi3"
+diff --git a/zyngui/zynthian_wsleds_base.py b/zyngui/zynthian_wsleds_base.py
+index 7696b0c9..fb1a391b 100644
+--- a/zyngui/zynthian_wsleds_base.py
++++ b/zyngui/zynthian_wsleds_base.py
+@@ -23,10 +23,8 @@
+ #
+ # ******************************************************************************
+ 
+-import board
+ import logging
+ import traceback
+-import neopixel_spi as neopixel
+ 
+ # Zynthian specific modules
+ from zyngine.zynthian_signal_manager import zynsigman
+@@ -128,6 +126,10 @@ class zynthian_wsleds_base:
+     def start(self):
+         if self.num_leds > 0:
+             try:
++                # Imported here: the LED strip needs SPI hardware (Raspberry Pi),
++                # the touch keypad's virtual LEDs (subclasses) don't
++                import board
++                import neopixel_spi as neopixel
+                 self.spi_board = board.SPI()
+                 self.wsleds = neopixel.NeoPixel_SPI(self.spi_board,
+                                                     self.num_leds,

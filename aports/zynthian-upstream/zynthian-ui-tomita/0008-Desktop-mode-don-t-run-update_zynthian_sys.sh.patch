@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 21:55:54 +0100
+Subject: [PATCH] Desktop mode: don't run update_zynthian_sys.sh
+
+save_config(..., updsys=True), e.g. when the hotplug audio settings change,
+ran zynthian-sys's system update script, which rewrites boot config and
+systemd units as root.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit c36fecd4b4281522d2bde19cb8b485dd4a1b385a)
+---
+ zynconf/zynthian_config.py | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/zynconf/zynthian_config.py b/zynconf/zynthian_config.py
+index 4640b3df..80ee95bc 100755
+--- a/zynconf/zynthian_config.py
++++ b/zynconf/zynthian_config.py
+@@ -313,6 +313,9 @@ def load_plain_envars(fpath, set_env=True):
+ 
+ 
+ def update_sys():
++    if desktop_mode:
++        # update_zynthian_sys.sh reconfigures the whole system (boot, services, ...) as root
++        return
+     try:
+         os.environ['ZYNTHIAN_FLAG_MASTER'] = "NONE"
+         check_output(zynthian_paths.sys_dir + "/scripts/update_zynthian_sys.sh", shell=True)

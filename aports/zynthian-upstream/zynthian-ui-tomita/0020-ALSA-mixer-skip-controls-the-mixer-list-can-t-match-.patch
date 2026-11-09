@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 6 Nov 2026 01:59:28 +0100
+Subject: [PATCH] ALSA mixer: skip controls the mixer list can't match before
+ opening them
+
+Each alsaaudio.Mixer() opens the card and loads all of its elements, and
+get_mixer_zctrls() opened about three per control before checking the
+symbol against SOUNDCARD_MIXER. On a card with many controls this is
+quadratic: the Pixel 3's SDM845 codec has 1178 controls (~21 ms per open),
+so zynthian spent ~74 s in it at startup, and with an empty SOUNDCARD_MIXER
+it kept none of them. Controls whose name no listed symbol can stand for are
+now dropped first: startup on the Pixel 3 goes from ~76 s to 8 s.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit 70497ea3c49d83cc44920546fafac6d430226c66)
+---
+ zyngine/zynthian_engine_alsa_mixer.py | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/zyngine/zynthian_engine_alsa_mixer.py b/zyngine/zynthian_engine_alsa_mixer.py
+index 84647c34..faa27edb 100644
+--- a/zyngine/zynthian_engine_alsa_mixer.py
++++ b/zyngine/zynthian_engine_alsa_mixer.py
+@@ -221,6 +221,15 @@ class zynthian_engine_alsa_mixer(zynthian_engine):
+         try:
+             is_log = False
+             mixer_ctrl_names = sorted(set(alsaaudio.mixers(device=device)))
++            if ctrl_list:
++                # Each alsaaudio.Mixer() opens the card and loads all its elements: skip the
++                # controls no symbol in the list can stand for before opening them (phone
++                # codecs have >1000 routing controls: minutes at startup otherwise)
++                wanted = set(ctrl_list)
++                def is_wanted(ctrl_name):
++                    base = ctrl_name.replace(' ', '_')
++                    return any(s == base or s.startswith(base + "_") for s in wanted)
++                mixer_ctrl_names = [c for c in mixer_ctrl_names if is_wanted(c)]
+             for ctrl_name in mixer_ctrl_names:
+                 idx = 0  # ALSA array index
+                 try:

@@ -8,6 +8,7 @@ Targets so far:
 | Target | What | Devices |
 |---|---|---|
 | `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss), zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
+| (in `zynthian`) | zynthian-ui from upstream (`zynthian-ui-vangelis`, `zynthian-ui-tomita`): the Tk UI with the port patches, packages only, see [docs/zynthian-upstream.md](docs/zynthian-upstream.md) | as above |
 
 Next: the Google Pixel 3 (`google-blueline`), see [docs/google-blueline.md](docs/google-blueline.md):
 device status, USB OTG (missing on all SDM845 phones; patches on the kernel lists), plan.
@@ -54,7 +55,7 @@ zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2`
 (zynthian's jalv, the LV2 plugins and Pure Data externals of `aports/lv2` and `aports/pd` through
 their meta packages, zynaddsubfx, setBfree, SooperLooper), `zynthian`
 (zyncoder, zynthian-ui, DrivenByMoss, zynthian-packages and zynthian-webconf from their checkouts, zynthian-data, postmarketos-ui-zynthian; always
-rebuilt). The Qt modules are separate stages because their recipes ask for the other modules
+rebuilt), `upstream` (zynthian-ui from upstream's vangelis and tomita with the port patches). The Qt modules are separate stages because their recipes ask for the other modules
 without a version, which Alpine's 6.11 would satisfy.
 
 ## Downloads

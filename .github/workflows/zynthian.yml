@@ -59,6 +59,9 @@ jobs:
       key_zynthian: ${{ steps.plan.outputs.key_zynthian }}
       run_zynthian: ${{ steps.plan.outputs.run_zynthian }}
       rebuild_zynthian: ${{ steps.plan.outputs.rebuild_zynthian }}
+      key_upstream: ${{ steps.plan.outputs.key_upstream }}
+      run_upstream: ${{ steps.plan.outputs.run_upstream }}
+      rebuild_upstream: ${{ steps.plan.outputs.rebuild_upstream }}
     steps:
       - uses: actions/checkout@v7
       - id: refs
@@ -111,6 +114,15 @@ jobs:
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_zynthian == 'true' }}
     uses: ./.github/workflows/stage.yml
     with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: zynthian, previous: plugins, previous-key: "${{ needs.plan.outputs.key_plugins }}", previous-cached: "${{ needs.plan.outputs.run_plugins != 'true' }}", key: "${{ needs.plan.outputs.key_zynthian }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_zynthian == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+
+  # zynthian-ui from upstream (vangelis, tomita) with the port patches: packages only, not in images
+  upstream:
+    needs: [plan, zynthian]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_upstream == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: "${{ inputs.arch || 'aarch64' }}", stage: upstream, previous: zynthian, previous-key: "${{ needs.plan.outputs.key_zynthian }}", previous-cached: "${{ needs.plan.outputs.run_zynthian != 'true' }}", key: "${{ needs.plan.outputs.key_upstream }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_upstream == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
 
@@ -176,9 +188,11 @@ jobs:
 
   # Releases (main only): the package repository (release "aarch64") and the images
   # (release "zynthian-latest"), see scripts/publish.sh
+  # A failed upstream stage doesn't hold back the rest: then the zynthian stage's packages are
+  # published (without the upstream ones)
   publish:
-    needs: [zynthian, image]
-    if: ${{ !cancelled() && !failure() && github.ref == 'refs/heads/main' }}
+    needs: [zynthian, upstream, image]
+    if: ${{ !cancelled() && needs.zynthian.result == 'success' && needs.image.result != 'failure' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -188,7 +202,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
-          name: packages-zynthian-zynthian
+          name: packages-zynthian-${{ needs.upstream.result == 'success' && 'upstream' || 'zynthian' }}
           path: out
       - uses: actions/download-artifact@v8
         if: needs.image.result == 'success'
