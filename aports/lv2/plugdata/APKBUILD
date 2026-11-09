@@ -30,6 +30,8 @@ _libraries_pd_cyclone=7b9c83df7d78eb3dd0c8446d84625b65d6459898
 _libraries_melatonin_perfetto=1fdceed03b3f83c983ab759e9b3e642792c0d0ed
 _libraries_libwebp=8c815d82d71f4296150c03d98ee90430d3cf1213
 _libraries_xz=dd4a1b259936880e04669b43e778828b60619860
+# not on GitHub (Bitbucket), so not found by gh-submodule-sources.py
+_libraries_fuzzysearchdatabase=23122d1ff60d936fd766361a30210c954e0c5449
 pkgdesc="Pure Data with a modern GUI (standalone and LV2)"
 url="https://github.com/plugdata-team/plugdata"
 arch="aarch64 x86_64"
@@ -75,6 +77,7 @@ source="$pkgname-$_commit.tar.gz::https://github.com/plugdata-team/plugdata/arch
 	libraries_melatonin_perfetto-${_libraries_melatonin_perfetto}.tar.gz::https://github.com/sudara/melatonin_perfetto/archive/${_libraries_melatonin_perfetto}.tar.gz
 	libraries_libwebp-${_libraries_libwebp}.tar.gz::https://github.com/webmproject/libwebp/archive/${_libraries_libwebp}.tar.gz
 	libraries_xz-${_libraries_xz}.tar.gz::https://github.com/tukaani-project/xz/archive/${_libraries_xz}.tar.gz
+	fuzzysearchdatabase-${_libraries_fuzzysearchdatabase}.tar.gz::https://bitbucket.org/j_norberg/fuzzysearchdatabase/get/${_libraries_fuzzysearchdatabase}.tar.gz
 	"
 builddir="$srcdir/plugdata-$_commit"
 options="!check" # no tests
@@ -110,6 +113,7 @@ prepare() {
 	rm -rf Libraries/melatonin_perfetto && mv "$srcdir"/melatonin_perfetto-${_libraries_melatonin_perfetto} Libraries/melatonin_perfetto
 	rm -rf Libraries/libwebp && mv "$srcdir"/libwebp-${_libraries_libwebp} Libraries/libwebp
 	rm -rf Libraries/xz && mv "$srcdir"/xz-${_libraries_xz} Libraries/xz
+	rm -rf Libraries/fuzzysearchdatabase && mv "$srcdir"/j_norberg-fuzzysearchdatabase-${_libraries_fuzzysearchdatabase%"${_libraries_fuzzysearchdatabase#????????????}"} Libraries/fuzzysearchdatabase
 	default_prepare
 }
 
@@ -161,4 +165,5 @@ b2e4caa38ec4d5e9b60e6bae8a6560a03eb1037401bfe9f8b829ae54d08932ba0e870b6ce062b9a0
 fc782a49f894f8974ab911d44b0c21ff777d7e4aec1294901fe7260d68b28b7b9ce62dd9e8ea2f3fd0be18736431bdfdcac4cb6ec3f79021e3cac21c3b6dbadf  libraries_melatonin_perfetto-1fdceed03b3f83c983ab759e9b3e642792c0d0ed.tar.gz
 0545988a223666987bc6348c6707d7a8106d80879f0bff9137e4d2286e23b0971a6090ea4f123f1a2d3781f0e17dc4e6baeb8f9f44d802eeef35e9057aa97ce7  libraries_libwebp-8c815d82d71f4296150c03d98ee90430d3cf1213.tar.gz
 18f5ac4239a3086dc501bce8e4ddd4be8c055daa79fa5b12fcfdbf708fdbd68f5e4623062cc865e262951d6a0d339311ddea682e3112d79e089bfbcd90105303  libraries_xz-dd4a1b259936880e04669b43e778828b60619860.tar.gz
+b4725501b79803eba3f1d1ad01e481e1536766de7f8c514a473f995383920472aaafb201181ca67af7da3ec44948c2b48909bf5c27bfa80c6ccb7bf9878dcf29  fuzzysearchdatabase-23122d1ff60d936fd766361a30210c954e0c5449.tar.gz
 "
