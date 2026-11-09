@@ -26,8 +26,8 @@ STAGE_pyside="pyside6"
 # The instruments with large data (FluidPlug's SoundFonts, the AVL drumkits: ~450 MB, in -data
 # subpackages; the FluidR3 SoundFonts, 150 MB) aren't in the meta package, to keep images small:
 # built here for the package repository; zynthian-factory-content (zynthian-packages) installs what
-# ZynthianOS' image has of them.
-STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree sooperlooper aeolus libgig linuxsampler fluidplug-lv2 avldrums-lv2 fluid-soundfont"
+# ZynthianOS' image has of them. gearmulator (Osirus, OsTIrus) needs the user's ROMs: repository only too.
+STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx setbfree sooperlooper aeolus libgig linuxsampler fluidplug-lv2 avldrums-lv2 fluid-soundfont gearmulator-lv2"
 # zynthian-ui and zyncoder are built from their checkouts (--src skips $source and doesn't build
 # missing dependencies, hence the order); seed-distfiles.sh puts the bundled Python packages into
 # the distfiles cache first. DrivenByMoss (its zynthian controller drivers, the NI Maschine Mk2/JAM
