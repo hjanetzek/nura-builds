@@ -149,7 +149,7 @@ build() {
 		gdb -batch -ex "set pagination off" -ex run -ex "info threads" -ex "thread apply all bt 25" \
 			--args build/juce_lv2_helper "$so" > "$srcdir"/gdb.log 2>&1 &
 		sleep 90
-		hp=$(pgrep -f "^$PWD/build/juce_lv2_helper|^build/juce_lv2_helper" | head -n 1)
+		hp=$(pgrep -x juce_lv2_helper | head -n 1)
 		echo "=== helper pid after 90 s: ${hp:-none}"
 		[ -n "$hp" ] && kill -INT $hp
 		sleep 20
