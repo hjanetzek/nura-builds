@@ -22,7 +22,9 @@
 #               software rendering in the guest. Headless (or without a terminal) the serial console
 #               goes to serial.log in the cache directory, QEMU's PID to qemu.pid
 #   -n          no OpenGL (software rendering in the guest: slow, for checking a GL problem)
-#   -A AUDIO    virtio (default: virtio-sound, QEMU 8.2+) or hda (emulated Intel HDA), none
+#   -A AUDIO    virtio (default: virtio-sound, QEMU 8.2+) or hda (emulated Intel HDA), none, or
+#               silent (Intel HDA without host output: the guest's audio clock runs, nothing is
+#               heard; for long unattended zynthian tests, where -A none can stall PipeWire's graph)
 #   -U VID:PID  pass a USB device through (repeatable), e.g. -U 17cc:1140 (Maschine Mk2). Needs
 #               write access to its /dev/bus/usb node (a udev rule, or run as root)
 #   -p PORT     host port for the VM's SSH (default 2222, or the next free one: ssh -p PORT user@localhost)
@@ -145,7 +147,7 @@ if [ "$display" = none ]; then
 else
 	echo "$displays" | grep -qx "$display" || missing="$missing qemu-ui-$display"
 fi
-if [ "$audio" != none ]; then
+if [ "$audio" != none ] && [ "$audio" != silent ]; then
 	echo "$audiodevs" | grep -qx -e pipewire -e pa || missing="$missing qemu-audio-pipewire"
 fi
 if [ -n "$usb" ]; then
@@ -173,10 +175,12 @@ free_port() {
 
 set -- -nodefaults -machine q35 -smp "$cpus" -m "$mem" \
 	-drive "if=pflash,format=raw,readonly=on,file=$ovmf" \
-	-drive "file=$disk,format=raw,if=virtio" \
+	-drive "file=$disk,format=raw,if=none,id=disk" -device virtio-blk-pci,drive=disk,bootindex=0 \
 	-device virtio-tablet-pci -device virtio-keyboard-pci \
 	-netdev "user,id=net,hostfwd=tcp:127.0.0.1:$ssh_port-:22,hostfwd=tcp:127.0.0.1:$web_port-:8080" \
-	-device virtio-net-pci,netdev=net
+	-device virtio-net-pci,netdev=net,romfile= \
+	-fw_cfg name=opt/org.tianocore/IPv4PXESupport,string=n \
+	-fw_cfg name=opt/org.tianocore/IPv6PXESupport,string=n
 
 if [ -w /dev/kvm ]; then
 	set -- "$@" -enable-kvm -cpu host
@@ -209,7 +213,9 @@ fi
 set -- "$@" -pidfile "$cache/qemu.pid"
 
 # Audio through the desktop's PipeWire (or PulseAudio)
-if [ "$audio" != none ]; then
+if [ "$audio" = silent ]; then
+	set -- "$@" -audiodev none,id=snd -device intel-hda -device hda-duplex,audiodev=snd
+elif [ "$audio" != none ]; then
 	if command -v pw-cli >/dev/null; then
 		set -- "$@" -audiodev pipewire,id=snd
 	else
