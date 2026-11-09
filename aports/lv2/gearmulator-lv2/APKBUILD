@@ -35,6 +35,7 @@ makedepends="
 	libxext-dev
 	libxinerama-dev
 	libxrandr-dev
+	mesa-dev
 	samurai
 	"
 source="$pkgname-$_commit.tar.gz::https://github.com/dsp56300/gearmulator/archive/$_commit.tar.gz
@@ -89,6 +90,7 @@ build() {
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
 		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
 	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	# (mesa-dev: juce_opengl, GL/glx.h)
 	# GCC 15: uint32_t without <cstdint> (juceRmlUi)
 	export CXXFLAGS="$CXXFLAGS -include cstdint"
 	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
