@@ -53,7 +53,7 @@ i2s-mmap, the MIDI UART, miniuart-bt, dwc2, core_freq) and `include zynthian-kit
 overlays (sound card, display), written by step 4. Kernel command line from the kit too
 (`deviceinfo_kernel_cmdline` plus the kit's display options, through pmOS' cmdline.txt generation).
 
-### 3. zyncoder for the hardware: `zyncoder-hw`
+### 3. zyncoder for the hardware: `zyncoder-hw` (started 2026-11-10)
 
 One package with **one build of libzyncore.so per wiring layout** (the per-kit builds,
 `/usr/lib/zynthian/hw/<LAYOUT>/libzyncore.so`), against Alpine's `wiringpi` (community):
@@ -105,5 +105,6 @@ nura-builds' zynthian target gets the device (DEVICES `zynthian-rpi`): the kiosk
 - Alpine's `wiringpi` is WiringPi 3.16 from the same GitHub project ZynthianOS builds (the Pi 4 and
   Pi 5 are supported there): check zyncoder's use of its MCP23017 and I2C extensions on musl.
 - PipeWire with the HifiBerry and at small quanta on the Pi 4 (ZynthianOS uses jackd).
-- zynthian as the session user: everything zynthian-sys does as root (soundcard mixer, boot config,
-  rfkill, ...) needs a privileged helper or sudo rules.
+- zynthian as the session user: what zynthian-sys does as root (soundcard mixer, boot config, rfkill,
+  ...) runs with passwordless sudo for the zynthian user at first (the user's choice, 2026-11-10); a
+  narrower helper later.
