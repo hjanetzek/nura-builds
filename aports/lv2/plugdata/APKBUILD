@@ -123,7 +123,9 @@ build() {
 	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE \
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
 		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
-	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
+	# Pd's d_soundfile.h: with _LARGEFILE64_SOURCE off_t is __off64_t (glibc) unless HAVE_OFF64_T;
+	# musl has off64_t
+	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -DHAVE_OFF64_T=1"
 	cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQUICK_BUILD=ON
 	# at most 3 jobs: the JUCE translation units need ~1 GB each
 	cmake --build build --parallel 3 --target plugdata_standalone plugdata_LV2 plugdata_fx_LV2
