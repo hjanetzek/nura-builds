@@ -6,9 +6,9 @@
 # plugins/<name>/daf-plugin against DAF, Dusk's DPF fork, at the pinned commit; LV2 targets only),
 # and the GUI-less Chord Analyzer Headless. The DAF plugins are monolithic with an OpenGL UI.
 pkgname=dusk-audio-lv2
-_commit=e96abd98d25abaf53f2a2d93abc8c3399fed30d2
-_daf=c74776b463456e18e29a8f49dfe7e92f120a5bd8
-pkgver=0_git20261105
+_commit=c3546a58aabd688f76804d786883b01ac5dfee57
+_daf=0abd02e3d23372052c1025e841955d8f398a36bb
+pkgver=0_git20261108
 pkgrel=0
 pkgdesc="Dusk Audio LV2 plugins: tape, EQ, dynamics, reverb, chord analyzer"
 url="https://github.com/dusk-audio/dusk-audio-plugins"
@@ -63,6 +63,6 @@ package() {
 	find build-* -type d -path '*/bin/*.lv2' -prune -exec cp -r {} "$pkgdir"/usr/lib/lv2/ \;
 }
 sha512sums="
-4837c379ed8231c31a58c378e1a27f2f324da6c3c67db0858270dbc2cf509551754c25f45fe63bbe41b4a3623b315dc6c03576f51135abb20e7cca3ea3ac90d7  dusk-audio-lv2-e96abd98d25abaf53f2a2d93abc8c3399fed30d2.tar.gz
-68788c7c7a615d5e14bf9003bc8e281eaea4a995957ed31a3554f1590e1efead826d0ebe404919164161fbc44cc737a63a39ad03a3330ea66d4e0ab1579e9716  daf-c74776b463456e18e29a8f49dfe7e92f120a5bd8.tar.gz
+5a79ed6ccfdad142941eef64ccac8870df05f75b985f2d37b3a948b936265c34fc9a015bb27c5a563b2ab5ccab7dc045e4fbae9e314c0edcccb2fe88a3903f84  dusk-audio-lv2-c3546a58aabd688f76804d786883b01ac5dfee57.tar.gz
+8fa494da784a71405fa4a4716d9f00ba01fed8d99111861208f3ca28a5e5bf5deaa3a0591b4546ba96876b187fea593b2aac6ace274818acce8205b1d7e75363  daf-0abd02e3d23372052c1025e841955d8f398a36bb.tar.gz
 "
