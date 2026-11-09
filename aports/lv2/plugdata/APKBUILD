@@ -115,6 +115,10 @@ prepare() {
 	rm -rf Libraries/xz && mv "$srcdir"/xz-${_libraries_xz} Libraries/xz
 	rm -rf Libraries/fuzzysearchdatabase && mv "$srcdir"/j_norberg-fuzzysearchdatabase-${_libraries_fuzzysearchdatabase%"${_libraries_fuzzysearchdatabase#????????????}"} Libraries/fuzzysearchdatabase
 	default_prepare
+	# no LTO: the final links (standalone, two LV2 plugins) take longer than pmbootstrap's
+	# 900 s without output in CI
+	sed -i 's/^if (ipo_supported)$/if (FALSE)/' CMakeLists.txt
+	grep -q '^if (FALSE)$' CMakeLists.txt
 }
 
 build() {
@@ -132,16 +136,12 @@ build() {
 }
 
 package() {
-	local d app
-	# the standalone program (juce_add_gui_app, PRODUCT_NAME plugdata); it unpacks its resources
-	# (abstractions, help, fonts) into the user's ~/Documents/plugdata on the first start
-	app=$(find build -type f -name plugdata -perm -u+x -path '*Standalone*' -o -type f -name plugdata -perm -u+x -path '*plugdata_standalone_artefacts*' | head -n 1)
-	[ -n "$app" ] || die "standalone program not found"
-	install -Dm755 "$app" "$pkgdir"/usr/bin/plugdata
+	# outputs in Plugins/ (Standalone/plugdata, LV2/*.lv2). The standalone program unpacks its
+	# resources (abstractions, help, fonts) into the user's ~/Documents/plugdata on the first start.
+	install -Dm755 Plugins/Standalone/plugdata "$pkgdir"/usr/bin/plugdata
 	mkdir -p "$pkgdir"/usr/lib/lv2
-	for d in $(find build -type d -path '*/LV2/*.lv2' -prune); do
-		cp -r "$d" "$pkgdir"/usr/lib/lv2/
-	done
+	cp -r Plugins/LV2/plugdata.lv2 Plugins/LV2/plugdata-fx.lv2 "$pkgdir"/usr/lib/lv2/
+	[ -f "$pkgdir"/usr/lib/lv2/plugdata.lv2/manifest.ttl ] || die "plugdata.lv2: no manifest.ttl"
 }
 sha512sums="
 921bc9454d73126f0101adfd492af25c3bceeaf5a92a082cf475b529df47e82ed5eaad65f4b19869de4e382c29a86b433db07bf83bc61a458f9d024d4355e737  plugdata-49aa12ba90548bda319f48ebe34c588e5f481b19.tar.gz
