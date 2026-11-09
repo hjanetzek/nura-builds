@@ -1,0 +1,25 @@
+--- a/source/main.cc	2026-11-09 01:14:59.662547058 +0100
++++ b/source/main.cc	2026-11-09 01:14:59.673397374 +0100
+@@ -24,6 +24,7 @@
+ #include <ctype.h>
+ #include <string.h>
+ #include <sys/mman.h>
++#include <sys/resource.h>
+ #include <signal.h>
+ #include <clthreads.h>
+ #include <dlfcn.h>
+@@ -196,7 +197,13 @@
+         readconfig("/etc/aeolus.conf");
+     procoptions(ac, av, "On command line:");
+ 
+-    if (mlockall(MCL_CURRENT | MCL_FUTURE))
++    // MCL_FUTURE under a memlock limit (8 MB for a normal user) makes later mappings fail once
++    // the limit is reached: libpipewire's shared memory, then a crash in its protocol thread.
++    // Lock only without a limit (root, or a raised limit for the audio group).
++    struct rlimit rlim;
++    if (getrlimit(RLIMIT_MEMLOCK, &rlim) == 0 && rlim.rlim_cur != RLIM_INFINITY)
++        fprintf(stderr, "Warning: memory lock limited, memory not locked.\n");
++    else if (mlockall(MCL_CURRENT | MCL_FUTURE))
+         fprintf(stderr, "Warning: memory lock failed.\n");
+ 
+     if (t_opt)

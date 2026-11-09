@@ -4,6 +4,8 @@
 # (aeolus_x11.so, used when zynthian has a display for engine GUIs; else the text interface, -t).
 # The stops come from zynthian-data (aeolus/stops; the engine passes -S). Fons Adriaensen's
 # clthreads and clxclient aren't in Alpine: built here as shared libraries and installed with it.
+# mlock-memlock-limit.patch: mlockall(MCL_FUTURE) only without a memlock limit; under the user's
+# 8 MB limit later mappings fail and libpipewire crashes in its protocol thread.
 pkgname=aeolus
 pkgver=0.10.4_git20240522
 pkgrel=0
@@ -18,6 +20,7 @@ makedepends="alsa-lib-dev freetype-dev jack-dev libx11-dev libxft-dev readline-d
 source="aeolus-$_commit.tar.gz::https://github.com/zynthian/aeolus/archive/$_commit.tar.gz
 	https://kokkinizita.linuxaudio.org/linuxaudio/downloads/clthreads-$_clthreads.tar.bz2
 	https://kokkinizita.linuxaudio.org/linuxaudio/downloads/clxclient-$_clxclient.tar.bz2
+	mlock-memlock-limit.patch
 	"
 builddir="$srcdir/aeolus-$_commit"
 options="!check" # no tests
@@ -57,4 +60,5 @@ sha512sums="
 f46d6bf11091b75a7db6e2b4f9cdce25c62fe77c73fd31ab8a253b452e6a99633532cedd9d754fbb14fb010525b3c0a88734f1b39bd5b50360a44bd08de05baa  aeolus-0f543acedc8a4386d2ea3cdabcd0fd32e9fc0d77.tar.gz
 a91de7a287c2cb9b2ce17e4c158db79bbaeccb278510d11e6c05fcbe9295c26b4d0231fa97800b265decd1d0886b7425f7b5d4cbcb18758be540356408e72131  clthreads-2.4.2.tar.bz2
 38c2782e58df24c2dfcb936fc9cfe4d44016055fb1aa52ef8e789bf8ec327f45f2f7a91f18012e4b0c6f253f6f10329d6d1e9fc341017ace3f2b6fa050592049  clxclient-3.9.2.tar.bz2
+f639de733feeb253a98e1b8a686b19031d63bda764598a183a3de014db46fa8846ab9a5b7d37bc4d918ab32599e453d5cb0b662d4d88247ac479f7518af94bf4  mlock-memlock-limit.patch
 "
