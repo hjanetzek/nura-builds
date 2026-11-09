@@ -64,6 +64,7 @@ prepare() {
 	#pragma once
 	static inline int backtrace(void **buf, int size) { (void) buf; (void) size; return 0; }
 	static inline char **backtrace_symbols(void *const *buf, int size) { (void) buf; (void) size; return 0; }
+	static inline void backtrace_symbols_fd(void *const *buf, int size, int fd) { (void) buf; (void) size; (void) fd; }
 	EOF
 	# git submodules (outer ones first)
 	rm -rf source/cpu/dsp56300 && mv "$srcdir"/dsp56300-${_source_cpu_dsp56300} source/cpu/dsp56300
