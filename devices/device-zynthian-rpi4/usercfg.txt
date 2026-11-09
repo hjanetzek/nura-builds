@@ -1,0 +1,48 @@
+# zynthian on a Raspberry Pi 4 (device-zynthian-rpi4). The firmware's config.txt
+# (raspberrypi-bootloader) includes this file; ZynthianOS' common settings
+# (zynthian-sys boot/config.txt), the kit's overlays in zynthian-kit.txt.
+
+boot_delay=0
+arm_64bit=1
+kernel=vmlinuz-rpi
+initramfs initramfs
+
+# Overlays for detected DSI displays (the V5's panel)
+display_auto_detect=1
+# No video= from the firmware: the kernel's default, or the kit's on the command line
+disable_fw_kms_setup=1
+disable_overscan=1
+hdmi_force_hotplug=1
+disable_splash=1
+# As fast as the board allows, from the start
+arm_boost=1
+initial_turbo=30
+usb_max_current_enable=1
+# Fixed core clock: the SPI clock of the RGB LEDs doesn't fluctuate
+core_freq=500
+core_freq_min=500
+
+# The kits' interfaces: encoders, switches and ADCs on I2C, sound cards on I2S, displays and
+# LEDs on SPI
+dtparam=i2c_arm=on
+dtparam=i2s=on
+dtparam=spi=on
+# MMAP for the I2S sound cards
+dtoverlay=i2s-mmap
+
+# MIDI on the UART (ttyAMA0 on the GPIO header, 31250 baud); Bluetooth on the mini UART
+enable_uart=1
+dtoverlay=miniuart-bt
+dtoverlay=midi-uart0
+dtparam=krnbt=on
+# USB gadget (OTG) on the USB-C port
+dtoverlay=dwc2
+
+# The onboard audio (headphone jack)
+dtparam=audio=on
+audio_pwm_mode=2
+
+dtoverlay=vc4-kms-v3d
+
+# The kit: sound card and display overlays, written by zynthian's kit setup
+include zynthian-kit.txt

@@ -1,0 +1,8 @@
+# The zynthian kits' interfaces for the session user (zynthian doesn't run as root on Nura):
+# GPIO (wiringPi: /dev/gpiomem, the GPIO character devices), I2C (encoders, ADCs, headphone
+# amplifiers), SPI (displays, RGB LEDs), and the VideoCore (vchiq) as pmaports' raspberry-pi4
+SUBSYSTEM=="vchiq", GROUP="video", MODE="0660"
+KERNEL=="gpiomem", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="i2c-dev", GROUP="i2c", MODE="0660"
+SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"
