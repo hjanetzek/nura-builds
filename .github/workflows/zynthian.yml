@@ -8,7 +8,7 @@ name: zynthian
 on:
   workflow_dispatch:
     inputs:
-      zynthian-ui-ref: { description: "zynthian-ui branch", default: nura }
+      zynthian-ui-ref: { description: "zynthian-ui branch", default: main }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
       release: { description: "publish the images as a release", type: boolean, default: false }
       images: { description: "build the device images (off by default while the plugins settle)", type: boolean, default: false }
@@ -30,7 +30,7 @@ concurrency:
 env:
   NURA_ARCH: ${{ inputs.arch || 'aarch64' }}
   REBUILD: ${{ inputs.rebuild || github.event_name == 'schedule' }}
-  REFS: ZYNTHIAN_UI_REF=${{ inputs.zynthian-ui-ref || 'nura' }} ZYNCODER_REF=${{ inputs.zyncoder-ref || 'nura' }}
+  REFS: ZYNTHIAN_UI_REF=${{ inputs.zynthian-ui-ref || 'main' }} ZYNCODER_REF=${{ inputs.zyncoder-ref || 'nura' }}
 
 jobs:
   # Which stages have to run (scripts/plan.sh): a stage whose packages are cached under its exact

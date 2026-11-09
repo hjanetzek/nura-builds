@@ -102,7 +102,7 @@ Headless (`-D none`, serial console and PID file in the cache directory) for age
 with `-A silent` (a sound card without host output: `-A none` can stall PipeWire's graph);
 `nura/tools/qemu_setup.sh` installs an SSH key and passwordless sudo in a fresh VM, and
 `nura/tools/qemu_compare.sh` runs upstream zynthian (Tk) and the Qt port side by side at the V5 kit's
-800x480. How zynthian's agents test in a VM: zynthian-ui's [docs/qemu-testing.md](https://github.com/hjanetzek/zynthian-ui/blob/nura/docs/qemu-testing.md).
+800x480. How zynthian's agents test in a VM: zynthian-ui's [docs/qemu-testing.md](https://github.com/hjanetzek/zynthian-ui/blob/main/docs/qemu-testing.md).
 
 ## Building single packages
 

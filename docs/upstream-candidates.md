@@ -3,7 +3,7 @@
 Fixes in this repository's recipes (patches in `aports/`, or `sed` in a recipe's `prepare()`) that
 belong in the upstream projects, and upstream bugs noticed but not fixed here. Changes to zynthian
 itself are logged in zynthian-ui's
-[docs/upstream-candidates.md](https://github.com/hjanetzek/zynthian-ui/blob/nura/docs/upstream-candidates.md).
+[docs/upstream-candidates.md](https://github.com/hjanetzek/zynthian-ui/blob/main/docs/upstream-candidates.md).
 Keep it up to date with each fix: add a row when a recipe works around an upstream problem.
 
 Status: **ready** (a patch file, can be sent as is), **sed** (a `sed` in the recipe: needs a proper

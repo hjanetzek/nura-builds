@@ -33,7 +33,7 @@ has no Qt UI (postmarketos-ui-zynthian r16; the patched launcher falls back as w
 
 ## The patches
 
-The port's essentials from the nura branch of hjanetzek/zynthian-ui (written with
+The port's essentials from the main branch (formerly nura) of hjanetzek/zynthian-ui (written with
 `git format-patch`, one file per commit, each with its own description):
 
 - desktop mode (`ZYNTHIAN_DESKTOP=1`): no Raspberry Pi hardware, no update_zynthian_sys.sh, no

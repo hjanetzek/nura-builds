@@ -3,7 +3,7 @@
 # Source repositories: name, URL, branch (override with <NAME>_REF in the environment, e.g.
 # ZYNTHIAN_UI_REF=my-branch), recipe directory linked into pmaports ("-": none, sources only)
 REPOS="
-zynthian-ui https://github.com/hjanetzek/zynthian-ui nura nura
+zynthian-ui https://github.com/hjanetzek/zynthian-ui main nura
 zyncoder    https://github.com/hjanetzek/zyncoder    nura -
 drivenbymoss-rust https://github.com/hjanetzek/drivenbymoss-rust main nura
 zynthian-packages https://github.com/hjanetzek/zynthian-packages nura nura

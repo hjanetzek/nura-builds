@@ -14,7 +14,7 @@ on:
       previous-key: { type: string, default: "" }   # previous stage's cache key
       key: { type: string, default: "" }            # this stage's cache key (scripts/plan.sh)
       previous-cached: { type: boolean, default: false }  # previous job skipped: packages from the cache
-      refs: { type: string, default: "" }           # e.g. "ZYNTHIAN_UI_REF=nura ZYNCODER_REF=nura"
+      refs: { type: string, default: "" }           # e.g. "ZYNTHIAN_UI_REF=main ZYNCODER_REF=nura"
       arch: { type: string, default: aarch64 }      # aarch64 or x86_64 (the runner and NURA_ARCH)
       # Build from scratch, ignoring this stage's cache, and replace the cached packages under the
       # same key (the weekly rebuild: our packages against the current versions of Alpine's

@@ -11,7 +11,7 @@ on:
     inputs:
       packages: { description: "packages to build (pkgnames, space separated)", required: true }
       target: { description: "target (targets/<target>.sh)", default: zynthian }
-      zynthian-ui-ref: { description: "zynthian-ui branch", default: nura }
+      zynthian-ui-ref: { description: "zynthian-ui branch", default: main }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
       base: { description: "stage whose cached packages to start from", default: plugins }
   # Also called per package by plugin.yml (pushes to plugin-* branches)
@@ -19,7 +19,7 @@ on:
     inputs:
       packages: { type: string, required: true }
       target: { type: string, default: zynthian }
-      zynthian-ui-ref: { type: string, default: nura }
+      zynthian-ui-ref: { type: string, default: main }
       zyncoder-ref: { type: string, default: nura }
       base: { type: string, default: plugins }
 
