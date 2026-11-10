@@ -39,13 +39,15 @@ with the CI key `nura-builds-ci.rsa.pub`).
 
 ## Install (SD card)
 
-Locally with pmbootstrap, as for the Pi 4. Two links into your pmaports checkout
-(`pmbootstrap config aports`): the device packages (pmbootstrap only finds those below `device/`)
-and the kernel recipes:
+Locally with pmbootstrap, as for the Pi 4. Links into your pmaports checkout
+(`pmbootstrap config aports`): the device packages into a device category pmbootstrap knows
+(`init` lists only devices in `device/main`, `community`, `testing`, `downstream`; others, such as
+CI's `device/nura-builds`, it skips with a warning, though it still builds them), and the kernel
+recipes:
 
 ```
 P=$(pmbootstrap config aports)
-ln -sfn <nura-builds>/devices "$P/device/nura-builds"
+for d in device-odroid-n2 u-boot-odroid-n2; do ln -sfn <nura-builds>/devices/$d "$P/device/testing/$d"; done
 ln -sfn <nura-builds>/aports/kernel "$P/nura-builds-kernel"
 ```
 
