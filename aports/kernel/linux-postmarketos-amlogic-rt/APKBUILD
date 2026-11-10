@@ -21,6 +21,7 @@ options="!strip !check !tracedeps
 "
 depends="!linux-postmarketos-amlogic"
 makedepends="
+	bash
 	bc
 	bison
 	clang
