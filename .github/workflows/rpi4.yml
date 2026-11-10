@@ -1,0 +1,19 @@
+# Raspberry Pi 4 (targets/rpi4.sh, docs/zynthian-rpi.md): the PREEMPT_RT kernel linux-rpi-rt, as
+# an .apk artifact (apks-rpi4-kernel). Runs on pushes to rpi4-* branches and by hand; the zynthian
+# workflow only runs for main.
+name: rpi4
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["rpi4-*"]
+
+concurrency:
+  group: rpi4-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kernel:
+    uses: ./.github/workflows/stage.yml
+    with: { target: rpi4, stage: kernel }
+    secrets: inherit
