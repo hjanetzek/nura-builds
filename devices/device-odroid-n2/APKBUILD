@@ -4,11 +4,14 @@
 # firmware (u-boot-odroid-n2), and a kernel choice: linux-postmarketos-amlogic or its PREEMPT_RT
 # build linux-postmarketos-amlogic-rt (nura-builds aports/kernel). Swap on the device with
 #   apk add device-odroid-n2-kernel-amlogic-rt '!device-odroid-n2-kernel-amlogic'
+# kernel-cmdline.conf: cpufreq.default_governor=performance. With schedutil, its frequency-change
+# threads (deadline class, ahead of all real-time priorities) stalled CPUs 1 and 2 for up to 5.6 ms
+# in cyclictest; with fixed clocks the worst case was 21 us idle, 100 us under load.
 # Based on the N2+ package by hexaheximal <hexaheximal@proton.me>
 pkgname=device-odroid-n2
 pkgdesc="ODROID N2"
 pkgver=1
-pkgrel=0
+pkgrel=1
 url="https://postmarketos.org"
 license="MIT"
 arch="aarch64"
@@ -48,6 +51,6 @@ kernel_amlogic_rt() {
 
 sha512sums="
 84420cf4b73c07e69e58f5a3924bed6f16dc6f2e96b4dc958ec6b64e7f2838a932b5d041edc8e80fc6127eeff39691221b52ff691ac213a2f44dd1e0aa8d6448  deviceinfo
-8b6a07d15079b3884c65fcebfbc9b2e3fba822e5eb65d8c85198869edc357c3bdd456ec54f579a04de2a5bced62f32b7e251e61f571bb41a1768fb2dea9e3c9d  kernel-cmdline.conf
+5af6a4bcf0660d9b17517e74d4a4d6c1e4adb02afdf9df6fa5207a1c74ac91e8e4379d2bcabb61b0436a03d28f488450ead088c7e060da040701f9ab32911b45  kernel-cmdline.conf
 b9f3e1902c17909de928c99868265a257ba5873f6ea6aa1097ad10721f59d68342d50ee51992472ecd23722f7664a13dd15f4e26071a40595c7c3e5161e533d7  modules-initfs
 "
