@@ -14,6 +14,7 @@ on:
       zynthian-ui-ref: { description: "zynthian-ui branch", default: main }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
       base: { description: "stage whose cached packages to start from", default: plugins }
+      image: { description: "then build the image for this device (e.g. zynthian-rpi4) from these packages", default: "" }
   # Also called per package by plugin.yml (pushes to plugin-* branches)
   workflow_call:
     inputs:
@@ -22,6 +23,7 @@ on:
       zynthian-ui-ref: { type: string, default: main }
       zyncoder-ref: { type: string, default: nura }
       base: { type: string, default: plugins }
+      image: { type: string, default: "" }
 
 jobs:
   build:
@@ -92,6 +94,25 @@ jobs:
           # run id and package names: unique also when plugin.yml calls this once per package
           name: packages-${{ github.run_id }}-${{ inputs.packages }}
           path: /home/runner/nura-out/built
+          retention-days: 7
+
+      # An image from the base's packages and the ones just built (scripts/image.sh), without
+      # running the target's stages
+      - name: Image for ${{ inputs.image }}
+        if: inputs.image != ''
+        env:
+          DEVICE: ${{ inputs.image }}
+          NURA_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/image.sh "$DEVICE"
+
+      - name: Upload the image
+        if: inputs.image != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ github.run_id }}-${{ inputs.image }}
+          path: /home/runner/nura-out/*.img.zst
           retention-days: 7
 
       - name: Build log
