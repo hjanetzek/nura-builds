@@ -98,6 +98,21 @@ still render through its render node; only the copy to the panel's buffer is the
 | C. Wayland kiosk | cage | DRM `ili9486` | as on the Duet; the Tk UI through XWayland (one X server and compositor more) |
 | D. no display server | none: Qt's `linuxfb` | fbtft or DRM (dumb buffer) | Qt UI only, the lightest; no plugin GUIs (jalv's GTK windows need a display server) |
 
+**Measured, option A** (2026-11-10, ZynthianOS as installed on the user's V4-type kit: Raspbian 10,
+32-bit kernel 5.15.70-v7l, fbtft at 64 MHz with deferred I/O at 33 fps, Xorg fbdev, the Tk UI;
+zynthian-ui's `nura/tools/display_bench.sh`, which counts the bytes the SPI controller sends to the
+panel):
+
+| | Panel traffic | Full frames/s | CPU (one core) |
+|---|---|---|---|
+| Panel limit (fbtft, UI stopped, full frames written) | 39.3 MB in 6.8 s | 16.7-18.8 | |
+| UI idle (main menu) | 1.36 MB/s | 4.4 | |
+| UI scrolling a list (5 steps/s) | 2.18 MB/s | 7.1 | Xorg 0.9 %, UI 8.0 % |
+
+The idle UI keeps the panel a quarter busy: fbtft sends the full rows of every changed page
+(the top bar's CPU meter and clock), not the changed rectangle. A DRM driver sends the damage
+rectangles: options B to D should send much less at idle.
+
 Measure per option: frames per second of the panel at a full redraw and while scrolling a list
 (the UI's switch timing tools), CPU load of the UI and the display server/compositor
 (`nura/tools/thread_cpu.sh`), input latency of the touch panel, and xruns under audio load.
