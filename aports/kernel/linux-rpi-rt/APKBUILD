@@ -10,7 +10,7 @@
 pkgname=linux-rpi-rt
 pkgver=6.18.60
 _kernver=${pkgver%.*}
-pkgrel=0
+pkgrel=1
 pkgdesc="Linux kernel with Raspberry Pi patches, PREEMPT_RT"
 url="https://github.com/raspberrypi/linux"
 depends="initramfs-generator linux-firmware-brcm !linux-rpi"
@@ -199,6 +199,20 @@ package() {
 	# The same files as linux-rpi (vmlinuz-rpi, dtbs, overlays)
 	replaces="linux-rpi"
 	_package rpi "$pkgdir"
+
+	# linux-rpi's layout, whichever installkernel ran: Alpine's names the files after the
+	# release's suffix (vmlinuz-rpi-rt), the kernel's fallback (the build chroot's case) plainly
+	# (vmlinuz, config, System.map). The bootloader config (usercfg.txt) boots vmlinuz-rpi.
+	local _rel="$(cat "$pkgdir"/usr/share/kernel/rpi/kernel.release)" f
+	for f in vmlinuz vmlinuz-rpi-rt; do
+		[ ! -e "$pkgdir"/boot/$f ] || mv "$pkgdir"/boot/$f "$pkgdir"/boot/vmlinuz-rpi
+	done
+	for f in config System.map; do
+		[ ! -e "$pkgdir"/boot/$f ] || mv "$pkgdir"/boot/$f "$pkgdir"/boot/$f-$_rel
+		[ ! -e "$pkgdir"/boot/$f-rpi-rt ] || mv "$pkgdir"/boot/$f-rpi-rt "$pkgdir"/boot/$f-$_rel
+	done
+	echo "-rpi" > "$pkgdir"/lib/modules/$_rel/kernel-suffix
+	[ -e "$pkgdir"/boot/vmlinuz-rpi ] || die "no /boot/vmlinuz-rpi"
 }
 
 
