@@ -13,6 +13,10 @@ Targets so far:
 Next: the Google Pixel 3 (`google-blueline`), see [docs/google-blueline.md](docs/google-blueline.md):
 device status, USB OTG (missing on all SDM845 phones; patches on the kernel lists), plan.
 
+Also: the Hardkernel ODROID N2 (`odroid-n2`, a device package of ours; the N2+ is pmaports'), with
+a PREEMPT_RT build of the mainline Amlogic kernel, built on `odroid-*` branches; see
+[docs/odroid-n2.md](docs/odroid-n2.md) for the packages and the SD card install. Not run on an N2 yet.
+
 ## How it works
 
 - `targets/<target>.sh` names the source repositories (cloned into `$NURA_SRC`, recipe directories
