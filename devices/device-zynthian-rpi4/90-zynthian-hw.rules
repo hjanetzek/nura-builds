@@ -6,3 +6,6 @@ KERNEL=="gpiomem", GROUP="gpio", MODE="0660"
 SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
 SUBSYSTEM=="i2c-dev", GROUP="i2c", MODE="0660"
 SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"
+# The V4 kit's SPI panel through DRM (zynscreen-drm overlay): a stable name for the kiosk's
+# compositor (/dev/dri/card0 and card1 depend on the probe order with vc4's HDMI)
+SUBSYSTEM=="drm", KERNEL=="card[0-9]*", DRIVERS=="ili9486", SYMLINK+="dri/zynscreen"

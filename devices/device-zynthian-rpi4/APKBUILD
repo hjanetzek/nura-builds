@@ -10,7 +10,7 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=1
+pkgrel=2
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT"
 arch="aarch64"
@@ -31,6 +31,7 @@ source="
 	zynthian-kit.txt
 	90-zynthian-hw.rules
 	zynscreen-drm-overlay.dts
+	50-zynthian-rpi4-drm.sh
 	"
 
 build() {
@@ -45,6 +46,8 @@ package() {
 	install -Dm644 "$srcdir"/zynthian-kit.txt "$pkgdir"/usr/share/$pkgname/zynthian-kit.txt
 	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
 	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
+	install -Dm644 "$srcdir"/50-zynthian-rpi4-drm.sh \
+		"$pkgdir"/usr/share/tinydm/env-wayland.d/50-zynthian-rpi4-drm.sh
 }
 sha512sums="
 15526ab26d0ce1a9295ed5539e05de0c142aba15d3c113217058f22a6a1bd6180105e85027a1dc664a45a038334f81e5501af52c447521cfdeaa23b33bfd389a  deviceinfo
@@ -52,6 +55,7 @@ sha512sums="
 e3515cf9f41807917eac1f7663e0131bd18783824facf15f2bb0381635bf6d9a0c334f3786b6fb76d01469de6449878c871f8b747f45e9e3cee77699905cf319  modules-initfs
 5933a59917bae3ab06f2434a0443688ddb7b236d7beb769f88ecafaf671c15223e74154301d1a403f1678e7fd4ea36f268ae13118a4e1555d9417851d30c040b  usercfg.txt
 255dc119239738eb075bc6ca332afd399b9042ff0743e3fde6587a41c5a36abe449441f73571030b3ff603e358beeac5f57ca16c4b03de31dccda91ca6a045dd  zynthian-kit.txt
-6c5600d0bdc3cbb2b1a77c8206075c370635516f4b71ee30819ba25d6bf5f627ce79e1e33e49c82056c8c007356d59a55fa7f491de1b1c4cf519bdba691fe42f  90-zynthian-hw.rules
+9a7fcd1fe663312122e5f960d52bc88bf44741628de288061f326936d56ca031c57a0e63f1eddf45033192236d73c67cba6f25dd3a7eac078c99cd47f2644429  90-zynthian-hw.rules
 8159a964c62469b3f9d66b0f1e065206aeadd502cf2ca5b7d36e473c6d792520bf0261003e0d2839e33cf17cf732a97b9f4d13340e51264f2c351101c976895d  zynscreen-drm-overlay.dts
+f7d160f2290fc84be4b502520c697a81a1994ca8f3876faab48d05fb07e22ef6995f8fa011aa32ada125a935324d71aba6f450194812189c4c7146f123a79c9f  50-zynthian-rpi4-drm.sh
 "
