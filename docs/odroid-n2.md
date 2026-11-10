@@ -39,10 +39,20 @@ with the CI key `nura-builds-ci.rsa.pub`).
 
 ## Install (SD card)
 
-Locally with pmbootstrap, as for the Pi 4. pmbootstrap finds the device package in
-`device/nura-builds` of pmaports, a link to this checkout's `devices/` (`scripts/setup.sh` makes
-it; or `ln -sfn <nura-builds>/devices <pmaports>/device/nura-builds`), and the kernel in
-`nura-builds` (the link to `aports/`).
+Locally with pmbootstrap, as for the Pi 4. Two links into your pmaports checkout
+(`pmbootstrap config aports`): the device packages (pmbootstrap only finds those below `device/`)
+and the kernel recipes:
+
+```
+P=$(pmbootstrap config aports)
+ln -sfn <nura-builds>/devices "$P/device/nura-builds"
+ln -sfn <nura-builds>/aports/kernel "$P/nura-builds-kernel"
+```
+
+Don't run `scripts/setup.sh` for this: it is for CI's own work directory and links the target's
+repositories (by default the `zynthian` target's, cloned into `~/nura-src`) and all of `aports/`
+into the pmaports it is given. Next to links of your own (e.g. `nura-builds-lv2`) pmbootstrap then
+finds recipes twice ("found in multiple aports subfolders").
 
 1. A config of its own, e.g. `~/.config/pmbootstrap-odroid-n2.cfg`:
 
