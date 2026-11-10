@@ -12,7 +12,8 @@
 # - the kit's hardware settings (ZYNTHIAN_KIT_VERSION, ZYNTHIAN_WIRING_*, SOUNDCARD_*, DISPLAY_*,
 #   the UI settings that depend on the display) into the user's zynthian_envars.sh, keeping the
 #   other settings; zyncore.py then loads the layout's build of zyncoder-hw;
-# - the sound card and display overlays to /boot/zynthian-kit.txt (included by usercfg.txt),
+# - the sound card and display overlays to /boot/zynthian-kit.txt (included by usercfg.txt), and
+#   the onboard audio (headphone jack) unless the user's ZYNTHIAN_DISABLE_RBPI_AUDIO is 1;
 #   the display's kernel options to /etc/kernel-cmdline.d/90-zynthian-kit.conf;
 # - the user into the groups gpio, i2c, spi (the kit's interfaces) and audio.
 # The boot settings take effect after a reboot.
@@ -83,6 +84,7 @@ echo "kit $kit: hardware settings in $envars"
 soundcard=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${SOUNDCARD_CONFIG:-}"' sh "$kit_file")
 display=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_CONFIG:-}"' sh "$kit_file")
 cmdline=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_KERNEL_OPTIONS:-}"' sh "$kit_file")
+rbpi_audio_off=$(sed -n 's/^export ZYNTHIAN_DISABLE_RBPI_AUDIO="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$envars" | tail -n 1)
 # The ZynScreen 3.5 (piscreen2r: fbtft, a framebuffer only) through DRM where the device has the
 # overlay (device-zynthian-rpi4: zynscreen-drm, the kernel's ili9486 driver, touch included):
 # Wayland compositors need DRM
@@ -96,6 +98,13 @@ esac
 	printf '%b\n' "$soundcard"
 	echo "# Display"
 	printf '%b\n' "$display"
+	# As ZynthianOS (update_zynthian_sys.sh): a user setting (webconf), not the kit's
+	echo "# Onboard audio"
+	if [ "$rbpi_audio_off" = 1 ]; then
+		echo "dtparam=audio=off"
+	else
+		printf '%s\n' "dtparam=audio=on" "audio_pwm_mode=2"
+	fi
 } > "$tmp"
 if [ $dry = 1 ]; then
 	echo "--- $boot_kit"; cat "$tmp"

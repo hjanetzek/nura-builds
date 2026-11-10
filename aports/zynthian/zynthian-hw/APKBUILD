@@ -6,7 +6,7 @@
 # what zynthian does as root on ZynthianOS (a first step). Plan: nura-builds docs/zynthian-rpi.md.
 pkgname=zynthian-hw
 pkgver=1
-pkgrel=1
+pkgrel=2
 pkgdesc="zynthian hardware support: kit selection, zyncoder for the kits"
 url="https://github.com/hjanetzek/zynthian-ui"
 arch="aarch64"
