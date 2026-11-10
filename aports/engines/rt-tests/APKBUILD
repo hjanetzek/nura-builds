@@ -1,0 +1,28 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# The kernel's real-time test tools (cyclictest, hackbench, oslat, ...), to measure scheduling
+# latency on the zynthian devices: linux-rpi-rt (PREEMPT_RT) against linux-rpi on the Pi 4
+# (docs/zynthian-rpi.md). Not an engine: in aports/engines only for the plugin-* CI builds; not in
+# any image. Without python3 (hwlatdetect, get_cyclictest_snapshot), which the Makefile then skips.
+pkgname=rt-tests
+pkgver=2.11
+pkgrel=0
+pkgdesc="Programs that test various real-time Linux features (cyclictest, hackbench, ...)"
+url="https://wiki.linuxfoundation.org/realtime/documentation/howto/tools/rt-tests"
+arch="all"
+license="GPL-2.0-only"
+makedepends="linux-headers numactl-dev"
+subpackages="$pkgname-doc"
+options="!check" # tests need root and real-time scheduling
+source="https://www.kernel.org/pub/linux/utils/rt-tests/rt-tests-$pkgver.tar.xz"
+
+build() {
+	make PYLIB= prefix=/usr
+}
+
+package() {
+	make PYLIB= prefix=/usr DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+541a47585fd87ae6998d7359a311a0c5a3b89cc3f7d7f43d9b3e63d2ec8172a009e2f8bbabc2c798f5f5e42cb5b38124b23a2ecb4be06faba51749709988113e  rt-tests-2.11.tar.xz
+"
