@@ -14,6 +14,8 @@ INPUTS_kernel="aports/kernel/linux-rpi-rt"
 # Packages published as their own artifact (the .apk files), per stage
 PUBLISH_kernel="linux-rpi-rt linux-rpi-rt-dev"
 
-# Images: none (the Pi image is built locally, docs/zynthian-rpi.md)
+# Images: none (the Pi image is built locally, docs/zynthian-rpi.md). The device only sets up
+# pmbootstrap (aarch64): not raspberry-pi4, a downstream port, whose confirmation prompt
+# pmbootstrap init (answered with the defaults in setup.sh) keeps repeating
 UI=none
-DEVICES="raspberry-pi4"
+DEVICES="qemu-aarch64"
