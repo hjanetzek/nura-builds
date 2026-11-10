@@ -10,6 +10,10 @@
 device=$1
 pmb config device "$device"
 pmb config ui "$UI"
+# The device's extra packages (targets: EXTRA_PACKAGES_<device, - as _>), e.g. zynthian-hw
+eval "extra=\${EXTRA_PACKAGES_$(echo "$device" | tr - _):-}"
+# shellcheck disable=SC2154 # set by eval
+pmb config extra_packages "${extra:-none}"
 pmb install --password "${NURA_PASSWORD:-147147}"
 
 img="$NURA_WORK/chroot_native/home/pmos/rootfs/$device.img"

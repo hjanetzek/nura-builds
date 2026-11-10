@@ -63,8 +63,10 @@ REBUILD_STAGES="qt1 qt2 qt3 pyside"
 
 # Images: pmbootstrap UI and the devices (pmaports device names)
 UI=zynthian
-DEVICES="google-kukui"
+DEVICES="google-kukui zynthian-rpi4"
 # amd64: the QEMU virtual machine (zynthian-ui's nura/tools/run_qemu.sh), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
-# zynthian-rpi4 (devices/device-zynthian-rpi4, docs/zynthian-rpi.md): add it here and to the image
-# job's device matrix (zynthian.yml) once it boots
+# zynthian-rpi4: zynthian on a Raspberry Pi 4 with a zynthian kit (devices/device-zynthian-rpi4,
+# docs/zynthian-rpi.md); the image job's device matrix (zynthian.yml) lists the devices too.
+# Extra packages of a device's image: EXTRA_PACKAGES_<device, - as _>
+EXTRA_PACKAGES_zynthian_rpi4="zynthian-hw"
