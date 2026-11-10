@@ -1,0 +1,39 @@
+--- a/src/cyclictest/cyclictest.c
++++ b/src/cyclictest/cyclictest.c
+@@ -57,7 +57,10 @@
+ #define CLOCK_AUX 16
+ #endif
+ 
++/* glibc and musl define it; only the old glibc headers lack it */
++#ifndef sigev_notify_thread_id
+ #define sigev_notify_thread_id _sigev_un._tid
++#endif
+ 
+ #ifdef __UCLIBC__
+ #define MAKE_PROCESS_CPUCLOCK(pid, clock) \
+--- a/src/hackbench/hackbench.c
++++ b/src/hackbench/hackbench.c
+@@ -128,9 +128,9 @@
+ 	sin.sin_port = 0;
+ 	sin.sin_addr.s_addr = inet_addr("127.0.0.1");
+ 
+-	if (bind(s1, &sin, len) < 0)
++	if (bind(s1, (struct sockaddr *)&sin, len) < 0)
+ 		barf("bind");
+-	if (getsockname(s1, &sin, &len) < 0)
++	if (getsockname(s1, (struct sockaddr *)&sin, &len) < 0)
+ 		barf("getsockname");
+ 	if (listen(s1, 10) < 0)
+ 		barf("listen");
+@@ -138,9 +138,9 @@
+ 		barf("ioctl");
+ 	if (ioctl(s1, FIONBIO, &ul) < 0)
+ 		barf("ioctl");
+-	if (connect(s2, &sin, len) < 0)
++	if (connect(s2, (struct sockaddr *)&sin, len) < 0)
+ 		barf("connect");
+-	if ((fds[0] = accept(s1, &sin, &len)) < 0)
++	if ((fds[0] = accept(s1, (struct sockaddr *)&sin, &len)) < 0)
+ 		barf("accept");
+ 	ul = 0;
+ 	if (ioctl(s2, FIONBIO, &ul) < 0)

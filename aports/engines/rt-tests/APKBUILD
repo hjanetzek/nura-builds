@@ -3,9 +3,10 @@
 # latency on the zynthian devices: linux-rpi-rt (PREEMPT_RT) against linux-rpi on the Pi 4
 # (docs/zynthian-rpi.md). Not an engine: in aports/engines only for the plugin-* CI builds; not in
 # any image. Without python3 (hwlatdetect, get_cyclictest_snapshot), which the Makefile then skips.
-# musl: cyclictest's fallback define of sigev_notify_thread_id (glibc's internal field) only where
-# the C library lacks it (patch); pi_stress left out (needs _POSIX_THREAD_PRIO_INHERIT, which musl
-# doesn't define).
+# musl (musl.patch): cyclictest's fallback define of sigev_notify_thread_id (glibc's internal
+# field) only where the C library lacks it; hackbench's sockaddr_in to the socket calls through
+# struct sockaddr * (glibc's transparent union accepts it, musl and GCC 14 don't). pi_stress left
+# out (needs _POSIX_THREAD_PRIO_INHERIT, which musl doesn't define).
 pkgname=rt-tests
 pkgver=2.11
 pkgrel=0
@@ -17,7 +18,7 @@ makedepends="linux-headers numactl-dev"
 subpackages="$pkgname-doc"
 options="!check" # tests need root and real-time scheduling
 source="https://www.kernel.org/pub/linux/utils/rt-tests/rt-tests-$pkgver.tar.xz
-	cyclictest-musl-sigev_notify_thread_id.patch
+	musl.patch
 	"
 # The Makefile's sources without pi_stress.c
 _sources="cyclictest.c hackbench.c pip_stress.c pmqtest.c ptsematest.c rt-migrate-test.c
@@ -36,5 +37,5 @@ package() {
 
 sha512sums="
 541a47585fd87ae6998d7359a311a0c5a3b89cc3f7d7f43d9b3e63d2ec8172a009e2f8bbabc2c798f5f5e42cb5b38124b23a2ecb4be06faba51749709988113e  rt-tests-2.11.tar.xz
-e61804eb786b96e729c1612f4310ac475fc304df816dfc4f19ca0e73fe01fc6ad933c7e51fef8d4dadf0c4b014d6ba2798dee7c15f2449dba632ef483ec04339  cyclictest-musl-sigev_notify_thread_id.patch
+cb74f8fd2e767125d50e3eaabebd1380964bcd3c3d3a491fc8944dfaac35e66257780a5f85af668e30cb3d942fbd972a91cd2be4c84504f4d19e802f79467f9e  musl.patch
 "
