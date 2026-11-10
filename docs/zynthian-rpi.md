@@ -122,6 +122,68 @@ Measure per option: frames per second of the panel at a full redraw and while sc
 nura-builds' zynthian target gets the device (DEVICES `zynthian-rpi`): the kiosk image with
 `zynthian-hw`; the kit chosen at first boot (`zynthian-kit auto`) or in the admin menu.
 
+## Findings on the Pi 4 (2026-11-10)
+
+Nura on the user's V4-type kit (Pi 4 2 GB, HifiBerry DAC+ ADC non-Pro, ZynScreen 3.5, MCP23017 at
+0x20 with interrupts on GPIO 27/4; Zynaptik-2 at 0x21/0x48/0x60 unused). Hardware data: the user's
+`~/bastel/cynthian/port/hal/zynthian_v4/HARDWARE.md` and `dumps/` (read from ZynthianOS).
+
+Setup: stock pmbootstrap image (`~/.config/pmbootstrap-zynthian-rpi4.cfg`: device raspberry-pi4,
+UI console, hostname zynthian-rpi4, user jeff), the nura-builds repository and key added, the kiosk
+(postmarketos-ui-zynthian) from it; device-zynthian-rpi4, zyncoder-hw, zynthian-hw built locally
+(`nura/deploy.sh -c ~/.config/pmbootstrap-zynthian-rpi4.cfg -H zynthian-rpi4.local -u jeff ...`;
+the device recipe from the branch `merge-device`, linked into the local pmaports as
+`device/nura-builds`). The device swap: `apk add device-zynthian-rpi4.apk '!device-raspberry-pi4'
+'!device-raspberry-pi4-udev'` (one transaction: linux-rpi and the firmware stay).
+
+What works: linux-rpi 6.18.58 boots with our usercfg.txt; HifiBerry DAC+ADC; the MCP23017 through
+zyncoder-hw (`MCP23017_ZynScreen`, wiringPi 3.16): zyncore sets up 8 switches and 4 encoders and
+the interrupts fire (counted in /proc/interrupts); ads7846 touch; the panel through fbtft
+(`piscreen2r,rotate=270`); the Qt UI on Qt's linuxfb (option D) **runs surprisingly well**, but
+needs another theme for 480x320.
+
+Problems found and fixed:
+- zyncoder-hw had no wiringPi: a `case $CARCH` added wiringpi-dev to makedepends, which
+  pmbootstrap reads statically: the kit builds used zyncoder's stand-in (no GPIO/I2C). Now its own
+  recipe (zynthian-ui `nura/zyncoder-hw`), failing if a build lacks libwiringPi.
+- No /dev/i2c-1: i2c-dev wasn't loaded. The device package loads it now (modules-load.d, r3). With
+  the real wiringPi a missing I2C device *exits* zynthian (the stand-in only failed).
+- zynthian-kit created zynthian_envars.sh before the first start: the launcher's setup was skipped
+  (no midi-profiles: the UI crashed). It runs zynthian's setup now.
+- Output scale 1.5 (the Duet's) on the Pi: the kiosk session uses 1 on Raspberry Pis (r22).
+- Touch flipped on both axes (as on ZynthianOS, where X has a calibration matrix): libinput needs
+  `LIBINPUT_CALIBRATION_MATRIX="-1 0 1 0 -1 1"` for the ADS7846 (a udev rule; Qt's evdev rotate
+  parameter is ignored, Qt uses libinput). On the Pi as /etc/udev/rules.d/91-zynscreen-touch.rules;
+  still to add to the device package.
+
+Open:
+- **DRM ili9486 (zynscreen-drm overlay)**: the driver binds (card, /dev/dri/zynscreen, backlight on,
+  cage runs on it, SPI traffic flows) but the panel stays white, at 64 and 32 MHz: its init
+  sequence (the original PiScreen / Waveshare 3.5") doesn't suit this panel revision; piscreen2r's
+  sequence (in the cynthian dumps) differs (power control, 0xB6 display function control, ...).
+  Needs the ili9486 driver with that sequence (the panel's 16-bit bus interface rules out the
+  generic panel-mipi-dbi). Until then: fbtft, so no cage (options B, C).
+- **Encoders and switches do nothing in the Qt UI**: the hardware events arrive, but the Qt UI has
+  no hardware input loop (TODO in `~/bastel/github/zynthian-stuff/TODO.md`; another agent takes it).
+- **The on-screen keypad** gets its actions only with touch navigation
+  (`ZYNTHIAN_UI_TOUCH_NAVIGATION=v5_keypad_left/right`: wiring-profiles/v5 and 24 virtual switches,
+  zynthian_gui_config.py); the V4 kit turns it off, the Custom kit has it (keypad works).
+- The kiosk on fbtft: cage needs DRM; option D runs zynthian outside the kiosk for now: a user
+  service (`systemd-run --user --unit=zynthian-linuxfb -E QT_QPA_PLATFORM=linuxfb:fb=/dev/fb0:nographicsmodeswitch
+  -E QT_QPA_FB_HIDECURSOR=1 -E ZYNTHIAN_UI=qt -E ZYNTHIAN_FULLSCREEN=1 /usr/bin/zynthian`), with
+  `loginctl enable-linger jeff` (else the user's systemd, PipeWire with it, stops with the last SSH
+  login), fbcon unbound from fb0 (`echo 0 > /sys/class/vtconsole/vtcon1/bind`: the blinking cursor),
+  jeff in video and input. A kiosk mode for linuxfb (and the X11 option A) would make it a session.
+- The device-zynthian-rpi4 commits (device, setup.sh link, zynthian-hw and zyncoder-hw in the
+  zynthian stage) are on the nura-builds branch `merge-device`, not yet in main (pushed after the
+  running Qt rebuild).
+
+**Measured, option D** (Qt UI, Qt linuxfb on fbtft, Nura): idle 0.03 MB/s (0.09 full frames/s),
+scrolling 0.62 MB/s (2.0 frames/s), UI 19 % CPU. Option C (cage on DRM, panel white but traffic
+measurable): idle 1.07 MB/s, scrolling 1.98 MB/s, UI 26 %, cage 0.9 %. Without a compositor Qt
+flushes only the changed rectangles, and fbtft sends only those pages. (Not the same screens:
+C on the Add Chain menu, D on the mixer; Tk against Qt for A.)
+
 ## Order
 
 1. `zyncoder-hw` with the V4 layout, built in CI (wiringpi, musl).
