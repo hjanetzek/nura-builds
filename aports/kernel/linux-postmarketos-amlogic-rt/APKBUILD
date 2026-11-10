@@ -46,7 +46,7 @@ _config="
 	pmos.config
 "
 source="
-	$pkgname-$pkgver.tar.xz::https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-$pkgver.tar.xz
+	linux-postmarketos-amlogic-$pkgver.tar.xz::https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-$pkgver.tar.xz
 	$_config
 	0001-add-x96-mini-support.patch
 	0002-add-initial-support-for-zte-b860hv5.patch
