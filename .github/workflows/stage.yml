@@ -177,8 +177,13 @@ jobs:
           eval "names=\${PUBLISH_${{ inputs.stage }}:-}"
           if [ -n "$names" ]; then
             mkdir -p "$NURA_OUT/publish"
+            # Only the newest version of each package: the repository also holds the versions a
+            # partial cache match brought in (an earlier pkgrel)
+            tar -tf "$NURA_OUT/packages.tar" > "$NURA_OUT/publish.list"
             for n in $names; do
-              tar -C "$NURA_OUT/publish" -xf "$NURA_OUT/packages.tar" --wildcards --no-anchored "*/$n-[0-9]*.apk"
+              f=$(grep -E "(^|/)$n-[0-9][^/]*\.apk$" "$NURA_OUT/publish.list" | sort -V | tail -n 1)
+              [ -n "$f" ] || { echo "no package $n in the stage's repository" >&2; exit 1; }
+              tar -C "$NURA_OUT/publish" -xf "$NURA_OUT/packages.tar" "$f"
             done
             find "$NURA_OUT/publish" -name "*.apk" -exec ls -la {} +
             echo "dir=$NURA_OUT/publish" >> "$GITHUB_OUTPUT"
