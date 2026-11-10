@@ -6,10 +6,12 @@
 # musl (musl.patch): cyclictest's fallback define of sigev_notify_thread_id (glibc's internal
 # field) only where the C library lacks it; hackbench's sockaddr_in to the socket calls through
 # struct sockaddr * (glibc's transparent union accepts it, musl and GCC 14 don't). pi_stress left
-# out (needs _POSIX_THREAD_PRIO_INHERIT, which musl doesn't define).
+# out (needs _POSIX_THREAD_PRIO_INHERIT, which musl doesn't define). musl-sched.h, included first:
+# the sched_* calls as system calls (musl's return ENOSYS; cyclictest: "unable to get scheduler
+# parameters").
 pkgname=rt-tests
 pkgver=2.11
-pkgrel=0
+pkgrel=1
 pkgdesc="Programs that test various real-time Linux features (cyclictest, hackbench, ...)"
 url="https://wiki.linuxfoundation.org/realtime/documentation/howto/tools/rt-tests"
 arch="all"
@@ -19,6 +21,7 @@ subpackages="$pkgname-doc"
 options="!check" # tests need root and real-time scheduling
 source="https://www.kernel.org/pub/linux/utils/rt-tests/rt-tests-$pkgver.tar.xz
 	musl.patch
+	musl-sched.h
 	"
 # The Makefile's sources without pi_stress.c
 _sources="cyclictest.c hackbench.c pip_stress.c pmqtest.c ptsematest.c rt-migrate-test.c
@@ -26,11 +29,13 @@ _sources="cyclictest.c hackbench.c pip_stress.c pmqtest.c ptsematest.c rt-migrat
 	oslat.c"
 
 build() {
-	make PYLIB= prefix=/usr sources="$(echo $_sources)"
+	CPPFLAGS="$CPPFLAGS -include $srcdir/musl-sched.h" \
+		make PYLIB= prefix=/usr sources="$(echo $_sources)"
 }
 
 package() {
-	make PYLIB= prefix=/usr sources="$(echo $_sources)" DESTDIR="$pkgdir" install
+	CPPFLAGS="$CPPFLAGS -include $srcdir/musl-sched.h" \
+		make PYLIB= prefix=/usr sources="$(echo $_sources)" DESTDIR="$pkgdir" install
 	# its man page (installed with the others)
 	rm -f "$pkgdir"/usr/share/man/man8/pi_stress.8*
 }
@@ -38,4 +43,5 @@ package() {
 sha512sums="
 541a47585fd87ae6998d7359a311a0c5a3b89cc3f7d7f43d9b3e63d2ec8172a009e2f8bbabc2c798f5f5e42cb5b38124b23a2ecb4be06faba51749709988113e  rt-tests-2.11.tar.xz
 cb74f8fd2e767125d50e3eaabebd1380964bcd3c3d3a491fc8944dfaac35e66257780a5f85af668e30cb3d942fbd972a91cd2be4c84504f4d19e802f79467f9e  musl.patch
+f5c544c46ac1b7a4def094e85ad56028ab61bd76e1707880915e71f8dc9d1e920b2bc0998574457ced97ca345fbad7f0b291fb9e393c2775aa8015bf8287b91c  musl-sched.h
 "
