@@ -1,0 +1,19 @@
+# ODROID N2/N2+ (targets/odroid-n2.sh): the PREEMPT_RT kernel linux-postmarketos-amlogic-rt, as an
+# .apk artifact (apks-odroid-n2-kernel). Runs on pushes to odroid-* branches and by hand; the
+# zynthian workflow only runs for main.
+name: odroid-n2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["odroid-*"]
+
+concurrency:
+  group: odroid-n2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kernel:
+    uses: ./.github/workflows/stage.yml
+    with: { target: odroid-n2, stage: kernel }
+    secrets: inherit
