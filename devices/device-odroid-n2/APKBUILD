@@ -1,0 +1,53 @@
+# Reference: <https://postmarketos.org/devicepkg>
+# nura-builds: the plain ODROID N2 (S922X, 2019), from pmaports' device/testing/device-odroid-n2plus
+# 6-r0 (pmaports 286d3b4ecc): the N2's dtb (meson-g12b-odroid-n2), U-Boot with the N2's boot
+# firmware (u-boot-odroid-n2), and a kernel choice: linux-postmarketos-amlogic or its PREEMPT_RT
+# build linux-postmarketos-amlogic-rt (nura-builds aports/kernel). Swap on the device with
+#   apk add device-odroid-n2-kernel-amlogic-rt '!device-odroid-n2-kernel-amlogic'
+# Based on the N2+ package by hexaheximal <hexaheximal@proton.me>
+pkgname=device-odroid-n2
+pkgdesc="ODROID N2"
+pkgver=1
+pkgrel=0
+url="https://postmarketos.org"
+license="MIT"
+arch="aarch64"
+options="!check !archcheck"
+depends="
+	linux-firmware-meson
+	postmarketos-base
+	soc-amlogic-aarch64
+	u-boot-odroid-n2
+	"
+makedepends="devicepkg-dev"
+subpackages="
+	$pkgname-kernel-amlogic:kernel_amlogic
+	$pkgname-kernel-amlogic-rt:kernel_amlogic_rt
+	"
+source="deviceinfo kernel-cmdline.conf modules-initfs"
+
+build() {
+	devicepkg_build $startdir $pkgname
+}
+
+package() {
+	devicepkg_package $startdir $pkgname
+}
+
+kernel_amlogic() {
+	pkgdesc="postmarketOS' mainline kernel for Amlogic devices (PREEMPT)"
+	depends="linux-postmarketos-amlogic"
+	devicepkg_subpackage_kernel $startdir $pkgname $subpkgname
+}
+
+kernel_amlogic_rt() {
+	pkgdesc="The mainline Amlogic kernel with PREEMPT_RT (linux-postmarketos-amlogic-rt), for low audio latency"
+	depends="linux-postmarketos-amlogic-rt"
+	devicepkg_subpackage_kernel $startdir $pkgname $subpkgname
+}
+
+sha512sums="
+84420cf4b73c07e69e58f5a3924bed6f16dc6f2e96b4dc958ec6b64e7f2838a932b5d041edc8e80fc6127eeff39691221b52ff691ac213a2f44dd1e0aa8d6448  deviceinfo
+8b6a07d15079b3884c65fcebfbc9b2e3fba822e5eb65d8c85198869edc357c3bdd456ec54f579a04de2a5bced62f32b7e251e61f571bb41a1768fb2dea9e3c9d  kernel-cmdline.conf
+b9f3e1902c17909de928c99868265a257ba5873f6ea6aa1097ad10721f59d68342d50ee51992472ecd23722f7664a13dd15f4e26071a40595c7c3e5161e533d7  modules-initfs
+"

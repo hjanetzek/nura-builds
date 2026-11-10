@@ -99,6 +99,8 @@ fi
 # Recipe directories into pmaports
 aports=$(pmbootstrap -c "$CFG" config aports)
 ln -sfn "$here/aports" "$aports/nura-builds"
+# Device packages: pmbootstrap looks for them in device/<category>/device-<codename> only
+ln -sfn "$here/devices" "$aports/device/nura-builds"
 echo "$REPOS" | while read -r name url branch recipes; do
 	[ -n "$name" ] && [ "$recipes" != "-" ] || continue
 	ln -sfn "$NURA_SRC/$name/$recipes" "$aports/$name"
