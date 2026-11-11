@@ -8,13 +8,12 @@ pkgname=device-samsung-s3ve3g
 pkgdesc="Samsung Galaxy S III Neo"
 # nura-builds: pmaports' pkgver 4 + 100
 pkgver=104
-pkgrel=5
+pkgrel=6
 url="https://postmarketos.org"
 license="MIT"
 arch="armv7"
 options="!check !archcheck"
 depends="
-	dtbtool
 	firmware-qcom-adreno-a330
 	linux-postmarketos-qcom-msm8226
 	mkbootimg
@@ -38,7 +37,7 @@ package() {
 }
 
 sha512sums="
-769f65e98a917808f92fbe2f6c58d902f1853145eec1872cc80e02620facc962cc573903736a0d32a0a5e1bb33455c9435ab80938dc887ebdf579a8868e9e194  deviceinfo
+2ff0d9ad3c17b479100be68ac1b9b2275ce56c2da55a11b6ef959c56f5c03855d093caf173eeab005c590ca3aaaddf56688825a6528e3775b205042d4d065805  deviceinfo
 9c434e573db0a48c2280ab52bf961014062adc1bc38209e0a4146570c81f3b45701070051386b0f01946ef231e572c3a648c4b0491ab9dca5d431c01f6d09854  kernel-cmdline.conf
 44d0a4f26340925c01894e61b05b6c84628c8425742b21cc11d3183269655734f5fcb70cfda601048ab1106155e3bf3f6ed8068c8d476647963173b081be9ff2  modules-initfs
 "

@@ -10,8 +10,8 @@ _flavor="postmarketos-qcom-msm8226"
 pkgname=linux-$_flavor
 pkgver=6.16.12
 # nura-builds: pmaports' pkgrel + 100, above the published package (+1: Terminus 16x32 font, +1: reserved memory as downstream,
-# +1: ramoops, +1: earlycon ramcon)
-pkgrel=108
+# +1: ramoops, +1: earlycon ramcon, +1: dt.img with soc_rev)
+pkgrel=109
 pkgdesc="Mainline Kernel fork for APQ8026/MSM8226/MSM8926 devices"
 arch="armv7"
 _carch="arm"
@@ -48,6 +48,7 @@ source="
 	$_config
 	0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 	0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
+	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-${_tag#v}"
 
@@ -77,11 +78,17 @@ package() {
 
 	install -D "$builddir"/include/config/kernel.release \
 		"$pkgdir"/usr/share/kernel/$_flavor/kernel.release
+
+	# nura-builds: the S III Neo's QCDT table (deviceinfo_bootimg_qcdt without a type: boot-deploy
+	# takes /boot/dt.img), version 1 with soc_rev as the downstream build makes it
+	python3 "$srcdir"/mkqcdt-v1.py "$pkgdir"/boot/dt.img \
+		"$pkgdir"/boot/dtbs/qcom-msm8226-samsung-s3ve3g.dtb
 }
 
 sha512sums="
 63bd2038d6ac22e104f36e31e3137c1cd000de713ef79c8ad13a6b81a64e975c2e8259c25490b96766c500a4df1a8623fbba9be9fc40ddc868032a11cb516679  linux-v6.16.12-msm8226-u2.tar.gz
 aae5e5c50beb1df5629215b441473925b2a9ad504035a26a708ddcd04e7ed4866b3dea89c56ae56f9507356c0bfa716302dafdf05414d869eb5336ace348a501  config-postmarketos-qcom-msm8226.armv7
-0cd11621cda8960afc55d25af73b778fffcf3321168ff8b5e51e82455682baa71f5867f365e3698ef8f2d79ccb1c474ef1faf59bece147c9b0b5595a47bd6be3  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
+e4187045f48bce2602dd781e8cad678a5eb12db790d524aad4d6acc2c19e3d27a84c481570b6df7be9015da6df0f18cf7ed347179e807526f737fb2561fc156c  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 f9b8510ace1f6c9efb7da0326aec04fb65f5567b46801ad510fdab82c89d76f2d0e0954f5c9be22ffff0dd7409aaff712c4d81400c832d34b55e5a95388fdf68  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
+cc85feccd63cfdb3a40c315dfa14eef2ef4385d9c9b8c7290fd25d1712a6b042abf69068282d6179c536c22738716d7a4ba32cc2c91f64421c52adf25dd2dd02  mkqcdt-v1.py
 "

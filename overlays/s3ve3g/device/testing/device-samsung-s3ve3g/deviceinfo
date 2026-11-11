@@ -2,9 +2,9 @@
 # Please use double quotes only. You can source this file in shell scripts.
 # nura-builds overlay: the mainline kernel (linux-postmarketos-qcom-msm8226) instead of the
 # downstream 3.4 one, booted by Samsung's bootloader (no lk2nd) with the device tree in a QCDT
-# table (dt.img, made by boot-deploy with dtbTool from qcom,msm-id): the bootloader ignored an
-# appended device tree (straight back to download mode), and lk2nd also uses QCDT on Samsung's
-# msm8226 devices
+# table (dt.img, version 1 with soc_rev as downstream, made by the kernel package: pmaports'
+# dtbTool writes 0 for soc_rev): the bootloader ignored an appended device tree (straight back
+# to download mode), and lk2nd also uses QCDT on Samsung's msm8226 devices
 
 deviceinfo_format_version="0"
 deviceinfo_name="Samsung Galaxy S III Neo"
@@ -26,7 +26,6 @@ deviceinfo_flash_method="heimdall-bootimg"
 deviceinfo_generate_bootimg="true"
 deviceinfo_dtb="qcom-msm8226-samsung-s3ve3g"
 deviceinfo_bootimg_qcdt="true"
-deviceinfo_bootimg_qcdt_type="qcom"
 deviceinfo_flash_offset_base="0x00000000"
 deviceinfo_flash_offset_kernel="0x00008000"
 deviceinfo_flash_offset_ramdisk="0x02000000"

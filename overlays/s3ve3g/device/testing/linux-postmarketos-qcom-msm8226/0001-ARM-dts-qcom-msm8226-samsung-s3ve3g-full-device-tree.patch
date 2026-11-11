@@ -8,10 +8,10 @@ wiring from its downstream device tree (msm8226-sec-s3ve3geur-r04), and
 qcom,msm-id for Samsung's bootloader (appended DTB).
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-index 288cacd..61974ef 100644
+index 288cacd..535b3de 100644
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-@@ -1,24 +1,588 @@
+@@ -1,24 +1,586 @@
  // SPDX-License-Identifier: BSD-3-Clause
  /*
   * Copyright (c) 2020, The Linux Foundation. All rights reserved.
@@ -41,15 +41,13 @@ index 288cacd..61974ef 100644
  	chassis-type = "handset";
  
 +	/*
-+	 * For Samsung's bootloader (LK), which picks an appended DTB by these: the values of the
-+	 * downstream device tree (msm8226-sec-s3ve3geur-r04) and those lk2nd uses on Samsung's
-+	 * msm8226 devices.
++	 * For Samsung's bootloader (LK), which picks the DTB from a QCDT table (dt.img, version 1:
++	 * platform, variant, soc_rev) made from these: those of the downstream device tree
++	 * (msm8226-sec-s3ve3geur-r04).
 +	 */
 +	qcom,msm-id = <0x9e00ff01 4 0x20000>,
 +		      <0x9e08ff01 4 0x20000>,
-+		      <0xdd08ff01 4 0x20000>,
-+		      <0x9e08ff01 1 0x20000>,
-+		      <0x9e08ff01 7 0x20000>;
++		      <0xdd08ff01 4 0x20000>;
 +
  	aliases {
 +		mmc0 = &sdhc_1; /* SDC1 eMMC slot */

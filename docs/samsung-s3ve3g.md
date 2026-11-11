@@ -24,8 +24,10 @@ but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied
   sequencer, YAS530 driver, Terminus 16x32 console font (`fbcon=font:TER16x32` in the device
   package's kernel command line, with the console on the screen last).
 - `device-samsung-s3ve3g` (pkgver 104): the mainline kernel, the device tree in a QCDT table
-  (`dt.img`, made by boot-deploy with `dtbTool`; Samsung's bootloader picks the entry by
-  `qcom,msm-id`), no lk2nd. An appended device tree didn't boot (the phone went straight back to
+  (`dt.img`, version 1: platform, variant, soc_rev; Samsung's bootloader picks the entry by
+  `qcom,msm-id`), no lk2nd. The kernel package makes it (`mkqcdt-v1.py`, the same bytes as the
+  downstream build's for the downstream DTB): pmaports' skales `dtbTool` writes 0 instead of
+  soc_rev (0x20000) for version 1, so no entry matched exactly. An appended device tree didn't boot (the phone went straight back to
   download mode); lk2nd too packs its device trees for Samsung's msm8226 bootloaders as QCDT. Flashed with
   heimdall: the kernel to BOOT, the rootfs to USERDATA (SYSTEM is too small). BOOT holds about
   10 MB: with the whole initramfs (13 MB, zstd) the boot image had 19 MB ("BOOT partition is too
