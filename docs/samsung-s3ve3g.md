@@ -21,7 +21,8 @@ but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied
   the SM5502 (bit-banged I2C on GPIO 4/5, IRQ 52), keys, hall sensor, MMS144 touch (`mms114`),
   MPU-6500, YAS532, Wi-Fi (pronto), the reserved memory of the Tab 4 3G, and the bootloader's
   splash screen as a simple framebuffer (0x03200000, 720x1280 RGB888; simpledrm). Config: ALSA
-  sequencer, YAS530 driver.
+  sequencer, YAS530 driver, Terminus 16x32 console font (`fbcon=font:TER16x32` in the device
+  package's kernel command line, with the console on the screen last).
 - `device-samsung-s3ve3g` (pkgver 104): the mainline kernel, a boot image with the device tree
   appended (Samsung's bootloader picks it by `qcom,msm-id`; no QCDT, no lk2nd), flashed with
   heimdall: the kernel to BOOT, the rootfs to USERDATA (SYSTEM is too small).
@@ -33,26 +34,62 @@ Not tested on the device yet. Unknown: whether the bootloader takes the appended
 `qcom,msm-id` values are the downstream ones and lk2nd's), the memory layout (from the Tab 4 3G),
 the framebuffer format, touch with mms114.
 
-## A minimal image, locally
+## A minimal base, locally
 
-With this repository's scripts (an x86_64 PC is fine: the kernel is cross-compiled), UI `none`:
+As for the ODROID N2: pmbootstrap with a config of its own, UI `console` (a login on the screen:
+the framebuffer console on the bootloader's splash framebuffer, simpledrm, Terminus 16x32 font;
+and on serial), SSH over USB networking. The kernel recipe replaces pmaports' one of the same name
+and pmaports' archived device package has to go, so not links into your pmaports checkout but a
+worktree of it with the overlays copied over (`tools/s3ve3g-pmaports.sh`, run again after
+changing them):
 
 ```sh
-export TARGET=s3ve3g NURA_ARCH=armv7 NURA_WORK=$HOME/nura-work-s3ve3g NURA_OUT=$HOME/nura-out-s3ve3g
-# the packages from CI (signed with the CI key) ...
-gh run download <run id> -n packages-s3ve3g-kernel -D "$NURA_OUT"
-scripts/setup.sh    # pmbootstrap config, the overlays over pmaports, restores packages.tar
-sudo cp keys/nura-builds-ci.rsa.pub "$NURA_WORK/config_apk_keys/"
-# ... or built here instead of the download: scripts/build.sh kernel
-scripts/image.sh samsung-s3ve3g
+tools/s3ve3g-pmaports.sh     # ~/.local/var/pmbootstrap/cache_git/pmaports-s3ve3g
 ```
 
-`$NURA_OUT/s3ve3g-samsung-s3ve3g.img.zst` (rootfs) and `s3ve3g-samsung-s3ve3g-boot.img.zst` (kernel,
-initramfs, device tree). setup.sh copies the overlays into pmbootstrap's pmaports checkout
-(`~/.local/var/pmbootstrap/cache_git/pmaports` unless `NURA_PMAPORTS` is set) and removes the
-archived device package there. Plain pmbootstrap works too: the overlays copied over the pmaports
-checkout the same way, `samsung-s3ve3g` at `pmbootstrap init`, the packages built with `pmbootstrap
-build`, then `pmbootstrap install` and `pmbootstrap flasher flash_kernel` / `flash_rootfs` (heimdall).
+`~/.config/pmbootstrap-s3ve3g.cfg`:
+
+```
+[pmbootstrap]
+aports = /home/<user>/.local/var/pmbootstrap/cache_git/pmaports-s3ve3g
+build_pkgs_on_install = False
+device = samsung-s3ve3g
+hostname = s3neo
+is_default_channel = False
+locale = C.UTF-8
+service_manager = systemd
+ssh_key_glob = ~/.ssh/id_ed25519.pub
+ssh_keys = True
+timezone = Europe/Berlin
+ui = console
+user = <user>
+
+[providers]
+postmarketos-base-ui-audio-backend = postmarketos-base-ui-audio-backend-pipewire
+```
+
+```sh
+C=~/.config/pmbootstrap-s3ve3g.cfg
+pmbootstrap -c $C build linux-postmarketos-qcom-msm8226 device-samsung-s3ve3g   # cross-compiled
+pmbootstrap -c $C install --sdcard=/dev/sdX     # the rootfs on an SD card
+pmbootstrap -c $C flasher flash_kernel          # boot image to BOOT, phone in download mode
+```
+
+Instead of the kernel build: the CI's packages (artifact `apks-s3ve3g-kernel`, signed with the CI
+key) into pmbootstrap's local repository:
+
+```sh
+gh run download <run id> -n apks-s3ve3g-kernel -D /tmp/s3ve3g
+W=$(pmbootstrap -c $C config work)
+sudo cp keys/nura-builds-ci.rsa.pub "$W/config_apk_keys/"
+sudo cp /tmp/s3ve3g/packages/edge/armv7/*.apk "$W/packages/edge/armv7/"
+pmbootstrap -c $C index
+```
+
+With this repository's scripts (CI's way, its own work dir, UI `none`): `TARGET=s3ve3g
+NURA_ARCH=armv7 scripts/setup.sh` (with `packages-s3ve3g-kernel` in `$NURA_OUT`, or
+`scripts/build.sh kernel`), then `scripts/image.sh samsung-s3ve3g`: `$NURA_OUT/s3ve3g-samsung-s3ve3g.img.zst`
+and `-boot.img.zst`. setup.sh copies the overlays into the pmaports checkout it uses (CI's way).
 
 ## Flashing
 
@@ -60,7 +97,8 @@ Download mode: Volume Down + Home + Power, then Volume Up to confirm. heimdall o
 (`heimdall print-pit --no-reboot` lists the partition names).
 
 From an SD card first (leaves Android on the eMMC): the rootfs on the card, the boot image to
-BOOT; the initramfs finds the root partition by its label on any disk.
+BOOT; the initramfs finds the root partition by its label on any disk. With pmbootstrap as above;
+with image files:
 
 ```sh
 zstd -d s3ve3g-samsung-s3ve3g.img.zst s3ve3g-samsung-s3ve3g-boot.img.zst
