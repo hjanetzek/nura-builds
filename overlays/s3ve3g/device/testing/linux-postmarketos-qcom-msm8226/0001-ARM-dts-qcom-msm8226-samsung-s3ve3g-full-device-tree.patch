@@ -8,10 +8,10 @@ wiring from its downstream device tree (msm8226-sec-s3ve3geur-r04), and
 qcom,msm-id for Samsung's bootloader (appended DTB).
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-index 288cacd..a8812de 100644
+index 288cacd..4458f91 100644
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-@@ -1,24 +1,555 @@
+@@ -1,24 +1,571 @@
  // SPDX-License-Identifier: BSD-3-Clause
  /*
   * Copyright (c) 2020, The Linux Foundation. All rights reserved.
@@ -169,13 +169,23 @@ index 288cacd..a8812de 100644
 +		pinctrl-names = "default";
 +	};
 +
++	/*
++	 * The regions the downstream kernel keeps from Linux (msm8226.dtsi: qcom,memblock-reserve at 0,
++	 * qcom,memblock-remove 0x08400000+64M, 0x0cb00000+43M, 0x0fa00000+5M; the splash framebuffer
++	 * 16M): TrustZone protects them, an access resets the SoC.
++	 */
 +	reserved-memory {
 +		#address-cells = <1>;
 +		#size-cells = <1>;
 +		ranges;
 +
++		reserved@0 {
++			reg = <0x00000000 0x4000>;
++			no-map;
++		};
++
 +		framebuffer@3200000 {
-+			reg = <0x03200000 0x800000>;
++			reg = <0x03200000 0xfa0000>;
 +			no-map;
 +		};
 +
@@ -186,6 +196,12 @@ index 288cacd..a8812de 100644
 +
 +		mba_region: mba@a300000 {
 +			reg = <0x0a300000 0x100000>;
++			no-map;
++		};
++
++		/* the rest of downstream's 64M modem window */
++		reserved@a400000 {
++			reg = <0x0a400000 0x2000000>;
 +			no-map;
 +		};
 +

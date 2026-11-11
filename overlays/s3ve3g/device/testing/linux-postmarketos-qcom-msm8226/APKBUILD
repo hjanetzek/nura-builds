@@ -8,8 +8,8 @@ maintainer="Stefan Hansson <newbyte@postmarketos.org>"
 _flavor="postmarketos-qcom-msm8226"
 pkgname=linux-$_flavor
 pkgver=6.16.12
-# nura-builds: pmaports' pkgrel + 100, above the published package (+1: Terminus 16x32 font)
-pkgrel=105
+# nura-builds: pmaports' pkgrel + 100, above the published package (+1: Terminus 16x32 font, +1: reserved memory as downstream)
+pkgrel=106
 pkgdesc="Mainline Kernel fork for APQ8026/MSM8226/MSM8926 devices"
 arch="armv7"
 _carch="arm"
@@ -79,5 +79,5 @@ package() {
 sha512sums="
 63bd2038d6ac22e104f36e31e3137c1cd000de713ef79c8ad13a6b81a64e975c2e8259c25490b96766c500a4df1a8623fbba9be9fc40ddc868032a11cb516679  linux-v6.16.12-msm8226-u2.tar.gz
 aae5e5c50beb1df5629215b441473925b2a9ad504035a26a708ddcd04e7ed4866b3dea89c56ae56f9507356c0bfa716302dafdf05414d869eb5336ace348a501  config-postmarketos-qcom-msm8226.armv7
-c89106dad68c6028036f491dae22eed36bbe8bcf6175068a5ca24f3bc244729c63be33f59473f02e693efb810514025b22c2bc31cb53085440dfa2e39e61c9a9  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
+7620f1ef1b9f2a79b3069887d7482d3a284f01a8512d3479660df022835223725153cb70662d57579a227998e31f312c3e8b57c6f9c7f655de83543fc0036b1f  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 "
