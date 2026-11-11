@@ -10,8 +10,7 @@ pmaports' `device-samsung-s3ve3g` is archived: the downstream kernel 3.4 (Lineag
 systemd and has framebuffer graphics only, and no binary packages. The mainline kernel
 `linux-postmarketos-qcom-msm8226` (msm8226-mainline's fork, 6.16) has a device tree for the phone,
 but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied over pmaports by
-`scripts/setup.sh` before `pmbootstrap init`; the device package in `device/testing`, as
-`pmbootstrap init` doesn't take an archived device non-interactively), built in the `device` stage:
+`scripts/setup.sh`), built in the `device` stage:
 
 - `linux-postmarketos-qcom-msm8226` (pkgrel + 100): patch
   `0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch` with a full device tree,
@@ -52,9 +51,8 @@ To the eMMC: `heimdall flash --BOOT zynthian-samsung-s3ve3g-boot.img --USERDATA
 zynthian-samsung-s3ve3g.img` (the raw image: slow). Back to Android: the stock firmware's boot
 image with heimdall (or Odin).
 
-With pmbootstrap: this repository's `overlays/s3ve3g` copied over the pmaports checkout (as
-`scripts/setup.sh` does: the device package goes to `device/testing`, pmaports' archived copy
-removed), `samsung-s3ve3g` at `pmbootstrap init`; then
+With pmbootstrap: `samsung-s3ve3g` can be typed in at `pmbootstrap init` (archived devices aren't
+listed), with this repository's `overlays/s3ve3g` copied over the pmaports checkout; then
 `pmbootstrap flasher flash_kernel` and `flash_rootfs` (heimdall).
 
 ## Debugging

@@ -105,33 +105,9 @@ if [ -n "${GITHUB_ACTIONS:-}" ] && [ -d "$PMAPORTS/.git" ]; then
 	echo "pmaports: $(git -C "$PMAPORTS" log -1 --format='%h %cs %s')"
 fi
 
-# Overlays: the target's recipe directories (with an APKBUILD) copied over the same path in
-# pmaports (OVERLAY, or OVERLAY_<arch>, in the target file), other copies of the recipe (e.g. an
-# archived one) removed; their list goes to $NURA_WORK/nura-overlays for pin-binary.sh. Before
-# pmbootstrap init: it asks about an archived device (no by default) and must see the overlay's.
-mkdir -p "$NURA_WORK"
-: > "$NURA_WORK/nura-overlays"
-if [ -n "${OVERLAY:-}" ]; then
-	[ -d "$PMAPORTS/.git" ] || git clone -q https://gitlab.postmarketos.org/postmarketOS/pmaports.git "$PMAPORTS"
-	(cd "$here/$OVERLAY" && find . -name APKBUILD | sed 's|^\./||; s|/APKBUILD$||') |
-	while read -r dir; do
-		(cd "$PMAPORTS" && find . -mindepth 2 -maxdepth 3 -type d -name "$(basename "$dir")" \
-			! -path "./.git/*" ! -path "./extra-repos/*") | sed 's|^\./||' |
-		while read -r other; do
-			[ "$other" = "$dir" ] || { rm -rf "${PMAPORTS:?}/$other"; echo "overlay: removed $other"; }
-		done
-		rm -rf "${PMAPORTS:?}/$dir"
-		mkdir -p "$PMAPORTS/$(dirname "$dir")"
-		cp -r "$here/$OVERLAY/$dir" "$PMAPORTS/$dir"
-		echo "$dir" >> "$NURA_WORK/nura-overlays"
-		echo "overlay: $dir"
-	done
-fi
-
-# Initialise: every question answered with the default from the config (with a time limit: a
-# question whose default isn't accepted would be asked again forever)
+# Initialise: every question answered with the default from the config
 if [ ! -f "$NURA_WORK/version" ]; then
-	yes "" | timeout 900 pmbootstrap -c "$CFG" init || true
+	yes "" | pmbootstrap -c "$CFG" init || true
 	[ -f "$NURA_WORK/version" ] || { echo "pmbootstrap init failed" >&2; exit 1; }
 fi
 
@@ -142,6 +118,21 @@ echo "$REPOS" | while read -r name url branch recipes; do
 	[ -n "$name" ] && [ "$recipes" != "-" ] || continue
 	ln -sfn "$NURA_SRC/$name/$recipes" "$aports/$name"
 done
+
+# Overlays: the target's recipe directories (with an APKBUILD) copied over the same path in
+# pmaports (OVERLAY, or OVERLAY_<arch>, in the target file); their list goes to
+# $NURA_WORK/nura-overlays for pin-binary.sh
+: > "$NURA_WORK/nura-overlays"
+if [ -n "${OVERLAY:-}" ]; then
+	(cd "$here/$OVERLAY" && find . -name APKBUILD | sed 's|^\./||; s|/APKBUILD$||') |
+	while read -r dir; do
+		rm -rf "${aports:?}/$dir"
+		mkdir -p "$aports/$(dirname "$dir")"
+		cp -r "$here/$OVERLAY/$dir" "$aports/$dir"
+		echo "$dir" >> "$NURA_WORK/nura-overlays"
+		echo "overlay: $dir"
+	done
+fi
 
 # Device packages (kernel, ...) at the versions postmarketOS has built, not newer recipes
 "$here/scripts/pin-binary.sh"
