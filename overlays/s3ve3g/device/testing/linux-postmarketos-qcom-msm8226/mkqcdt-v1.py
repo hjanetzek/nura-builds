@@ -3,12 +3,16 @@
 # downstream build makes it: one entry per qcom,msm-id triple <platform variant soc_rev> of each
 # DTB, i.e. (platform_id, variant_id, soc_rev, offset, size). pmaports' skales dtbTool writes 0 in
 # place of soc_rev for version 1 (the subtype), so no entry matched exactly.
+# Each DTB gets FREE bytes of free space (totalsize raised, zeros appended): the bootloader adds the
+# memory ranges and its long command line (about 1 KB of its own) to the DTB in place, with only a
+# small padding of its own, and resets when that doesn't fit.
 #
 # Usage: mkqcdt-v1.py OUT.img DTB...
 import struct
 import sys
 
 PAGE = 2048
+FREE = 16384
 FDT_BEGIN_NODE, FDT_END_NODE, FDT_PROP, FDT_NOP, FDT_END = 1, 2, 3, 4, 9
 
 
@@ -42,8 +46,14 @@ def pad(b):
     return b + b"\0" * (-len(b) % PAGE)
 
 
+def grow(dtb):
+    total, = struct.unpack_from(">I", dtb, 4)
+    dtb = dtb[:total] + b"\0" * FREE
+    return dtb[:4] + struct.pack(">I", len(dtb)) + dtb[8:]
+
+
 def main():
-    out, dtbs = sys.argv[1], [open(f, "rb").read() for f in sys.argv[2:]]
+    out, dtbs = sys.argv[1], [grow(open(f, "rb").read()) for f in sys.argv[2:]]
     entries = []
     for i, dtb in enumerate(dtbs):
         ids = root_prop(dtb, "qcom,msm-id")

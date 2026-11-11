@@ -27,7 +27,12 @@ but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied
   (`dt.img`, version 1: platform, variant, soc_rev; Samsung's bootloader picks the entry by
   `qcom,msm-id`), no lk2nd. The kernel package makes it (`mkqcdt-v1.py`, the same bytes as the
   downstream build's for the downstream DTB): pmaports' skales `dtbTool` writes 0 instead of
-  soc_rev (0x20000) for version 1, so no entry matched exactly. An appended device tree didn't boot (the phone went straight back to
+  soc_rev (0x20000) for version 1, so no entry matched exactly. It also gives the DTB 16 KB of
+  free space (kernel r111): with debug markers at the decompressor's first instruction (patch
+  0003, r110) nothing reached the RAM buffer, so the bootloader never jumped into the kernel; it
+  edits the DTB in place before (memory ranges, its own ~1 KB of command line plus ours) with
+  only a small padding, and resets when that fails. lk2nd (QCDT version 2) and an appended DTB
+  go to download mode instead: this bootloader takes QCDT version 1 only. An appended device tree didn't boot (the phone went straight back to
   download mode); lk2nd too packs its device trees for Samsung's msm8226 bootloaders as QCDT. Flashed with
   heimdall: the kernel to BOOT, the rootfs to USERDATA (SYSTEM is too small). BOOT holds about
   10 MB: with the whole initramfs (13 MB, zstd) the boot image had 19 MB ("BOOT partition is too

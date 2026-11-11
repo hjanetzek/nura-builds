@@ -11,8 +11,8 @@ pkgname=linux-$_flavor
 pkgver=6.16.12
 # nura-builds: pmaports' pkgrel + 100, above the published package (+1: Terminus 16x32 font, +1: reserved memory as downstream,
 # +1: ramoops, +1: earlycon ramcon, +1: dt.img with soc_rev,
-# +1: debug boot markers)
-pkgrel=110
+# +1: debug boot markers, +1: free space in the DTB)
+pkgrel=111
 pkgdesc="Mainline Kernel fork for APQ8026/MSM8226/MSM8926 devices"
 arch="armv7"
 _carch="arm"
@@ -93,5 +93,5 @@ aae5e5c50beb1df5629215b441473925b2a9ad504035a26a708ddcd04e7ed4866b3dea89c56ae56f
 e4187045f48bce2602dd781e8cad678a5eb12db790d524aad4d6acc2c19e3d27a84c481570b6df7be9015da6df0f18cf7ed347179e807526f737fb2561fc156c  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 f9b8510ace1f6c9efb7da0326aec04fb65f5567b46801ad510fdab82c89d76f2d0e0954f5c9be22ffff0dd7409aaff712c4d81400c832d34b55e5a95388fdf68  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 1f8d8ecdc63c4615177d8a7a8f1abb0f418a0bae47065bd8106c810f2fdcddddf7a2664fa5e537345e3257d8556fdc1eb01f124fab2d9f36bf77d3c9c058417f  0003-ARM-s3ve3g-debug-boot-markers-in-the-RAM-log-buffer.patch
-cc85feccd63cfdb3a40c315dfa14eef2ef4385d9c9b8c7290fd25d1712a6b042abf69068282d6179c536c22738716d7a4ba32cc2c91f64421c52adf25dd2dd02  mkqcdt-v1.py
+c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
