@@ -25,7 +25,10 @@ but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied
   package's kernel command line, with the console on the screen last).
 - `device-samsung-s3ve3g` (pkgver 104): the mainline kernel, a boot image with the device tree
   appended (Samsung's bootloader picks it by `qcom,msm-id`; no QCDT, no lk2nd), flashed with
-  heimdall: the kernel to BOOT, the rootfs to USERDATA (SYSTEM is too small).
+  heimdall: the kernel to BOOT, the rootfs to USERDATA (SYSTEM is too small). BOOT holds about
+  10 MB: with the whole initramfs (13 MB, zstd) the boot image had 19 MB ("BOOT partition is too
+  small"), so `deviceinfo_create_initfs_extra` (filesystem tools, udev, the FDE unlocker in
+  initramfs-extra on the rootfs' boot partition) and `lzma` compression.
 
 Each run uploads the `.apk` files (artifact `apks-s3ve3g-kernel`) and the package repository for a
 local image (`packages-s3ve3g-kernel`, `packages.tar`).

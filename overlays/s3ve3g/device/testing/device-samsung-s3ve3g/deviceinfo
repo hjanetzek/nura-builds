@@ -34,3 +34,7 @@ deviceinfo_flash_heimdall_partition_kernel="BOOT"
 # The rootfs to USERDATA: SYSTEM is too small for the zynthian image
 deviceinfo_flash_heimdall_partition_rootfs="USERDATA"
 deviceinfo_flash_sparse="true"
+# BOOT is about 10 MB: the large parts of the initramfs (filesystem tools, udev, the FDE unlocker)
+# in initramfs-extra on the boot partition of the rootfs, the rest compressed best
+deviceinfo_create_initfs_extra="true"
+deviceinfo_initfs_compression="lzma"
