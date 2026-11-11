@@ -23,8 +23,10 @@ but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied
   splash screen as a simple framebuffer (0x03200000, 720x1280 RGB888; simpledrm). Config: ALSA
   sequencer, YAS530 driver, Terminus 16x32 console font (`fbcon=font:TER16x32` in the device
   package's kernel command line, with the console on the screen last).
-- `device-samsung-s3ve3g` (pkgver 104): the mainline kernel, a boot image with the device tree
-  appended (Samsung's bootloader picks it by `qcom,msm-id`; no QCDT, no lk2nd), flashed with
+- `device-samsung-s3ve3g` (pkgver 104): the mainline kernel, the device tree in a QCDT table
+  (`dt.img`, made by boot-deploy with `dtbTool`; Samsung's bootloader picks the entry by
+  `qcom,msm-id`), no lk2nd. An appended device tree didn't boot (the phone went straight back to
+  download mode); lk2nd too packs its device trees for Samsung's msm8226 bootloaders as QCDT. Flashed with
   heimdall: the kernel to BOOT, the rootfs to USERDATA (SYSTEM is too small). BOOT holds about
   10 MB: with the whole initramfs (13 MB, zstd) the boot image had 19 MB ("BOOT partition is too
   small"), so `deviceinfo_create_initfs_extra` (filesystem tools, udev, the FDE unlocker in
@@ -33,7 +35,8 @@ but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied
 Each run uploads the `.apk` files (artifact `apks-s3ve3g-kernel`) and the package repository for a
 local image (`packages-s3ve3g-kernel`, `packages.tar`).
 
-Not tested on the device yet. Unknown: whether the bootloader takes the appended device tree (the
+Status 2026-11-11: flashing works (heimdall, BOOT and USERDATA); with an appended device tree the
+bootloader went back to download mode, QCDT is next. Unknown: whether an entry matches (the
 `qcom,msm-id` values are the downstream ones and lk2nd's), the memory layout (from the Tab 4 3G),
 the framebuffer format, touch with mms114.
 
