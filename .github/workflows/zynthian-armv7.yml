@@ -1,9 +1,8 @@
 # zynthian for armv7 (branch zynthian-arm7): the zynthian workflow (zynthian.yml) for 32-bit ARM
-# phones, first the Samsung Galaxy S III Neo (samsung-s3ve3g, MSM8226), without
+# phones, first the Samsung Galaxy S III Neo (samsung-s3ve3g, MSM8226; device qcom-msm8226), without
 # the plugins stage: an "engines" stage builds only zynthian-ui's own dependencies (zynthian-jalv,
 # aeolus, sooperlooper), and the zynthian stage leaves out the kiosk package, which depends on the
-# plugins (targets/zynthian.sh: the *_armv7 settings). The "device" stage builds the S III Neo's
-# kernel and device package from overlays/s3ve3g (artifact apks-zynthian-device). The runners are arm64 (as for aarch64):
+# plugins (targets/zynthian.sh: the *_armv7 settings). The runners are arm64 (as for aarch64):
 # pmbootstrap runs armv7 natively where the CPU executes 32-bit code, under QEMU (with crossdirect
 # for the compilers) otherwise.
 #
@@ -57,9 +56,6 @@ jobs:
       key_zynthian: ${{ steps.plan.outputs.key_zynthian }}
       run_zynthian: ${{ steps.plan.outputs.run_zynthian }}
       rebuild_zynthian: ${{ steps.plan.outputs.rebuild_zynthian }}
-      key_device: ${{ steps.plan.outputs.key_device }}
-      run_device: ${{ steps.plan.outputs.run_device }}
-      rebuild_device: ${{ steps.plan.outputs.rebuild_device }}
       key_upstream: ${{ steps.plan.outputs.key_upstream }}
       run_upstream: ${{ steps.plan.outputs.run_upstream }}
       rebuild_upstream: ${{ steps.plan.outputs.rebuild_upstream }}
@@ -119,28 +115,19 @@ jobs:
     secrets: inherit
     permissions: { contents: read, actions: write }
 
-  # The S III Neo's kernel and device package (overlays/s3ve3g)
-  device:
-    needs: [plan, zynthian]
-    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_device == 'true' }}
-    uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, arch: armv7, stage: device, previous: zynthian, previous-key: "${{ needs.plan.outputs.key_zynthian }}", previous-cached: "${{ needs.plan.outputs.run_zynthian != 'true' }}", key: "${{ needs.plan.outputs.key_device }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_device == 'true' }}" }
-    secrets: inherit
-    permissions: { contents: read, actions: write }
-
   # zynthian-ui from upstream (vangelis, tomita) with the port patches: packages only, not in images
   upstream:
-    needs: [plan, device]
+    needs: [plan, zynthian]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_upstream == 'true' }}
     uses: ./.github/workflows/stage.yml
-    with: { target: zynthian, arch: armv7, stage: upstream, previous: device, previous-key: "${{ needs.plan.outputs.key_device }}", previous-cached: "${{ needs.plan.outputs.run_device != 'true' }}", key: "${{ needs.plan.outputs.key_upstream }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_upstream == 'true' }}" }
+    with: { target: zynthian, arch: armv7, stage: upstream, previous: zynthian, previous-key: "${{ needs.plan.outputs.key_zynthian }}", previous-cached: "${{ needs.plan.outputs.run_zynthian != 'true' }}", key: "${{ needs.plan.outputs.key_upstream }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_upstream == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
 
   # The device images only when asked for (Run workflow > images): without the kiosk package (it
   # depends on the plugins), UI "none" with zynthian-ui installed (IMAGE_PACKAGES_armv7)
   image:
-    needs: [plan, device]
+    needs: [plan, zynthian]
     if: ${{ inputs.images && !cancelled() && !failure() }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
@@ -148,7 +135,7 @@ jobs:
       fail-fast: false
       matrix:
         # as DEVICES_armv7 in targets/zynthian.sh
-        device: [samsung-s3ve3g]
+        device: [qcom-msm8226]
     permissions:
       contents: write
     env:
@@ -165,7 +152,7 @@ jobs:
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
       - uses: actions/download-artifact@v8
         with:
-          name: packages-zynthian-device
+          name: packages-zynthian-zynthian
           path: /home/runner/nura-out
       - uses: ./.github/actions/pmaports
 
@@ -180,7 +167,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: zynthian-${{ matrix.device }}
-          path: /home/runner/nura-out/zynthian-${{ matrix.device }}*.img.zst
+          path: /home/runner/nura-out/zynthian-${{ matrix.device }}.img.zst
           retention-days: 7
           compression-level: 0
       - name: Release
@@ -192,7 +179,7 @@ jobs:
           gh release view "$tag" >/dev/null 2>&1 \
             || gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "zynthian armv7 $(date +%Y-%m-%d)" \
                  --notes "zynthian (Qt UI) for Nura on armv7, without the plugins, built from zynthian-ui ${{ inputs.zynthian-ui-ref }}, zyncoder ${{ inputs.zyncoder-ref }}"
-          gh release upload "$tag" "$NURA_OUT"/zynthian-${{ matrix.device }}*.img.zst --clobber
+          gh release upload "$tag" "$NURA_OUT/zynthian-${{ matrix.device }}.img.zst" --clobber
       - name: Build log
         if: failure()
         run: sudo tail -n 200 "$NURA_WORK/log.txt" || true
@@ -200,8 +187,8 @@ jobs:
   # Releases (zynthian-arm7 only): the package repository (release "armv7", the same repository URL
   # as aarch64) and the images (release "zynthian-armv7-latest"), see scripts/publish.sh
   publish:
-    needs: [device, upstream, image]
-    if: ${{ !cancelled() && needs.device.result == 'success' && needs.image.result != 'failure' && github.ref == 'refs/heads/zynthian-arm7' }}
+    needs: [zynthian, upstream, image]
+    if: ${{ !cancelled() && needs.zynthian.result == 'success' && needs.image.result != 'failure' && github.ref == 'refs/heads/zynthian-arm7' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -212,7 +199,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
-          name: packages-zynthian-${{ needs.upstream.result == 'success' && 'upstream' || 'device' }}
+          name: packages-zynthian-${{ needs.upstream.result == 'success' && 'upstream' || 'zynthian' }}
           path: out
       - uses: actions/download-artifact@v8
         if: needs.image.result == 'success'

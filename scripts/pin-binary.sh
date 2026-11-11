@@ -41,10 +41,6 @@ pin() {
 	pkg=$1
 	dir=$(recipe_dir "$pkg")
 	[ -n "$dir" ] || return 0
-	if grep -qxF "$dir" "$NURA_WORK/nura-overlays" 2>/dev/null; then
-		echo "pin-binary: $pkg: our overlay, not pinned"
-		return 0
-	fi
 	bin=$(binary_version "$pkg")
 	[ -n "$bin" ] || return 0
 	cur=$(recipe_version HEAD "$dir")

@@ -71,24 +71,16 @@ DEVICES_x86_64="qemu-amd64"
 # on. The kiosk package (postmarketos-ui-zynthian) depends on the plugins, so it isn't built: the
 # image is a plain one (UI "none") with zynthian-ui installed, for bringing up the device.
 # Overrides: <VAR>_<arch> (common.sh: STAGES, UI, IMAGE_PACKAGES; STAGE_<stage>_<arch>).
-STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian device upstream"
+STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian upstream"
 STAGE_engines="zynthian-jalv aeolus sooperlooper"
 INPUTS_engines="aports/zynthian-jalv aports/engines/aeolus aports/engines/sooperlooper"
 STAGE_zynthian_armv7="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none
 IMAGE_PACKAGES_armv7="zynthian-ui"
-# Device: the Samsung Galaxy S III Neo (samsung-s3ve3g). Its pmaports package is archived (the
-# downstream 3.4 kernel: too old for systemd, no binary packages), and the mainline kernel's device
-# tree for it had the serial port only: both as overlays (overlays/s3ve3g, copied over pmaports by
-# setup.sh), the kernel with a full device tree, the device package on the mainline kernel (boot
-# image with the device tree appended, flashed with heimdall). Built in the "device" stage after
-# zynthian (a kernel change doesn't invalidate the stages before), its .apk files also as the
-# artifact apks-zynthian-device (PUBLISH_device).
-OVERLAY_armv7=overlays/s3ve3g
-STAGE_device="linux-postmarketos-qcom-msm8226 device-samsung-s3ve3g"
-INPUTS_device="overlays/s3ve3g"
-PUBLISH_device="linux-postmarketos-qcom-msm8226 device-samsung-s3ve3g"
-DEVICES_armv7="samsung-s3ve3g"
+# Device: the generic mainline MSM8226 port (pmaports device/testing, linux-postmarketos-qcom-msm8226
+# with the s3ve3g's device tree; booted by lk2nd, flashed once with heimdall). The S III Neo's own
+# device package (samsung-s3ve3g) is archived, with the downstream 3.4 kernel: too old for systemd.
+DEVICES_armv7="qcom-msm8226"
 # Recipes of the other repositories whose arch= lacks armv7 (aarch64 x86_64): setup.sh adds it in
 # the checkouts until the recipes list armv7 themselves
 ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder @drivenbymoss-rust/nura/drivenbymoss"
