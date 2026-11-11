@@ -10,6 +10,8 @@
 # - fix-header-install-dir.patch dropped: 6.12's CMake build installs the headers to include/
 # - the Python wrapper scripts and egg-info of setup.py are not installed (not needed to import
 #   PySide6); the shiboken6 generator stays in pyside6-dev
+# - prepare(): lookupEnum's array size as std::size_t, not "long unsigned" (unsigned int on 32-bit:
+#   template deduction fails on armv7)
 pkgname=pyside6
 pkgver=6.12.0
 pkgrel=0
@@ -47,6 +49,14 @@ builddir="$srcdir/pyside-setup-everywhere-src-$pkgver"
 options="!check" # tests need a display and the modules left out
 
 _modules="Core;Gui;Network;OpenGL;Qml;Quick;QuickControls2;Svg"
+
+prepare() {
+	default_prepare
+	sed -i 's/class EnumType, long unsigned N>/class EnumType, std::size_t N>/' \
+		sources/shiboken6_generator/ApiExtractor/typesystemparser.cpp
+	grep -q 'class EnumType, std::size_t N>' \
+		sources/shiboken6_generator/ApiExtractor/typesystemparser.cpp
+}
 
 build() {
 	export LLVM_INSTALL_DIR=/usr/lib/llvm$_llvmver
