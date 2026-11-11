@@ -19,3 +19,12 @@ jobs:
     with: { target: s3ve3g, arch: armv7, stage: kernel }
     secrets: inherit
     permissions: { contents: read, actions: write }
+
+  # The downstream kernel for a repacked TWRP (artifact apks-s3ve3g-recovery), see
+  # tools/s3ve3g-twrp-repack.py; after the kernel stage, whose packages it carries on
+  recovery:
+    needs: kernel
+    uses: ./.github/workflows/stage.yml
+    with: { target: s3ve3g, arch: armv7, stage: recovery, previous: kernel, previous-key: "${{ needs.kernel.outputs.key }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }

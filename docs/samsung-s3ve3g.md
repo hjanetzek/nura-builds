@@ -132,6 +132,20 @@ with heimdall (or Odin).
   `adb shell 'dd if=/dev/mem bs=1048576 skip=507 count=1' > ramoops.bin` (507 MB = 0x1FB00000;
   the log starts after a 12-byte header, `DBGC`), `strings ramoops.bin`. On the next boot of our
   kernel the old log is in `/sys/fs/pstore/console-ramoops-0`.
+  The official TWRP (3.3.1-1-s3ve3g, https://twrp.me/samsung/samsunggalaxys3neo.html) has neither:
+  its prebuilt 3.4 kernel lacks the ram_console and /dev/mem. Hence a repacked TWRP: CI's
+  `recovery` stage builds pmaports' archived downstream kernel (`linux-samsung-s3ve3g`, overlay
+  with `CONFIG_DEVMEM=y`; artifact `apks-s3ve3g-recovery`), and
+  `tools/s3ve3g-twrp-repack.py twrp-3.3.1-1-s3ve3g.img linux-samsung-s3ve3g-*.apk twrp-ramconsole.img`
+  puts its kernel and dt.img into TWRP (ramdisk and command line kept); `heimdall flash
+  --RECOVERY twrp-ramconsole.img`. After a reset (no battery pull): Volume Up + Home + Power,
+  `adb shell cat /proc/last_kmsg`.
+- The bootloader's command line (seen in TWRP): `console=null`, `uart_dbg=0` (the UART is off for
+  debug output), `sec_log=0x100000@0x3fe00008`, `sec_dbg=0x80000@0x3ff00008` (Samsung's own log
+  buffers), `mdss_mdp.panel=1:dsi:0:mdss_dsi_samsung_720p_video_s6e8aa0a` (the bootloader sets up
+  the panel), `samsung.board_rev=4`, `androidboot.bootloader=I9301IXXUAQL1`. RAM as the downstream
+  kernel gets it (`/proc/iomem`): 0-0x083fffff, 0x0c400000-0x0cafffff, 0x0f600000-0x0f9fffff,
+  0x0ff00000-0x0fffffff, 0x10600000-0x5f2fffff.
 
 - USB networking (the initramfs and the system): 172.16.42.1, `ssh user@172.16.42.1`, if the
   SM5502 detects the PC (else the USB controller stays without a role).

@@ -12,12 +12,17 @@ REPOS=""
 # device package, removed); pin-binary.sh leaves them alone
 OVERLAY=overlays/s3ve3g
 
-STAGES="kernel"
+STAGES="kernel recovery"
 STAGE_kernel="linux-postmarketos-qcom-msm8226 device-samsung-s3ve3g"
-INPUTS_kernel="overlays/s3ve3g"
+INPUTS_kernel="overlays/s3ve3g/device/testing"
+# The downstream kernel (LineageOS 3.4) with /dev/mem and the ram_console, for a repacked TWRP that
+# reads the mainline kernel's RAM log after a reset (tools/s3ve3g-twrp-repack.py); not for Nura
+STAGE_recovery="linux-samsung-s3ve3g"
+INPUTS_recovery="overlays/s3ve3g/device/archived/linux-samsung-s3ve3g"
 
 # Packages published as their own artifact (the .apk files), per stage
 PUBLISH_kernel="linux-postmarketos-qcom-msm8226 device-samsung-s3ve3g"
+PUBLISH_recovery="linux-samsung-s3ve3g"
 
 # Images (locally): a minimal one, no UI
 UI=none
