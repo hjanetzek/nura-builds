@@ -35,8 +35,14 @@ but with the serial port only. Both are overlays here (`overlays/s3ve3g`, copied
 Each run uploads the `.apk` files (artifact `apks-s3ve3g-kernel`) and the package repository for a
 local image (`packages-s3ve3g-kernel`, `packages.tar`).
 
-Status 2026-11-11: flashing works (heimdall, BOOT and USERDATA); with an appended device tree the
-bootloader went back to download mode, QCDT is next. Unknown: whether an entry matches (the
+Status 2026-11-12: flashing works (heimdall, BOOT and USERDATA). With an appended device tree the
+bootloader went back to download mode; with QCDT it starts the kernel ("KERNEL IS NOT SEANDROID
+ENFORCING"), which resets about 2 s later (Samsung logo, black, again). Tried: the reserved memory
+as downstream (kernel r106). Trying (device package r4): no `earlycon` (the release bootloader
+likely leaves the UART unclocked: an access resets the SoC; the generic msm8226 port has lk2nd set
+it up), `clk_ignore_unused pd_ignore_unused` (simpledrm is a module, loaded after the kernel turns
+off the "unused" MDSS clocks and power domain under the splash framebuffer). A downstream boot.img
+(LineageOS) has the same QCDT entries (version 1, the first three msm-ids) and load addresses. Unknown: whether an entry matches (the
 `qcom,msm-id` values are the downstream ones and lk2nd's), the memory layout (from the Tab 4 3G),
 the framebuffer format, touch with mms114.
 
