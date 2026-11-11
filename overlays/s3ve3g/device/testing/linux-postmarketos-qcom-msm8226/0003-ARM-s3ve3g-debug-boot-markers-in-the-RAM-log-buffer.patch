@@ -1,0 +1,65 @@
+From: nura-builds
+Subject: [PATCH] ARM: s3ve3g debug: boot markers in the RAM log buffer
+
+Temporary: without a serial console, mark how far the boot gets, in the
+RAM buffer at 0x1FB00000 (DBGC format, read after a reset as
+/proc/last_kmsg by a downstream kernel): "ZIM" at the decompressor's entry,
+"KRN" at stext; the ramcon earlycon takes over from setup_arch.
+---
+diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+index 9f406e9..5843227 100644
+--- a/arch/arm/boot/compressed/head.S
++++ b/arch/arm/boot/compressed/head.S
+@@ -229,6 +229,24 @@ start:
+ 		mov	r7, r1			@ save architecture ID
+ 		mov	r8, r2			@ save atags pointer
+ 
++		/*
++		 * nura-builds debug (s3ve3g): marker "ZIM\n" in the RAM log buffer at 0x1FB00000,
++		 * DBGC format (ram_console/ramoops: sig, start, size, data), read after a reset as
++		 * /proc/last_kmsg in a downstream kernel; MMU and caches are off here.
++		 */
++		movw	r0, #0x0000
++		movt	r0, #0x1fb0
++		movw	r3, #0x4244		@ "DBGC"
++		movt	r3, #0x4347
++		str	r3, [r0]
++		mov	r3, #4
++		str	r3, [r0, #4]		@ start
++		str	r3, [r0, #8]		@ size
++		movw	r3, #0x495a		@ "ZI"
++		movt	r3, #0x0a4d		@ "M\n"
++		str	r3, [r0, #12]
++		dsb
++
+ #ifndef CONFIG_CPU_V7M
+ 		/*
+ 		 * Booting from Angel - need to enter SVC mode and disable
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index f22c50d..c7ca7d2 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -104,6 +104,23 @@ ENTRY(stext)
+ 	@ ensure svc mode and all interrupts masked
+ 	safe_svcmode_maskall r9
+ 
++	/*
++	 * nura-builds debug (s3ve3g): marker "KRN\n" after the decompressor's "ZIM\n" in the RAM
++	 * log buffer at 0x1FB00000 (DBGC format); MMU and caches are off here.
++	 */
++	movw	r9, #0x0000
++	movt	r9, #0x1fb0
++	movw	r3, #0x4244			@ "DBGC"
++	movt	r3, #0x4347
++	str	r3, [r9]
++	movw	r3, #0x524b			@ "KR"
++	movt	r3, #0x0a4e			@ "N\n"
++	str	r3, [r9, #16]
++	mov	r3, #8
++	str	r3, [r9, #4]			@ start
++	str	r3, [r9, #8]			@ size
++	dsb
++
+ 	mrc	p15, 0, r9, c0, c0		@ get processor id
+ 	bl	__lookup_processor_type		@ r5=procinfo r9=cpuid
+ 	movs	r10, r5				@ invalid processor (r5=0)?
