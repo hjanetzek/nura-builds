@@ -20,6 +20,7 @@ eval "DEVICES=\${DEVICES_$ARCH:-\${DEVICES:-}}"
 # Other settings of the architecture (<VAR>_<arch> in the target file, e.g. STAGES_armv7)
 eval "STAGES=\${STAGES_$ARCH:-\$STAGES} UI=\${UI_$ARCH:-\$UI}"
 eval "IMAGE_PACKAGES=\${IMAGE_PACKAGES_$ARCH:-\${IMAGE_PACKAGES:-}} ADD_ARCH=\${ADD_ARCH_$ARCH:-}"
+eval "OVERLAY=\${OVERLAY_$ARCH:-\${OVERLAY:-}}"
 # Target name in cache keys: as before for aarch64, <target>_<arch> for the others (no "-":
 # prune-cache.sh splits keys at "-")
 KEY_TARGET=$TARGET

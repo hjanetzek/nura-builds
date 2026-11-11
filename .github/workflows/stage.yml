@@ -170,6 +170,30 @@ jobs:
           key: ${{ steps.key.outputs.partial }}partial-${{ github.run_id }}-${{ github.run_attempt }}
           path: /home/runner/nura-out/packages.tar
 
+      # Packages of the stage as their own artifact (PUBLISH_<stage> in the target file), e.g. a
+      # device's kernel to flash without an image
+      - name: Packages to publish
+        id: publish
+        run: |
+          . "targets/$TARGET.sh"
+          eval "names=\${PUBLISH_${{ inputs.stage }}:-}"
+          if [ -n "$names" ]; then
+            mkdir -p "$NURA_OUT/publish"
+            for n in $names; do
+              tar -C "$NURA_OUT/publish" -xf "$NURA_OUT/packages.tar" --wildcards --no-anchored "*/$n-[0-9]*.apk"
+            done
+            find "$NURA_OUT/publish" -name "*.apk" -exec ls -la {} +
+            echo "dir=$NURA_OUT/publish" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish packages
+        if: steps.publish.outputs.dir != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: apks-${{ inputs.target }}-${{ inputs.stage }}
+          path: ${{ steps.publish.outputs.dir }}
+          retention-days: 14
+
       - name: Pass the packages on
         uses: actions/upload-artifact@v7
         with:

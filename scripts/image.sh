@@ -19,4 +19,11 @@ img="$NURA_WORK/chroot_native/home/pmos/rootfs/$device.img"
 mkdir -p "$NURA_OUT"
 sudo zstd -T0 -10 -q -f "$img" -o "$NURA_OUT/$TARGET-$device.img.zst"
 sudo chown "$(id -u):$(id -g)" "$NURA_OUT/$TARGET-$device.img.zst"
-ls -la "$NURA_OUT/$TARGET-$device.img.zst"
+# Android boot image (devices flashed with heimdall or fastboot: kernel, initramfs, device tree),
+# next to the image as <target>-<device>-boot.img.zst
+bootimg="$NURA_WORK/chroot_rootfs_$device/boot/boot.img"
+if sudo test -f "$bootimg"; then
+	sudo zstd -q -f "$bootimg" -o "$NURA_OUT/$TARGET-$device-boot.img.zst"
+	sudo chown "$(id -u):$(id -g)" "$NURA_OUT/$TARGET-$device-boot.img.zst"
+fi
+ls -la "$NURA_OUT/$TARGET-$device"*.img.zst

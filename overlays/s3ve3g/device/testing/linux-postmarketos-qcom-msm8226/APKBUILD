@@ -1,0 +1,83 @@
+# nura-builds overlay (targets/zynthian.sh, OVERLAY_armv7): pmaports' recipe at 6b904fc480
+# (6.16.12-r4), copied over the pmaports recipe by scripts/setup.sh. Changes are marked
+# "nura-builds:": the Samsung Galaxy S III Neo's device tree (eMMC, SD card, USB, keys, touch,
+# sensors, Wi-Fi, splash framebuffer; it had the serial port only), the ALSA sequencer and the
+# YAS532 magnetometer in the config.
+# Co-Maintainer: Luca Weiss <luca@lucaweiss.eu>
+maintainer="Stefan Hansson <newbyte@postmarketos.org>"
+_flavor="postmarketos-qcom-msm8226"
+pkgname=linux-$_flavor
+pkgver=6.16.12
+# nura-builds: pmaports' pkgrel + 100, above the published package
+pkgrel=104
+pkgdesc="Mainline Kernel fork for APQ8026/MSM8226/MSM8926 devices"
+arch="armv7"
+_carch="arm"
+url="https://github.com/msm8226-mainline/linux"
+license="GPL-2.0-only"
+options="!strip !check !tracedeps
+	pmb:cross-native
+	pmb:kconfigcheck-community
+	"
+makedepends="
+	bison
+	clang
+	elfutils-dev
+	findutils
+	flex
+	linux-headers
+	lld
+	llvm
+	openssl-dev
+	pahole
+	perl
+	postmarketos-installkernel
+	python3
+	xz
+	zstd
+"
+
+_config="config-$_flavor.$arch"
+_tag="v${pkgver/_/-}-msm8226-u2"
+
+# Source
+source="
+	https://github.com/msm8226-mainline/linux/archive/$_tag/linux-$_tag.tar.gz
+	$_config
+	0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
+"
+builddir="$srcdir/linux-${_tag#v}"
+
+prepare() {
+	default_prepare
+	cp "$srcdir/config-$_flavor.$arch" .config
+	# nura-builds: the options added to the config with their dependencies resolved
+	make ARCH="$_carch" LLVM=1 olddefconfig
+}
+
+build() {
+	unset LDFLAGS
+	make ARCH="$_carch" LLVM=1 \
+		KBUILD_BUILD_VERSION="$((pkgrel + 1 ))-$_flavor"
+}
+
+package() {
+	mkdir -p "$pkgdir"/boot
+	make zinstall modules_install dtbs_install \
+		ARCH="$_carch" \
+		LLVM=1 \
+		INSTALL_PATH="$pkgdir"/boot/ \
+		INSTALL_MOD_PATH="$pkgdir"/usr \
+		INSTALL_MOD_STRIP=1 \
+		INSTALL_DTBS_PATH="$pkgdir"/boot/dtbs
+	rm "$pkgdir"/usr/lib/modules/*/build
+
+	install -D "$builddir"/include/config/kernel.release \
+		"$pkgdir"/usr/share/kernel/$_flavor/kernel.release
+}
+
+sha512sums="
+63bd2038d6ac22e104f36e31e3137c1cd000de713ef79c8ad13a6b81a64e975c2e8259c25490b96766c500a4df1a8623fbba9be9fc40ddc868032a11cb516679  linux-v6.16.12-msm8226-u2.tar.gz
+b02d9b82668ce9090c089f9a584e96e024346ad100c9efb4849bebf9d407c80b339352601d703d1584f50c8f2860a5d9486d7e13bf6c53ae515c92f6b2c2d7c9  config-postmarketos-qcom-msm8226.armv7
+c89106dad68c6028036f491dae22eed36bbe8bcf6175068a5ca24f3bc244729c63be33f59473f02e693efb810514025b22c2bc31cb53085440dfa2e39e61c9a9  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
+"
