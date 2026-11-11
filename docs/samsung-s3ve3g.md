@@ -124,6 +124,12 @@ with heimdall (or Odin).
 
 ## Debugging
 
+- The kernel log from the first moments (kernel r108, device package r5): `earlycon=ramcon,0x1fb00000`,
+  our early console (patch 0002) writing the last 4 KB of the log into the same buffer in the same
+  format, from `setup_arch` on (ramoops only starts at `device_initcall`: with r107 the buffer still
+  held a downstream log, so our kernel dies before that). `ignore_loglevel`: the bootloader appends
+  `loglevel=4`, which hides most messages from every console. Read with the repacked TWRP
+  (`/proc/last_kmsg`). Our `__log_buf` (0x0173d7f4) doesn't survive: TWRP's kernel data covers it.
 - The kernel log across resets (ramoops, kernel r107): the console goes to downstream's
   `ram_console` buffer (1 MB at 0x1FB00000, `RAMCONSOLE_PHYS_ADDR` in the downstream
   `board-8226.c`), which the bootloader keeps. After a crash or reset, boot a downstream kernel
