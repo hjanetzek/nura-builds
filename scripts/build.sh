@@ -13,8 +13,7 @@ if [ "${1:-}" = "--hash" ]; then
 	exit 0
 fi
 stage=$1
-eval "builds=\${STAGE_$stage:-}"
-# shellcheck disable=SC2154 # set by eval
+builds=$(stage_builds "$stage")
 [ -n "$builds" ] || { echo "no stage $stage in targets/$TARGET.sh" >&2; exit 1; }
 
 eval "seed=\${SEED_$stage:-}"

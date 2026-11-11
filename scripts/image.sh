@@ -10,7 +10,9 @@
 device=$1
 pmb config device "$device"
 pmb config ui "$UI"
-pmb install --password "${NURA_PASSWORD:-147147}"
+# IMAGE_PACKAGES (target file, e.g. IMAGE_PACKAGES_armv7): packages installed besides the UI's
+pmb install --password "${NURA_PASSWORD:-147147}" \
+	${IMAGE_PACKAGES:+--add "$(echo $IMAGE_PACKAGES | tr ' ' ',')"}
 
 img="$NURA_WORK/chroot_native/home/pmos/rootfs/$device.img"
 [ -f "$img" ] || { echo "no image at $img" >&2; exit 1; }

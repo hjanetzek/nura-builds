@@ -64,3 +64,23 @@ DEVICES="google-kukui"
 # amd64: the QEMU virtual machine (zynthian-ui's nura/tools/run_qemu.sh), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
 # raspberry-pi4 is in pmaports' "downstream" category; add it here once tested
+
+# armv7 (branch zynthian-arm7, workflow zynthian-armv7.yml): the Samsung Galaxy S III Neo
+# (samsung-s3ve3g, MSM8226) and other MSM8226 phones. Without the plugins stage (the LV2 plugins,
+# Pure Data, the large engines): an "engines" stage builds only what zynthian-ui itself depends
+# on. The kiosk package (postmarketos-ui-zynthian) depends on the plugins, so it isn't built: the
+# image is a plain one (UI "none") with zynthian-ui installed, for bringing up the device.
+# Overrides: <VAR>_<arch> (common.sh: STAGES, UI, IMAGE_PACKAGES; STAGE_<stage>_<arch>).
+STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian upstream"
+STAGE_engines="zynthian-jalv aeolus sooperlooper"
+INPUTS_engines="aports/zynthian-jalv aports/engines/aeolus aports/engines/sooperlooper"
+STAGE_zynthian_armv7="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
+UI_armv7=none
+IMAGE_PACKAGES_armv7="zynthian-ui"
+# Device: the generic mainline MSM8226 port (pmaports device/testing, linux-postmarketos-qcom-msm8226
+# with the s3ve3g's device tree; booted by lk2nd, flashed once with heimdall). The S III Neo's own
+# device package (samsung-s3ve3g) is archived, with the downstream 3.4 kernel: too old for systemd.
+DEVICES_armv7="qcom-msm8226"
+# Recipes of the other repositories whose arch= lacks armv7 (aarch64 x86_64): setup.sh adds it in
+# the checkouts until the recipes list armv7 themselves
+ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder @drivenbymoss-rust/nura/drivenbymoss"

@@ -1,0 +1,212 @@
+# zynthian for armv7 (branch zynthian-arm7): the zynthian workflow (zynthian.yml) for 32-bit ARM
+# phones, first the Samsung Galaxy S III Neo (samsung-s3ve3g, MSM8226; device qcom-msm8226), without
+# the plugins stage: an "engines" stage builds only zynthian-ui's own dependencies (zynthian-jalv,
+# aeolus, sooperlooper), and the zynthian stage leaves out the kiosk package, which depends on the
+# plugins (targets/zynthian.sh: the *_armv7 settings). The runners are arm64 (as for aarch64):
+# pmbootstrap runs armv7 natively where the CPU executes 32-bit code, under QEMU (with crossdirect
+# for the compilers) otherwise.
+#
+# Run on pushes to zynthian-arm7 and by hand. GitHub runs schedules only on the default branch,
+# so there is no weekly rebuild here: the input "rebuild" does it by hand.
+name: zynthian-armv7
+
+on:
+  workflow_dispatch:
+    inputs:
+      zynthian-ui-ref: { description: "zynthian-ui branch", default: main }
+      zyncoder-ref: { description: "zyncoder branch", default: nura }
+      release: { description: "publish the images as a release", type: boolean, default: false }
+      images: { description: "build the device images", type: boolean, default: false }
+      rebuild: { description: "rebuild Qt and PySide from scratch", type: boolean, default: false }
+  push:
+    branches: [zynthian-arm7]
+    paths: ["aports/**", "scripts/**", "targets/zynthian.sh", ".github/workflows/zynthian-armv7.yml", ".github/workflows/stage.yml"]
+
+concurrency:
+  group: zynthian-armv7-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NURA_ARCH: armv7
+  REBUILD: ${{ inputs.rebuild || false }}
+  REFS: ZYNTHIAN_UI_REF=${{ inputs.zynthian-ui-ref || 'main' }} ZYNCODER_REF=${{ inputs.zyncoder-ref || 'nura' }}
+
+jobs:
+  # Which stages have to run (scripts/plan.sh), as in zynthian.yml
+  plan:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
+    outputs:
+      refs: ${{ steps.refs.outputs.refs }}
+      key_qt1: ${{ steps.plan.outputs.key_qt1 }}
+      run_qt1: ${{ steps.plan.outputs.run_qt1 }}
+      rebuild_qt1: ${{ steps.plan.outputs.rebuild_qt1 }}
+      key_qt2: ${{ steps.plan.outputs.key_qt2 }}
+      run_qt2: ${{ steps.plan.outputs.run_qt2 }}
+      rebuild_qt2: ${{ steps.plan.outputs.rebuild_qt2 }}
+      key_qt3: ${{ steps.plan.outputs.key_qt3 }}
+      run_qt3: ${{ steps.plan.outputs.run_qt3 }}
+      rebuild_qt3: ${{ steps.plan.outputs.rebuild_qt3 }}
+      key_pyside: ${{ steps.plan.outputs.key_pyside }}
+      run_pyside: ${{ steps.plan.outputs.run_pyside }}
+      rebuild_pyside: ${{ steps.plan.outputs.rebuild_pyside }}
+      key_engines: ${{ steps.plan.outputs.key_engines }}
+      run_engines: ${{ steps.plan.outputs.run_engines }}
+      rebuild_engines: ${{ steps.plan.outputs.rebuild_engines }}
+      key_zynthian: ${{ steps.plan.outputs.key_zynthian }}
+      run_zynthian: ${{ steps.plan.outputs.run_zynthian }}
+      rebuild_zynthian: ${{ steps.plan.outputs.rebuild_zynthian }}
+      key_upstream: ${{ steps.plan.outputs.key_upstream }}
+      run_upstream: ${{ steps.plan.outputs.run_upstream }}
+      rebuild_upstream: ${{ steps.plan.outputs.rebuild_upstream }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: refs
+        run: echo "refs=$REFS" >> "$GITHUB_OUTPUT"
+      - id: plan
+        env:
+          NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: TARGET=zynthian scripts/plan.sh
+
+  qt1:
+    needs: plan
+    # runs after a skipped stage too (!failure() instead of the default success())
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt1 == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: qt1, key: "${{ needs.plan.outputs.key_qt1 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt1 == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+  qt2:
+    needs: [plan, qt1]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt2 == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: qt2, previous: qt1, previous-key: "${{ needs.plan.outputs.key_qt1 }}", previous-cached: "${{ needs.plan.outputs.run_qt1 != 'true' }}", key: "${{ needs.plan.outputs.key_qt2 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt2 == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+  qt3:
+    needs: [plan, qt2]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_qt3 == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: qt3, previous: qt2, previous-key: "${{ needs.plan.outputs.key_qt2 }}", previous-cached: "${{ needs.plan.outputs.run_qt2 != 'true' }}", key: "${{ needs.plan.outputs.key_qt3 }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_qt3 == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+  pyside:
+    needs: [plan, qt3]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_pyside == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: pyside, previous: qt3, previous-key: "${{ needs.plan.outputs.key_qt3 }}", previous-cached: "${{ needs.plan.outputs.run_qt3 != 'true' }}", key: "${{ needs.plan.outputs.key_pyside }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_pyside == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+  # instead of the plugins stage: zynthian-ui's own dependencies only
+  engines:
+    needs: [plan, pyside]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_engines == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: engines, previous: pyside, previous-key: "${{ needs.plan.outputs.key_pyside }}", previous-cached: "${{ needs.plan.outputs.run_pyside != 'true' }}", key: "${{ needs.plan.outputs.key_engines }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_engines == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+  zynthian:
+    needs: [plan, engines]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_zynthian == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: zynthian, previous: engines, previous-key: "${{ needs.plan.outputs.key_engines }}", previous-cached: "${{ needs.plan.outputs.run_engines != 'true' }}", key: "${{ needs.plan.outputs.key_zynthian }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_zynthian == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+
+  # zynthian-ui from upstream (vangelis, tomita) with the port patches: packages only, not in images
+  upstream:
+    needs: [plan, zynthian]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_upstream == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: upstream, previous: zynthian, previous-key: "${{ needs.plan.outputs.key_zynthian }}", previous-cached: "${{ needs.plan.outputs.run_zynthian != 'true' }}", key: "${{ needs.plan.outputs.key_upstream }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_upstream == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+
+  # The device images only when asked for (Run workflow > images): without the kiosk package (it
+  # depends on the plugins), UI "none" with zynthian-ui installed (IMAGE_PACKAGES_armv7)
+  image:
+    needs: [plan, zynthian]
+    if: ${{ inputs.images && !cancelled() && !failure() }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # as DEVICES_armv7 in targets/zynthian.sh
+        device: [qcom-msm8226]
+    permissions:
+      contents: write
+    env:
+      TARGET: zynthian
+      NURA_WORK: /home/runner/nura-work
+      NURA_SRC: /home/runner/nura-src
+      NURA_OUT: /home/runner/nura-out
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      NURA_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages-zynthian-zynthian
+          path: /home/runner/nura-out
+      - uses: ./.github/actions/pmaports
+
+      - name: Set up pmbootstrap
+        run: |
+          export ${{ needs.plan.outputs.refs }}
+          scripts/setup.sh
+      - name: Image for ${{ matrix.device }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/image.sh ${{ matrix.device }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zynthian-${{ matrix.device }}
+          path: /home/runner/nura-out/zynthian-${{ matrix.device }}.img.zst
+          retention-days: 7
+          compression-level: 0
+      - name: Release
+        if: inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=zynthian-armv7-$(date +%Y%m%d)-${{ github.run_number }}
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --prerelease --target "$GITHUB_SHA" --title "zynthian armv7 $(date +%Y-%m-%d)" \
+                 --notes "zynthian (Qt UI) for Nura on armv7, without the plugins, built from zynthian-ui ${{ inputs.zynthian-ui-ref }}, zyncoder ${{ inputs.zyncoder-ref }}"
+          gh release upload "$tag" "$NURA_OUT/zynthian-${{ matrix.device }}.img.zst" --clobber
+      - name: Build log
+        if: failure()
+        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true
+
+  # Releases (zynthian-arm7 only): the package repository (release "armv7", the same repository URL
+  # as aarch64) and the images (release "zynthian-armv7-latest"), see scripts/publish.sh
+  publish:
+    needs: [zynthian, upstream, image]
+    if: ${{ !cancelled() && needs.zynthian.result == 'success' && needs.image.result != 'failure' && github.ref == 'refs/heads/zynthian-arm7' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NURA_IMAGE_TAG: zynthian-armv7-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages-zynthian-${{ needs.upstream.result == 'success' && 'upstream' || 'zynthian' }}
+          path: out
+      - uses: actions/download-artifact@v8
+        if: needs.image.result == 'success'
+        with:
+          pattern: zynthian-*
+          path: out/images
+          merge-multiple: true
+      # without images (image job skipped) only the package repository is published
+      - name: Publish
+        run: scripts/publish.sh zynthian out/packages.tar $(ls out/images/*.img.zst 2>/dev/null)

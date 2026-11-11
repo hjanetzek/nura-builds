@@ -83,6 +83,21 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
   `zynthian-qemu-amd64.img.zst` in `zynthian-latest`. On x86-64 runners; cache keys
   `packages-zynthian_x86_64-<stage>-...` (`NURA_ARCH`, `DEVICES_x86_64` in the target file).
 
+- **armv7** (branch `zynthian-arm7`, workflow `zynthian-armv7.yml`): zynthian for 32-bit ARM phones,
+  first the Samsung Galaxy S III Neo (`samsung-s3ve3g`, MSM8226). The stages of `zynthian.yml`
+  without `plugins`: a small `engines` stage builds only zynthian-ui's own dependencies (zynthian-jalv,
+  aeolus, sooperlooper), and the zynthian stage leaves out the kiosk package (it depends on the
+  plugins). The device is the generic mainline port `qcom-msm8226` (pmaports `device/testing`,
+  `linux-postmarketos-qcom-msm8226` with the s3ve3g's device tree, booted by lk2nd); the phone's own
+  `samsung-s3ve3g` package is archived, with the downstream 3.4 kernel, too old for systemd. Its
+  image (input `images`) has UI `none` with zynthian-ui installed, for bringing up the device. Recipes
+  of the other repositories that list only `aarch64 x86_64` get `armv7` added in the checkouts
+  (`ADD_ARCH_armv7`). Settings: the `*_armv7` variables in `targets/zynthian.sh`; cache keys
+  `packages-zynthian_armv7-<stage>-...`; on pushes to the branch, release
+  [`armv7`](../../releases/tag/armv7) (same repository URL) and, with images,
+  `zynthian-armv7-latest`. On arm64 runners: armv7 natively where the CPU runs 32-bit code, under
+  QEMU otherwise (slow for Qt and PySide: the partial caches carry a stage over several runs).
+
 Workflow artifacts (packages per stage, images) stay for a few days for debugging.
 
 The zynthian image leaves out large data from elsewhere (SoundFonts, sample packs); after the first

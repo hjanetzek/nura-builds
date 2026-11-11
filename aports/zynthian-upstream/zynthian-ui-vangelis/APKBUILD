@@ -17,7 +17,7 @@ pkgver=0_git20261106
 pkgrel=3
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream vangelis, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
-arch="aarch64 x86_64"
+arch="aarch64 armv7 x86_64"
 license="GPL-3.0-or-later"
 options="!check"
 # Versioned: apk then allows only one package providing zynthian-ui (and prefers the real zynthian-ui
