@@ -10,6 +10,9 @@ Targets so far:
 | `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss), zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
 | (in `zynthian`) | zynthian-ui from upstream (`zynthian-ui-vangelis`, `zynthian-ui-tomita`): the Tk UI with the port patches, packages only, see [docs/zynthian-upstream.md](docs/zynthian-upstream.md) | as above |
 
+Device bring-up on its own branch: the Samsung Galaxy S III Neo (`samsung-s3ve3g`, armv7), branch
+`galaxy-s3-neo`, kernel and device package only, see [docs/samsung-s3ve3g.md](docs/samsung-s3ve3g.md).
+
 Next: the Google Pixel 3 (`google-blueline`), see [docs/google-blueline.md](docs/google-blueline.md):
 device status, USB OTG (missing on all SDM845 phones; patches on the kernel lists), plan.
 
@@ -87,11 +90,10 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
   first the Samsung Galaxy S III Neo (`samsung-s3ve3g`, MSM8226). The stages of `zynthian.yml`
   without `plugins`: a small `engines` stage builds only zynthian-ui's own dependencies (zynthian-jalv,
   aeolus, sooperlooper), and the zynthian stage leaves out the kiosk package (it depends on the
-  plugins). A `device` stage builds the phone's kernel and device package from overlays
-  (`overlays/s3ve3g`: the mainline kernel with a full device tree, the archived device package
-  moved to it), see [docs/samsung-s3ve3g.md](docs/samsung-s3ve3g.md). Its image (input `images`,
-  with a boot image for heimdall) has UI `none` with zynthian-ui installed, for bringing up the
-  device. Recipes
+  plugins). The device is the generic mainline port `qcom-msm8226` (pmaports `device/testing`,
+  `linux-postmarketos-qcom-msm8226` with the s3ve3g's device tree, booted by lk2nd); the phone's own
+  `samsung-s3ve3g` package is archived, with the downstream 3.4 kernel, too old for systemd. Its
+  image (input `images`) has UI `none` with zynthian-ui installed, for bringing up the device. Recipes
   of the other repositories that list only `aarch64 x86_64` get `armv7` added in the checkouts
   (`ADD_ARCH_armv7`). Settings: the `*_armv7` variables in `targets/zynthian.sh`; cache keys
   `packages-zynthian_armv7-<stage>-...`; on pushes to the branch, release

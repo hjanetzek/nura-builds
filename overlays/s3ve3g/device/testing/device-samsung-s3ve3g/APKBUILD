@@ -1,4 +1,4 @@
-# nura-builds overlay (targets/zynthian.sh, OVERLAY_armv7): pmaports' archived device package
+# nura-builds overlay (targets/s3ve3g.sh): pmaports' archived device package
 # (downstream kernel 3.4, too old for systemd), moved to the mainline kernel and to device/testing
 # (setup.sh removes the archived one: pmbootstrap init doesn't take an archived device unasked)
 # linux-postmarketos-qcom-msm8226, whose s3ve3g device tree is ours (the kernel's overlay).

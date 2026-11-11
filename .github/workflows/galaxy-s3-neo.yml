@@ -1,0 +1,21 @@
+# Samsung Galaxy S III Neo (targets/s3ve3g.sh, docs/samsung-s3ve3g.md): the mainline kernel with
+# the phone's device tree and the device package, from overlays of pmaports' recipes, as .apk files
+# (artifact apks-s3ve3g-kernel; packages-s3ve3g-kernel: the package repository for a local
+# image). Runs on pushes to galaxy-s3-neo* branches and by hand; images are built locally.
+name: galaxy-s3-neo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["galaxy-s3-neo*"]
+
+concurrency:
+  group: galaxy-s3-neo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kernel:
+    uses: ./.github/workflows/stage.yml
+    with: { target: s3ve3g, arch: armv7, stage: kernel }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
