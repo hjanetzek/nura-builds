@@ -124,6 +124,15 @@ with heimdall (or Odin).
 
 ## Debugging
 
+- The kernel log across resets (ramoops, kernel r107): the console goes to downstream's
+  `ram_console` buffer (1 MB at 0x1FB00000, `RAMCONSOLE_PHYS_ADDR` in the downstream
+  `board-8226.c`), which the bootloader keeps. After a crash or reset, boot a downstream kernel
+  (TWRP in RECOVERY: Volume Up + Home + Power) and read it, the same header as Android's
+  persistent RAM: `adb shell cat /proc/last_kmsg`, or raw:
+  `adb shell 'dd if=/dev/mem bs=1048576 skip=507 count=1' > ramoops.bin` (507 MB = 0x1FB00000;
+  the log starts after a 12-byte header, `DBGC`), `strings ramoops.bin`. On the next boot of our
+  kernel the old log is in `/sys/fs/pstore/console-ramoops-0`.
+
 - USB networking (the initramfs and the system): 172.16.42.1, `ssh user@172.16.42.1`, if the
   SM5502 detects the PC (else the USB controller stays without a role).
 - Serial console: `blsp1_uart3` at 115200 (`console=ttyMSM0`). Samsung routes it to the micro-USB

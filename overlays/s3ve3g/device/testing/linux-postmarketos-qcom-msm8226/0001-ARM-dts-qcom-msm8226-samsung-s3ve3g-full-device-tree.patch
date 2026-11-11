@@ -8,10 +8,10 @@ wiring from its downstream device tree (msm8226-sec-s3ve3geur-r04), and
 qcom,msm-id for Samsung's bootloader (appended DTB).
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-index 288cacd..4458f91 100644
+index 288cacd..61974ef 100644
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-@@ -1,24 +1,571 @@
+@@ -1,24 +1,588 @@
  // SPDX-License-Identifier: BSD-3-Clause
  /*
   * Copyright (c) 2020, The Linux Foundation. All rights reserved.
@@ -197,6 +197,23 @@ index 288cacd..4458f91 100644
 +		mba_region: mba@a300000 {
 +			reg = <0x0a300000 0x100000>;
 +			no-map;
++		};
++
++		/*
++		 * The kernel log across resets: downstream's ram_console buffer (board-8226.c:
++		 * RAMCONSOLE_PHYS_ADDR, 1M), which the bootloader leaves alone. All of it as the
++		 * console zone (no dmesg records, no ECC): the same header (DBGC) as Android's
++		 * persistent_ram, so a downstream kernel (TWRP) shows it as /proc/last_kmsg.
++		 */
++		ramoops@1fb00000 {
++			compatible = "ramoops";
++			reg = <0x1fb00000 0x100000>;
++			no-map;
++
++			console-size = <0x100000>;
++			record-size = <0>;
++			ecc-size = <0>;
++			unbuffered;
 +		};
 +
 +		/* the rest of downstream's 64M modem window */
