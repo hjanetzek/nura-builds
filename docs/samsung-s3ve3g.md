@@ -110,6 +110,18 @@ NURA_ARCH=armv7 scripts/setup.sh` (with `packages-s3ve3g-kernel` in `$NURA_OUT`,
 `scripts/build.sh kernel`), then `scripts/image.sh samsung-s3ve3g`: `$NURA_OUT/s3ve3g-samsung-s3ve3g.img.zst`
 and `-boot.img.zst`. setup.sh copies the overlays into the pmaports checkout it uses (CI's way).
 
+## The command line limit
+
+Samsung's bootloader appends about 840 characters to the boot image's command line (sec_log,
+cordon, connie, ...) and doesn't boot when the total exceeds 1024 bytes: it shows the red "not
+SEANDROID enforcing" text, then resets (a loop), without starting the kernel. Found with hybrid
+images (TWRP, which boots from BOOT, with our 329-character command line loops; downstream's 141
+and TWRP's 75 boot) and the RAM log (debug markers at the decompressor's first instruction never
+appeared). So the boot image keeps only pmOS's `pmos_*` options (about 130 characters, at most
+183): the device options are built into the kernel (`CONFIG_CMDLINE`, `CONFIG_CMDLINE_EXTEND`,
+appended to the bootloader's line; `COMMAND_LINE_SIZE` raised to 2048, patch 0004), and the device
+package overrides `quiet` and plymouth's options with empty files in `/etc/kernel-cmdline.d`.
+
 ## Flashing
 
 Download mode: Volume Down + Home + Power, then Volume Up to confirm. heimdall on the PC
