@@ -296,6 +296,42 @@ Tested (2026-11-12): S2 follows the frequency (0x69 at 300 MHz, 0x73 at 600/787.
 1190.4 MHz (925 runs, none wrong, 62 °C) and with boost at 1593.6 MHz (1088 runs, none wrong,
 67 °C, levelling off).
 
+## Network over USB (2026-11-12)
+
+The phone's Wi-Fi gives about 550 KiB/s; the USB network (172.16.42.1 phone, 172.16.42.2 host)
+carries about 7 MB/s (an ssh transfer, and a mirror download through the host). For installing
+packages the phone can use the host's internet connection:
+
+- **Host (needs root), with ufw:** `net/ipv4/ip_forward=1` in `/etc/ufw/sysctl.conf`; at the top of
+  `/etc/ufw/before.rules` a NAT table
+  `*nat` / `:POSTROUTING ACCEPT [0:0]` / `-A POSTROUTING -s 172.16.42.0/24 -o <uplink> -j MASQUERADE` / `COMMIT`;
+  `sudo ufw route allow in on <usb interface> out on <uplink>`; `sudo ufw reload`.
+  - Use the interface's real name (here `enp34s0f3u1u3u2`), not its altname (`enx…`, from the
+    phone's fixed USB MAC): iptables matches real names only, a rule with the altname silently never
+    matches. The real name depends on the USB port.
+  - ufw forwards ICMP by itself (before.rules): a working ping proves nothing about the route rule;
+    test TCP (`nc -zv <ip> 443`).
+- **Phone (runtime, lost on reboot):** `ip route replace default via 172.16.42.2 dev usb0 metric 100`
+  (below Wi-Fi's 600, which stays as fallback). Here the path behind the host takes at most 1480-byte
+  packets (`ping -s 1452` passes, 1472 doesn't) and no "fragmentation needed" comes back through the
+  NAT, so also `mtu 1480 advmss 1440` on that route.
+- **IPv6 goes around it:** NetworkManager gives wlan0 an IPv6 default route, and musl (which ignores
+  `/etc/gai.conf`) prefers IPv6: hosts with an AAAA record (GitHub has none, many mirrors do) are
+  reached over Wi-Fi. `sysctl net.ipv6.conf.wlan0.disable_ipv6=1` while installing.
+- **Mirror:** the mirror matters as much as the link. The Alpine CDN gave the host 420 KiB/s to
+  5.5 MB/s (cold/warm cache), RWTH Aachen 13 MB/s; the phone's Alpine repositories point there
+  (`/etc/apk/repositories`, the original kept as `.orig`). Measuring with BusyBox: `date` has no
+  nanoseconds, use `/proc/uptime`; throughput of an interface from `/proc/net/dev` over a few
+  seconds (no iftop needed).
+- **Without root on the host:** `tools/s3ve3g-debug/http-proxy.py` listening on 172.16.42.2 and
+  `http_proxy=` for apk (passed through `sudo env`, `sudo -E` drops it); `ssh -R` doesn't work, the
+  phone's sshd has `AllowTcpForwarding no`. The host's firewall must allow the port from the USB
+  interface.
+- Package repository of nura-builds for armv7 (zynthian, our Qt 6.12/PySide6 6.12): key
+  `keys/nura-builds-ci.rsa.pub` into `/etc/apk/keys/`, `https://github.com/hjanetzek/nura-builds/releases/download`
+  into `/etc/apk/repositories`. apk keeps an installed Alpine Qt 6.11 unless the Qt packages are
+  named with `apk add -u`.
+
 ## Kernel updates over SSH
 
 Once the device runs (USB networking), new builds go to it without heimdall or a new rootfs:

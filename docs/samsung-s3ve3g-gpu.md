@@ -242,13 +242,8 @@ ACL, gamma update) around it.
 - **niri:** not packaged for 32-bit by Alpine (its screencast feature needs pipewire-rs);
   `overlays/s3ve3g/temp/niri` builds it without that feature (`--features dbus`); pmbootstrap
   needs `sccache` in makedepends for Rust.
-- **Package downloads over USB:** the host routes and NATs the phone's subnet (ufw:
-  `net/ipv4/ip_forward=1`, a MASQUERADE rule for 172.16.42.0/24 in `before.rules`,
-  `ufw route allow in on <usb if> out on <uplink>`); on the phone
-  `ip route add default via 172.16.42.2 dev usb0 metric 100` (Wi-Fi stays as fallback, runtime
-  only) and an Alpine mirror close by (RWTH Aachen: ~1.5 MB/s vs ~550 KiB/s over Wi-Fi). Without
-  root on the host: `tools/s3ve3g-debug/http-proxy.py` on the USB address (sshd's
-  AllowTcpForwarding is off, so no `ssh -R`).
+- **Package downloads:** over the USB network through the host, see "Network over USB" in
+  `samsung-s3ve3g.md`.
 
 ## Effort and blockers (estimates)
 
