@@ -157,13 +157,24 @@ Powering the display down and up (DPMS: `fb0/blank`) works since 2026-11-12:
 - 0013 commits planes after the modeset enables (unblank aborted on the LM registers before the
   DSI's pixel clock was back) and takes the CRTC's irq masks in atomic_enable; 0014 + the DT give
   the MDSS the MMSS_MISC_AHB_CLK (only the DSI had it); the panel sends sleep in in its disable.
-- The freeze that remained: after the MDSS's own runtime suspend/resume the MDP's registers are
-  unreachable, and the first CTL write in the CRTC's atomic_enable hung the bus (found with a live
-  `cat /dev/kmsg` and drm.debug over SSH: the log stops at "enabling [CRTC:53:crtc-0]" right after
-  mdss_runtime_resume/mdp5_runtime_resume). With the MDSS kept from runtime suspend
-  (`power/control = on`) blank and unblank work, the MDP, the DSI and the panel still power down.
-  The device package does that with a udev rule (`90-s3ve3g-mdss.rules`). The cause in the MDSS
-  resume (power domain, a clock, a reset) is still to be found; the rule works around it.
+- The freeze that remained (fixed by 0015): after the MDSS's own runtime suspend/resume the first
+  CTL write in the CRTC's atomic_enable hung the bus (found with a live `cat /dev/kmsg` and
+  drm.debug over SSH: the log stops at "enabling [CRTC:53:crtc-0]" right after
+  mdss_runtime_resume/mdp5_runtime_resume). Narrowed down with the MDSS GDSC forced always on
+  (a test build): then the MDSS clocks go off and on again and DPMS works, so the power collapse
+  loses something, not the clocks. The clock controller's registers are the same before and after
+  the collapse. Downstream, after every MDSS power-on, has TrustZone restore the MDP IOMMU's
+  secure configuration (`msm_iommu_sec_program_iommu(1)`: SCM MP/IOMMU_SECURE_CFG for the SMMU at
+  0xfd928000, `qcom,iommu-secure-id = <1>`), which TZ set up at boot to let the MDP's traffic
+  through. Mainline has the same call as `qcom_scm_restore_sec_cfg(1, 0)`; 0015 makes it in
+  msm_mdss_enable() on MSM8226 (it returns 0). The VBIF settings the bootloader left
+  (0x004 = 1, 0x0d8 = 0x707, 0x124 = 3, downstream's `qcom,vbif-settings`) are lost too, so 0015
+  writes them again (the DT's `vbif_phys`, unused before). The GDSC now powers off with the screen
+  (`pm_genpd_summary`: mdss off-0) and the udev rule that kept the MDSS on is gone.
+  After a collapse the first enable shows about 10 underrun interrupts (`errors: 04000000`), as at
+  boot: the INTF starts before the planes are committed (0013's order); not seen as a glitch.
+  Careful with `/dev/mem` reads of the MDSS while the MDP is suspended: sometimes a bus error,
+  sometimes a hang and a reset of the SoC.
 - `s3ve3g-screen off|on` (the screen-off service after boot) uses DPMS with msm: the panel gets
   display off and sleep in, the MDP and DSI suspend; without msm it clears the framebuffer.
 - Console blanking stays off (`consoleblank=0`, the ESC[9;5] taken out of `/etc/issue`), it would

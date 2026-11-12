@@ -1,0 +1,69 @@
+From: s3ve3g bring-up
+Subject: [PATCH] drm/msm/mdss: MSM8226: restore the MDP IOMMU and VBIF after a power collapse
+
+After a power collapse of the MDSS GDSC the MDP hung the bus at the first modeset (DPMS on).
+TrustZone sets up the MDP IOMMU at boot and the bootloader the VBIF; downstream restores both
+after each power-on (msm_iommu_sec_program_iommu(), qcom,vbif-settings).
+---
+--- a/drivers/gpu/drm/msm/msm_mdss.c
++++ b/drivers/gpu/drm/msm/msm_mdss.c
+@@ -6,6 +6,7 @@
+ #include <linux/bitfield.h>
+ #include <linux/clk.h>
+ #include <linux/delay.h>
++#include <linux/firmware/qcom/qcom_scm.h>
+ #include <linux/interconnect.h>
+ #include <linux/irq.h>
+ #include <linux/irqchip.h>
+@@ -29,6 +30,7 @@
+ 	struct device *dev;
+ 
+ 	void __iomem *mmio;
++	void __iomem *vbif;	/* MSM8226: restored after a power collapse */
+ 	struct clk_bulk_data *clocks;
+ 	size_t num_clocks;
+ 	bool is_mdp5;
+@@ -311,6 +313,30 @@
+ 	}
+ 
+ 	/*
++	 * MSM8226: the MDP's IOMMU (SMMU at 0xfd928000, secure id 1) is set up by TrustZone at boot,
++	 * which lets the MDP's traffic through; a power collapse of the MDSS GDSC resets it, and then
++	 * the MDP hangs the bus. The downstream kernel has TZ restore it after each power-on
++	 * (msm_iommu_sec_program_iommu()), as we do here.
++	 */
++	if (msm_mdss->is_mdp5 && of_machine_is_compatible("qcom,msm8226") &&
++	    qcom_scm_restore_sec_cfg_available()) {
++		int sret = qcom_scm_restore_sec_cfg(1, 0);
++
++		dev_dbg(msm_mdss->dev, "restored the MDP IOMMU's secure config: %d\n", sret);
++	}
++
++	/*
++	 * The VBIF settings the bootloader left (downstream: qcom,vbif-settings of msm8226-mdss.dtsi)
++	 * are lost in a power collapse as well; without them the MDP underruns after each enable.
++	 */
++	if (msm_mdss->vbif) {
++		writel_relaxed(0x00000001, msm_mdss->vbif + 0x004);
++		writel_relaxed(0x00000707, msm_mdss->vbif + 0x0d8);
++		writel_relaxed(0x00000003, msm_mdss->vbif + 0x124);
++		wmb();
++	}
++
++	/*
+ 	 * Register access requires MDSS_MDP_CLK, which is not enabled by the
+ 	 * mdss on mdp5 hardware. Skip it for now.
+ 	 */
+@@ -463,6 +489,12 @@
+ 
+ 	dev_dbg(&pdev->dev, "mapped mdss address space @%pK\n", msm_mdss->mmio);
+ 
++	if (is_mdp5 && of_machine_is_compatible("qcom,msm8226")) {
++		msm_mdss->vbif = devm_platform_ioremap_resource_byname(pdev, "vbif_phys");
++		if (IS_ERR(msm_mdss->vbif))
++			msm_mdss->vbif = NULL;
++	}
++
+ 	ret = msm_mdss_parse_data_bus_icc_path(&pdev->dev, msm_mdss);
+ 	if (ret)
+ 		return ERR_PTR(ret);

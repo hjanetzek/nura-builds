@@ -37,7 +37,6 @@ source="
 	s3ve3g-debug-telnet.initd
 	s3ve3g-display-manual.conf
 	s3ve3g-panic.sysctl
-	90-s3ve3g-mdss.rules
 "
 
 build() {
@@ -89,7 +88,6 @@ package() {
 	# nura-builds, bring-up: a place to blacklist msm (display, GPU) again while debugging it
 	install -Dm644 "$srcdir"/s3ve3g-display-manual.conf "$pkgdir"/etc/modprobe.d/s3ve3g-display-manual.conf
 	# the MDSS kept from runtime suspend (its resume leaves the MDP unreachable; DPMS works with it)
-	install -Dm644 "$srcdir"/90-s3ve3g-mdss.rules "$pkgdir"/usr/lib/udev/rules.d/90-s3ve3g-mdss.rules
 
 	# bring-up: restart on an oops (alpine's 00-alpine.conf has kernel.panic = 120, no panic_on_oops)
 	install -Dm644 "$srcdir"/s3ve3g-panic.sysctl "$pkgdir"/etc/sysctl.d/90-s3ve3g-panic.conf
@@ -130,5 +128,4 @@ c7d995717b9bfb0d9cab20f833201802d86453468e5afbb6dee39ac8b23732446a2c8f8026f1e731
 ede70db74354ed147024175125fe84dc2050837f9e7671baf737152059b172ce5718fc169acf6b4f41185c206039d20949ca99a19af8d6e59ae52fd255da6883  s3ve3g-debug-telnet.initd
 22f4af7df5cd6d589405f242ad2ca44b4884938be80ffdbb5493b667e6c77dadecd96700d8c32ef31af343350d525b8296b934880f72f0a1c5eea68ce02a7a7e  s3ve3g-display-manual.conf
 4cf2bf2ec71f13109700620017c44b1829b0700c1d8f88480e2b17555d37bf52a399263d26ff96a445de5b87de6fd0457c68e5b8659db9068a168529af14025e  s3ve3g-panic.sysctl
-cf901575c1350f27bd3474f8753de4de35ebf6d302e2c661fbe0aca94888d4d1fde545517df881a3078da5f0e734b221e7c451fdd2a60eacac235fc83abf56ed  90-s3ve3g-mdss.rules
 "

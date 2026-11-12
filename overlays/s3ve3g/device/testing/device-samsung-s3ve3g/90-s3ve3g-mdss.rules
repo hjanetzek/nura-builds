@@ -1,5 +1,0 @@
-# Samsung Galaxy S III Neo: keep the display subsystem (MDSS) from runtime-suspending. After an MDSS
-# runtime suspend/resume the MDP's registers are unreachable (the first CTL write in the CRTC's
-# atomic_enable hangs the bus: unblank froze the phone); with the MDSS kept on, the MDP, the DSI and
-# the panel still power down and up again (DPMS works). Costs a few bus clocks.
-ACTION=="add", SUBSYSTEM=="platform", KERNEL=="fd900000.display-subsystem", ATTR{power/control}="on"
