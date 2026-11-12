@@ -30,10 +30,10 @@ index 4228332..7b9e933 100644
 +obj-$(CONFIG_DRM_PANEL_SAMSUNG_S3VE3G_S6E8AA0A) += panel-samsung-s3ve3g-s6e8aa0a.o
 diff --git a/drivers/gpu/drm/panel/msm8226-generated/panel-samsung-s3ve3g-s6e8aa0a.c b/drivers/gpu/drm/panel/msm8226-generated/panel-samsung-s3ve3g-s6e8aa0a.c
 new file mode 100644
-index 0000000..c148ff1
+index 0000000..a87b9f1
 --- /dev/null
 +++ b/drivers/gpu/drm/panel/msm8226-generated/panel-samsung-s3ve3g-s6e8aa0a.c
-@@ -0,0 +1,490 @@
+@@ -0,0 +1,519 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +// Samsung S6E8AA0A 720x1280 AMOLED (video mode) of the Samsung Galaxy S III Neo (s3ve3g).
 +// In the style of linux-mdss-dsi-panel-driver-generator's drivers, written from the vendor device
@@ -70,6 +70,7 @@ index 0000000..c148ff1
 +	struct gpio_desc *reset_gpio;
 +	struct gpio_desc *enable_gpio;
 +	bool on;
++	bool blanked;	/* display off and sleep in through the backlight device (bl_power) */
 +};
 +
 +#define GAMMA_LEVEL_NUM 25
@@ -305,10 +306,37 @@ index 0000000..c148ff1
 +static int s6e8aa0a_bl_update_status(struct backlight_device *bl)
 +{
 +	struct s6e8aa0a *ctx = bl_get_data(bl);
++	struct mipi_dsi_multi_context dsi_ctx = { .dsi = ctx->dsi };
 +
 +	/* sent with the panel on only; enable applies the current level */
 +	if (!ctx->on)
 +		return 0;
++
++	/*
++	 * Blanked (bl_power, or the display being disabled): the AMOLED dark and asleep while the
++	 * video stream goes on, so that the screen can be switched off without DRM master (e.g. by
++	 * the power key while a Qt eglfs application owns the display)
++	 */
++	if (backlight_is_blank(bl)) {
++		if (ctx->blanked)
++			return 0;
++		ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
++		mipi_dsi_dcs_set_display_off_multi(&dsi_ctx);
++		mipi_dsi_msleep(&dsi_ctx, 20);
++		mipi_dsi_dcs_enter_sleep_mode_multi(&dsi_ctx);
++		mipi_dsi_msleep(&dsi_ctx, 120);
++		ctx->blanked = true;
++		return dsi_ctx.accum_err;
++	}
++	if (ctx->blanked) {
++		ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
++		mipi_dsi_dcs_exit_sleep_mode_multi(&dsi_ctx);
++		mipi_dsi_msleep(&dsi_ctx, 120);
++		mipi_dsi_dcs_set_display_on_multi(&dsi_ctx);
++		ctx->blanked = false;
++		if (dsi_ctx.accum_err)
++			return dsi_ctx.accum_err;
++	}
 +
 +	return s6e8aa0a_set_brightness(ctx, backlight_get_brightness(bl));
 +}
@@ -373,6 +401,7 @@ index 0000000..c148ff1
 +
 +	/* drm_panel_enable() then calls backlight_enable(), which sends the current level */
 +	ctx->on = true;
++	ctx->blanked = false;
 +
 +	return 0;
 +}

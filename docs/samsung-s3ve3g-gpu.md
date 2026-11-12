@@ -289,6 +289,23 @@ samples the buffer through a 1D texture view, which a3xx encoded wrongly, corrup
 vertex data. `FD_MESA_DEBUG=inorder` (no staging for busy buffers) makes the flicker go away:
 the workaround until the fixed Mesa (the armv7 CI's `aports/mesa`, 26.2.6-r1) is installed.
 
+## Power key: screen off and on (2026-11-13)
+
+elogind (installed with the cage UI) powered the phone off on a short press of the power key:
+`HandlePowerKey=ignore` is in `/usr/lib/elogind/logind.conf`, which this elogind doesn't read
+(log: "Power key pressed short." -> "System is powering down."). A drop-in
+`/etc/elogind/logind.conf.d/50-s3ve3g-powerkey.conf` sets `HandlePowerKey`,
+`HandlePowerKeyLongPress`, `HandleLidSwitch` and `HandleLidSwitchExternalPower` to ignore (the Hall
+sensor is a lid switch for elogind: a flip cover would suspend).
+
+`tools/s3ve3g-debug/s3ve3g-powerkey.sh` (root, BusyBox sh) switches the screen with the key: the
+panel through its backlight device, `bl_power` 4/0 (patch 0008: display off and sleep in while the
+video stream goes on, sleep out, display on and the gamma table back; works without DRM master,
+so also under a Qt eglfs application), the touchscreen inhibited meanwhile
+(`/sys/class/input/inputN/inhibited`). Tested on the console and with zynthian on eglfs. Not yet in
+the device package (OpenRC service, the elogind drop-in). Suspend (s2idle, the only sleep state
+offered) untested; the power key is a wakeup source.
+
 ## Effort and blockers (estimates)
 
 | Step | Effort |
