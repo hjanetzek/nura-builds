@@ -1,0 +1,12 @@
+[Unit]
+Description=Wi-Fi NV calibration file from the system partition (Samsung Galaxy S III Neo)
+DefaultDependencies=no
+Before=msm-firmware-loader.service systemd-udevd.service
+ConditionPathExists=!/lib/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/s3ve3g-wcnss-nv
+
+[Install]
+WantedBy=sysinit.target

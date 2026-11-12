@@ -148,6 +148,23 @@ framebuffer, Terminus 16x32). Found on the way:
   boot), and the initramfs's log drive in its debug shell (USB mass storage `PMOS_LOGS`:
   `pmOS_init.txt`, `dmesg.txt`).
 
+## Hardware status (2026-11-12, kernel r113)
+
+Works: boot to the login prompt, USB networking (cdc_ncm, SSH at 172.16.42.1), simpledrm on the
+splash framebuffer (720x1280), eMMC, keys, hall sensor, power key, touchscreen (MMS114 registers),
+magnetometer (yas532), IMU (mpu6500), PMIC ADCs, Wi-Fi (2.4 and 5 GHz; `hal_start_scan ... err=5`
+from the old firmware is harmless), Bluetooth (registers), 4 CPUs with cpufreq up to 787 MHz.
+
+Wi-Fi needs the NV calibration file `wlan/prima/WCNSS_qcom_wlan_nv.bin` (without it the WCNSS
+firmware crashes in a loop): it is on the stock system partition (`/etc/firmware/wlan/prima/`),
+where msm-firmware-loader doesn't look; the device package's `s3ve3g-wcnss-nv.service` copies it to
+`/lib/firmware` once, before the loader. The `l24: unsupportable voltage range` warning is the
+iris driver's default for vdddig; downstream feeds vddrfa and vdddig from l24 too.
+
+Missing: battery and charging (no mainline driver for the PM8226 charger and fuel gauge), sound,
+a panel driver (S6E8AA0A: brightness, blanking), cpufreq above 787 MHz (CPR, speed bins), SD card
+(the controller probes, untested with a card), vibrator, LED, light/proximity sensor, NFC, modem.
+
 ## Flashing
 
 Download mode: Volume Down + Home + Power, then Volume Up to confirm. heimdall on the PC
