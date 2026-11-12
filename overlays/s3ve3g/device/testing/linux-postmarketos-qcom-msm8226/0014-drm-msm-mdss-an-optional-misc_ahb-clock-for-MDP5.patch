@@ -1,0 +1,35 @@
+From: nura-builds
+Subject: [PATCH] drm/msm/mdss: an optional misc_ahb clock for MDP5
+
+On MSM8226 the MDSS registers need MMSS_MISC_AHB_CLK, which only the DSI
+controller enabled ("core_mmss"): after a blank (the DSI powered down) the
+MDP's registers were unreachable and unblanking crashed with external
+aborts (mdp5_crtc_atomic_flush, mdp5_ctl_set_cursor), even the MDP's
+version register faulted with the MDP runtime-active. Take an optional
+"misc_ahb" clock in the MDSS node, enabled with the others while the MDSS
+is active.
+---
+diff --git a/drivers/gpu/drm/msm/msm_mdss.c b/drivers/gpu/drm/msm/msm_mdss.c
+--- a/drivers/gpu/drm/msm/msm_mdss.c
++++ b/drivers/gpu/drm/msm/msm_mdss.c
+@@ -409,7 +409,7 @@
+ /*
+  * MDP5 MDSS uses at most three specified clocks.
+  */
+-#define MDP5_MDSS_NUM_CLOCKS 3
++#define MDP5_MDSS_NUM_CLOCKS 4
+ static int mdp5_mdss_parse_clock(struct platform_device *pdev, struct clk_bulk_data **clocks)
+ {
+ 	struct clk_bulk_data *bulk;
+@@ -426,6 +426,11 @@
+ 	bulk[num_clocks++].id = "iface";
+ 	bulk[num_clocks++].id = "bus";
+ 	bulk[num_clocks++].id = "vsync";
++	/*
++	 * MSM8226: MMSS_MISC_AHB_CLK, else only the DSI's: register access to the MDSS fails when
++	 * the DSI powers down while the MDP is still in use (optional)
++	 */
++	bulk[num_clocks++].id = "misc_ahb";
+ 
+ 	ret = devm_clk_bulk_get_optional(&pdev->dev, num_clocks, bulk);
+ 	if (ret)

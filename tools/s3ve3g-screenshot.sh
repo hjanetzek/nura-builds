@@ -5,11 +5,11 @@
 #
 # Usage: tools/s3ve3g-screenshot.sh [NAME]
 #   NAME  file name stem (default: screen-<time>)
-# Environment: CAM (default https://192.168.178.58:4444), CAM_USER/CAM_PASS (if the app has
+# Environment: CAM (default https://192.168.178.87:4444), CAM_USER/CAM_PASS (if the app has
 # authentication on), OUT (default ./out/s3ve3g/screens), SIZE (scaled copy, default 900)
 set -eu
 
-CAM=${CAM:-https://192.168.178.58:4444}
+CAM=${CAM:-https://192.168.178.87:4444}
 OUT=${OUT:-$(cd "$(dirname "$0")/.." && pwd)/out/s3ve3g/screens}
 SIZE=${SIZE:-900}
 name=${1:-screen-$(date +%Y%m%d-%H%M%S)}

@@ -1,0 +1,5 @@
+# Samsung Galaxy S III Neo bring-up: an oops (e.g. the display driver) panics and the phone
+# restarts after 10 s, instead of hanging until someone holds the power button; the oops is
+# then in /sys/fs/pstore (ramoops) after the restart
+kernel.panic_on_oops = 1
+kernel.panic = 10

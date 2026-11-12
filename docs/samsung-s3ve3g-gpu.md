@@ -151,11 +151,27 @@ found by its byte patterns: Qualcomm LK's `{size, payload, wait}` entries, paylo
 DSI headers) differs from the vendor tree's (panel condition F8 0x19/0x04, gamma, ELVSS B1 04 00,
 no ACL); both work now, the vendor tree's gives the right colours.
 
-Still open: blanking and unblanking (`fb0/blank`, the console's 300 s blanking) crashes in
-`mdp5_crtc_atomic_flush` (external abort), so msm stays blacklisted at boot
-(`/etc/modprobe.d/s3ve3g-display-manual.conf`); the panel driver's bring-up switches
-(`skip_init`, `no_reset`, the power-mode log) and 0010's register trace can go once that's done;
-no brightness control yet (no smart dimming). The camera setup for checking the screen:
+msm loads at boot now (the blacklist in `/etc/modprobe.d/s3ve3g-display-manual.conf` is commented
+out). Still open: powering the display down and up again (DPMS off/on: `fb0/blank`, the
+console's blanking) doesn't work yet:
+- 0013 commits planes after the modeset enables (unblank aborted in `mdp5_crtc_atomic_flush` on
+  the LM registers before), 0014 + the DT give the MDSS the MMSS_MISC_AHB_CLK (only the DSI had
+  it; after a blank even the MDP's version register faulted); then the abort moved to
+  `mdp5_ctl_set_cursor` from the CRTC's atomic_enable, and now the phone freezes already in the
+  blank, after the panel's sleep in timed out (msm waits for a video done after the MDP stopped;
+  sleep in is in the panel's disable now). Likely an MDP register access after the DSI (and its
+  PLL, the pixel clock) is off, which stalls the bus instead of aborting.
+- Avoided for now: no DPMS. The console's blanking is off when the screen is on (`s3ve3g-screen
+  on` sends ESC[9;0]: `/etc/issue` of postmarketos-release sets 5 minutes with ESC[9;5], which
+  overrides `consoleblank=0`), and `s3ve3g-screen off` (the default after boot) unbinds fbcon and
+  clears the framebuffer instead.
+- Debugging aids: `kernel.panic_on_oops = 1`, `kernel.panic = 10` (device package sysctl; the
+  phone restarts by itself; ramoops keeps nothing across that restart here),
+  `/sys/module/kernel/parameters/pause_on_oops` and a live `sudo cat /dev/kmsg` over SSH to get
+  an oops out (netconsole doesn't work over the USB gadget network: no netpoll), msm.reglog=1.
+
+The panel driver's bring-up switches (`skip_init`, `no_reset`, the power-mode log) and 0010's
+register trace can go once that's done; no brightness control yet (no smart dimming). The camera setup for checking the screen:
 `tools/s3ve3g-screenshot.sh` (and the project skill `s3neo-screen`).
 
 ## Effort and blockers (estimates)

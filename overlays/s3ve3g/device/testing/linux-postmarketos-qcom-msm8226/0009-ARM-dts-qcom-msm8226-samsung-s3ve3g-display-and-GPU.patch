@@ -8,7 +8,7 @@ msm.allow_vram_carveout).
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-@@ -402,6 +402,45 @@
+@@ -402,6 +402,59 @@
  	status = "okay";
  };
  
@@ -17,6 +17,20 @@ diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/b
 +};
 +
 +&mdss {
++	/*
++	 * MMSS_MISC_AHB_CLK was only the DSI's ("core_mmss"): when the DSI powered down (blank), it
++	 * went off and with it register access to the whole MDSS (external aborts in the MDP on
++	 * unblank). msm's MDSS driver keeps all of its node's clocks on while active.
++	 */
++	clocks = <&mmcc MDSS_AHB_CLK>,
++		 <&mmcc MDSS_AXI_CLK>,
++		 <&mmcc MDSS_VSYNC_CLK>,
++		 <&mmcc MMSS_MISC_AHB_CLK>;
++	clock-names = "iface",
++		      "bus",
++		      "vsync",
++		      "misc_ahb";
++
 +	status = "okay";
 +};
 +

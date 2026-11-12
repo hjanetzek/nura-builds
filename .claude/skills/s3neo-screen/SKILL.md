@@ -16,7 +16,7 @@ tools/s3ve3g-screenshot.sh [NAME]     # prints the path of the scaled copy
 
 Then view the printed `*-small.jpg` with the Read tool. The full-size photo is next to it
 (`out/s3ve3g/screens/NAME.jpg`) for detail: crop it with python3/PIL before reading if small text
-matters. Environment: `CAM` (default `https://192.168.178.58:4444`), `CAM_USER`/`CAM_PASS` when the
+matters. Environment: `CAM` (default `https://192.168.178.87:4444`), `CAM_USER`/`CAM_PASS` when the
 app's authentication is on, `SIZE` (default 900).
 
 If it fails:

@@ -1,0 +1,31 @@
+From: nura-builds
+Subject: [PATCH] drm/msm: commit planes after the modeset enables (bring-up)
+
+On MDP5 v1.1 (MSM8226, Galaxy S III Neo) unblanking a DSI display crashed
+in mdp5_crtc_atomic_flush() with an external abort on the LM registers:
+the planes were committed (mixer setup, flush) before the modeset enables,
+i.e. before the DSI bridge's pre_enable brought the DSI PLL, and with it
+the pixel clock of the mixer/interface side, back. Use the order of
+drm_atomic_helper_commit_tail_rpm(): disables, enables, planes (active
+CRTCs only).
+---
+diff --git a/drivers/gpu/drm/msm/msm_atomic.c b/drivers/gpu/drm/msm/msm_atomic.c
+--- a/drivers/gpu/drm/msm/msm_atomic.c
++++ b/drivers/gpu/drm/msm/msm_atomic.c
+@@ -244,9 +244,15 @@
+ 	/*
+ 	 * Push atomic updates down to hardware:
+ 	 */
++	/*
++	 * Enables before planes (as drm_atomic_helper_commit_tail_rpm()): on MDP5 v1.1 (MSM8226) the
++	 * mixer and interface side needs the DSI PLL's pixel clock, which the DSI bridge only brings
++	 * back in its pre_enable; flushing planes into an enabling CRTC first aborts (external abort
++	 * on the LM registers after a blank/unblank)
++	 */
+ 	drm_atomic_helper_commit_modeset_disables(dev, state);
+-	drm_atomic_helper_commit_planes(dev, state, 0);
+ 	drm_atomic_helper_commit_modeset_enables(dev, state);
++	drm_atomic_helper_commit_planes(dev, state, DRM_PLANE_COMMIT_ACTIVE_ONLY);
+ 
+ 	if (async) {
+ 		struct msm_pending_timer *timer =
