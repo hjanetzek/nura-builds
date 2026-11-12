@@ -217,6 +217,10 @@ video stream runs, applied again on enable (it survives DPMS off/on), and skippe
 off. Checked through the camera: in the MJPEG stream the screen jumps about 2× (saturated) going
 from 0 to 24, before the camera's auto exposure catches up. Not done: smart dimming from the
 panel's MTP (per-panel calibrated gamma, as downstream does); 0 is dim but not off (use DPMS).
+Known issue: a brightness change shows a short flicker with big horizontal bands (seen by eye,
+with kmscube running), in LP and in HS mode alike; probably the gamma taking effect mid-frame.
+Untried: sending the table during vertical blanking, or downstream's order of commands (ELVSS,
+ACL, gamma update) around it.
 
 ## Effort and blockers (estimates)
 
