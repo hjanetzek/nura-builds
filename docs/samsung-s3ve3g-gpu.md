@@ -151,24 +151,27 @@ found by its byte patterns: Qualcomm LK's `{size, payload, wait}` entries, paylo
 DSI headers) differs from the vendor tree's (panel condition F8 0x19/0x04, gamma, ELVSS B1 04 00,
 no ACL); both work now, the vendor tree's gives the right colours.
 
-msm loads at boot now (the blacklist in `/etc/modprobe.d/s3ve3g-display-manual.conf` is commented
-out). Still open: powering the display down and up again (DPMS off/on: `fb0/blank`, the
-console's blanking) doesn't work yet:
-- 0013 commits planes after the modeset enables (unblank aborted in `mdp5_crtc_atomic_flush` on
-  the LM registers before), 0014 + the DT give the MDSS the MMSS_MISC_AHB_CLK (only the DSI had
-  it; after a blank even the MDP's version register faulted); then the abort moved to
-  `mdp5_ctl_set_cursor` from the CRTC's atomic_enable, and now the phone freezes already in the
-  blank, after the panel's sleep in timed out (msm waits for a video done after the MDP stopped;
-  sleep in is in the panel's disable now). Likely an MDP register access after the DSI (and its
-  PLL, the pixel clock) is off, which stalls the bus instead of aborting.
-- Avoided for now: no DPMS. The console's blanking is off when the screen is on (`s3ve3g-screen
-  on` sends ESC[9;0]: `/etc/issue` of postmarketos-release sets 5 minutes with ESC[9;5], which
-  overrides `consoleblank=0`), and `s3ve3g-screen off` (the default after boot) unbinds fbcon and
-  clears the framebuffer instead.
+msm loads at boot (the blacklist in `/etc/modprobe.d/s3ve3g-display-manual.conf` is commented out).
+
+Powering the display down and up (DPMS: `fb0/blank`) works since 2026-11-12:
+- 0013 commits planes after the modeset enables (unblank aborted on the LM registers before the
+  DSI's pixel clock was back) and takes the CRTC's irq masks in atomic_enable; 0014 + the DT give
+  the MDSS the MMSS_MISC_AHB_CLK (only the DSI had it); the panel sends sleep in in its disable.
+- The freeze that remained: after the MDSS's own runtime suspend/resume the MDP's registers are
+  unreachable, and the first CTL write in the CRTC's atomic_enable hung the bus (found with a live
+  `cat /dev/kmsg` and drm.debug over SSH: the log stops at "enabling [CRTC:53:crtc-0]" right after
+  mdss_runtime_resume/mdp5_runtime_resume). With the MDSS kept from runtime suspend
+  (`power/control = on`) blank and unblank work, the MDP, the DSI and the panel still power down.
+  The device package does that with a udev rule (`90-s3ve3g-mdss.rules`). The cause in the MDSS
+  resume (power domain, a clock, a reset) is still to be found; the rule works around it.
+- `s3ve3g-screen off|on` (the screen-off service after boot) uses DPMS with msm: the panel gets
+  display off and sleep in, the MDP and DSI suspend; without msm it clears the framebuffer.
+- Console blanking stays off (`consoleblank=0`, the ESC[9;5] taken out of `/etc/issue`), it would
+  work now.
 - Debugging aids: `kernel.panic_on_oops = 1`, `kernel.panic = 10` (device package sysctl; the
   phone restarts by itself; ramoops keeps nothing across that restart here),
-  `/sys/module/kernel/parameters/pause_on_oops` and a live `sudo cat /dev/kmsg` over SSH to get
-  an oops out (netconsole doesn't work over the USB gadget network: no netpoll), msm.reglog=1.
+  `/sys/module/kernel/parameters/pause_on_oops` and a live `sudo cat /dev/kmsg` over SSH to get an
+  oops out (netconsole doesn't work over the USB gadget network: no netpoll), msm.reglog=1.
 
 GPU (2026-11-12): works. kmscube (Alpine's, `kmscube -D /dev/dri/card1`) gets `vendor: freedreno`,
 `renderer: FD305`, OpenGL ES 3.0 (Mesa 26.2.6), renders at 60 fps, and the cube is on the panel

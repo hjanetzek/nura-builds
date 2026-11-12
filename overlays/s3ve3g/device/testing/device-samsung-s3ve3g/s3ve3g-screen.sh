@@ -1,11 +1,10 @@
 #!/bin/sh
-# Samsung Galaxy S III Neo: the screen on or off. Without a panel driver there is no brightness
-# control (the screen is the bootloader's framebuffer, simpledrm); an AMOLED's black pixels are
-# off, so "off" detaches the text console from the framebuffer and clears it to black (no burn-in).
-# "on" binds the console again (it redraws) and turns console blanking off (DPMS off crashes the
-# msm display driver for now; "off" is safe: the console doesn't reach the framebuffer then).
-# Programs drawing on the framebuffer themselves
-# (buffyboard) keep drawing.
+# Samsung Galaxy S III Neo: the screen on or off.
+# With the msm display driver (fb0 "msmdrmfb"): DPMS, the panel powered down (display off, sleep in)
+# and up again. With the bootloader's framebuffer only (simpledrm, no panel driver): no power
+# control, so "off" detaches the text console from the framebuffer and clears it (an AMOLED's black
+# pixels are off: no burn-in), "on" binds the console again (it redraws).
+# Programs drawing on the framebuffer themselves (buffyboard) keep drawing.
 #
 # Usage: s3ve3g-screen on|off
 set -eu
@@ -19,12 +18,25 @@ fbcon() {
 	done
 }
 
+dpms() {
+	[ "$(cat /sys/class/graphics/fb0/name 2>/dev/null)" = msmdrmfb ]
+}
+
 case "${1:-}" in
 off)
+	if dpms; then
+		echo 4 > /sys/class/graphics/fb0/blank
+		exit 0
+	fi
 	fbcon 0
 	dd if=/dev/zero of=/dev/fb0 bs=1M status=none 2>/dev/null || true
 	;;
 on)
+	if dpms; then
+		fbcon 1
+		echo 0 > /sys/class/graphics/fb0/blank
+		exit 0
+	fi
 	fbcon 1
 	# no console blanking: it would power the display down through DPMS, which crashes msm
 	# on MSM8226 so far (and /etc/issue of postmarketos-release sets 5 minutes, ESC[9;5])

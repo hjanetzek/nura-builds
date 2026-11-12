@@ -37,6 +37,7 @@ source="
 	s3ve3g-debug-telnet.initd
 	s3ve3g-display-manual.conf
 	s3ve3g-panic.sysctl
+	90-s3ve3g-mdss.rules
 "
 
 build() {
@@ -87,6 +88,9 @@ package() {
 
 	# nura-builds, bring-up: a place to blacklist msm (display, GPU) again while debugging it
 	install -Dm644 "$srcdir"/s3ve3g-display-manual.conf "$pkgdir"/etc/modprobe.d/s3ve3g-display-manual.conf
+	# the MDSS kept from runtime suspend (its resume leaves the MDP unreachable; DPMS works with it)
+	install -Dm644 "$srcdir"/90-s3ve3g-mdss.rules "$pkgdir"/usr/lib/udev/rules.d/90-s3ve3g-mdss.rules
+
 	# bring-up: restart on an oops (alpine's 00-alpine.conf has kernel.panic = 120, no panic_on_oops)
 	install -Dm644 "$srcdir"/s3ve3g-panic.sysctl "$pkgdir"/etc/sysctl.d/90-s3ve3g-panic.conf
 
@@ -120,10 +124,11 @@ sha512sums="
 7e26dffcec1a2673324fb534f475ce973773c18b8eb962bbc41df3350cd6338b8f179dcc2c6a416d5d260cef44264590bb649648024b751466daae68bcec8e1f  s3ve3g-firmware.sh
 cb233173ada34d8bca56e9e947246f494cc1f5a96404f360dce3826d9bd69744731c3b21cd758f80bc66281205b9e0d5e7456fd70ab3421191641d8d6dcf1837  s3ve3g-firmware.service
 dd83c92e45be16613d51d0a75748549d672f4f901a3e2d3e36400da3a13c3cfbb9da6d2958d21f158d4da34a68ca92ed775bd321c599ae6888db9b6e87f0d13e  s3ve3g-firmware.initd
-80389633d427cf198907164415d3ddb3e53d1c40a7bf4b4cbe349daec0cbb460634fe5e7731b51bb14a13b36ebcc06c1858a8fdb4722066aecddfae8022d0546  s3ve3g-screen.sh
+79319443901c0e5bf9b6cb72f2f853de223609abcc50f6e1bbc0675fcf48a307b5d942e943027589f63caa92680bd624c40e37bb7c490476f57bf4ef91d5c762  s3ve3g-screen.sh
 98393829f2462641bbe2a4c2037daf9168721818c869dd844cb4434385e4fc65f35fa958d1f3e6b8c98114ab0ca198b40ba1ca99b4f8d700527275e77418244b  s3ve3g-screen-off.initd
 c7d995717b9bfb0d9cab20f833201802d86453468e5afbb6dee39ac8b23732446a2c8f8026f1e7314ce6337df8b91aaf23224b00e63bbdd1c73be9cd6370a655  s3ve3g-screen-off.service
 ede70db74354ed147024175125fe84dc2050837f9e7671baf737152059b172ce5718fc169acf6b4f41185c206039d20949ca99a19af8d6e59ae52fd255da6883  s3ve3g-debug-telnet.initd
 22f4af7df5cd6d589405f242ad2ca44b4884938be80ffdbb5493b667e6c77dadecd96700d8c32ef31af343350d525b8296b934880f72f0a1c5eea68ce02a7a7e  s3ve3g-display-manual.conf
 4cf2bf2ec71f13109700620017c44b1829b0700c1d8f88480e2b17555d37bf52a399263d26ff96a445de5b87de6fd0457c68e5b8659db9068a168529af14025e  s3ve3g-panic.sysctl
+cf901575c1350f27bd3474f8753de4de35ebf6d302e2c661fbe0aca94888d4d1fde545517df881a3078da5f0e734b221e7c451fdd2a60eacac235fc83abf56ed  90-s3ve3g-mdss.rules
 "
