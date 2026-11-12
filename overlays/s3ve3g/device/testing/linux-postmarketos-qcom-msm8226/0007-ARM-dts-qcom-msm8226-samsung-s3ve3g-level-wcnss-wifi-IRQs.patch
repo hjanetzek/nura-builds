@@ -1,0 +1,31 @@
+From: nura-builds
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: wcnss Wi-Fi IRQs level high
+
+wcn36xx requests its tx and rx interrupts with IRQF_TRIGGER_HIGH, which
+replaces the DT's IRQ_TYPE_EDGE_RISING at the first probe. After a
+firmware crash, remoteproc recovery probes the driver again, and mapping
+the DT's edge type over the existing level mapping fails ("irq: type
+mismatch, failed to map hwirq-177", "IRQ tx not found"): no Wi-Fi until
+reboot. Declare them as the driver uses them.
+---
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -421,6 +421,17 @@
+ 	smd-edge {
+ 		wcnss {
+ 			status = "okay";
++
++			/*
++			 * Level, as wcn36xx requests them (IRQF_TRIGGER_HIGH): with the
++			 * edge type from the DT, the second probe after a firmware
++			 * restart can't map them again ("type mismatch"), and Wi-Fi
++			 * stays gone
++			 */
++			wifi {
++				interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
++			};
+ 		};
+ 	};
+ };
