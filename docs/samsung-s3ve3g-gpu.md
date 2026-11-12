@@ -170,17 +170,22 @@ console's blanking) doesn't work yet:
   `/sys/module/kernel/parameters/pause_on_oops` and a live `sudo cat /dev/kmsg` over SSH to get
   an oops out (netconsole doesn't work over the USB gadget network: no netpoll), msm.reglog=1.
 
-GPU (2026-11-12): kmscube (Alpine's, `kmscube -D /dev/dri/card1`) gets `vendor: freedreno`,
-`renderer: FD305`, OpenGL ES 3.0 (Mesa 26.2.6); its buffers in the VRAM carveout hold the rendered
-cube (grey background 0x808080, the cube's colours): the Adreno 305B renders. The panel keeps
-showing the console, though (once the cube appeared): msm flips at ~58 Hz (CTL flushes, vblank
-irq on; 0013 now also takes the irq masks from the new state in the CRTC's atomic_enable, which
-the changed commit order had left empty), but the DMA pipe's active source address stays on the
-console's buffer (0x5810a000) whatever is written, a manual CTL_FLUSH (DMA0 | LM0 | CTL, or all
-bits) included: after the timing engine's start the MDP doesn't take the double-buffered pipe
-updates. CTL0 FLUSH reads 0x1d7bf. Next: downstream's flush/start handling for video mode on
-MDP5 v1.1 (mdss_mdp_ctl.c, mdss_mdp_intf_video.c), and whether the flush needs the INTF's own
-bit or the vsync of another block.
+GPU (2026-11-12): works. kmscube (Alpine's, `kmscube -D /dev/dri/card1`) gets `vendor: freedreno`,
+`renderer: FD305`, OpenGL ES 3.0 (Mesa 26.2.6), renders at 60 fps, and the cube is on the panel
+(seen through the camera; out/s3ve3g/screens/cube-camera-back2.jpg); the DMA pipe's source address
+alternates between kmscube's two buffers. 0013 also takes the CRTC's irq masks from the new state
+in atomic_enable (the planes-after-enables order had left them empty: no vblank irq, page flips
+never completed).
+
+kmscube quits as soon as its stdin is readable ("user interrupted!"): started in the background
+with stdin closed or /dev/null it ran one or two frames, and the display fell back to the console,
+which first looked like the MDP not latching new pipe addresses. Run it from an interactive SSH
+session, or with a stdin that never delivers (`sleep N | kmscube ...`); the phone has an OpenRC
+service for that (`/etc/init.d/kmscube`, local, not in the package yet: `rc-service kmscube
+start|stop`; stop it again, its static background on the AMOLED).
+
+The camera app's `/video/snapshot` can return a stale picture: `tools/s3ve3g-screenshot.sh` takes
+the newest frame of the MJPEG stream (`/video/mjpeg`) and turns it upright.
 
 The panel driver's bring-up switches (`skip_init`, `no_reset`, the power-mode log) and 0010's
 register trace can go once that's done; no brightness control yet (no smart dimming). The camera setup for checking the screen:

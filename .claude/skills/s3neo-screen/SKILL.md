@@ -14,7 +14,9 @@ points at the S III Neo; its snapshot endpoint gives a photo of the screen.
 tools/s3ve3g-screenshot.sh [NAME]     # prints the path of the scaled copy
 ```
 
-Then view the printed `*-small.jpg` with the Read tool. The full-size photo is next to it
+It takes the newest frame of the camera's MJPEG stream (the app's `/video/snapshot` can return a
+stale picture), turned upright (ROTATE, default -90). Then view the printed `*-small.jpg` with the
+Read tool. The full-size photo is next to it
 (`out/s3ve3g/screens/NAME.jpg`) for detail: crop it with python3/PIL before reading if small text
 matters. Environment: `CAM` (default `https://192.168.178.87:4444`), `CAM_USER`/`CAM_PASS` when the
 app's authentication is on, `SIZE` (default 900).
@@ -38,6 +40,10 @@ Say what is actually visible, not what was expected:
   bands tells the pixel format), whether white is white, stripes, tearing, shifted or doubled images.
 - Brightness and uniformity (dim, fading, purple/green casts are panel or gamma problems).
 - Orientation (upside down, mirrored).
+
+A test program on the screen: kmscube quits when its stdin becomes readable, so start it from an
+interactive SSH session or as `sudo rc-service kmscube start` (stop it afterwards: burn-in); make
+sure it still runs (`pgrep -a kmscube`) when the picture is taken.
 
 For display bring-up, report the result together with the phone's own state (panel power mode in
 dmesg, DSI FIFO_STATUS, dsi_isr rate): see docs/samsung-s3ve3g-gpu.md.
