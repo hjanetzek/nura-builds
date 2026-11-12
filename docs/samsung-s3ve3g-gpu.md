@@ -76,6 +76,45 @@ sequence without smart dimming, so a fixed brightness (or a few fixed gamma step
   `CONFIG_CMDLINE`.
 - Firmware: `firmware-qcom-adreno-a330` in the image.
 
+## Bring-up status (2026-11-12, patches 0008 and 0009)
+
+0008 adds a panel driver (`panel-samsung-s3ve3g-s6e8aa0a`, among the fork's generated MSM8226
+panels): the init sequence and fixed gamma parsed from the vendor dtsi, the reset sequence
+`<1 20 0 20 1 20>` (GPIO 25, active low), power on GPIO 73 (`enable-gpios`), 4 lanes, burst video
+mode; for bring-up it logs the panel id and has `skip_init` (keep the bootloader's setup). 0009
+enables MDSS, DSI0 with the panel (vdda L4, vdd L15, vddio L8) and the GPU; the command line has
+`msm.allow_vram_carveout=1 msm.vram=64m cma=128m`. msm is blacklisted for now
+(`/etc/modprobe.d/s3ve3g-display-manual.conf` in the device package): `modprobe msm` by hand.
+
+What works: msm binds MDP5 (v1.1), DSI0 and the Adreno 305B (a330 firmware loads); the panel
+answers over DSI in low-power mode (id `a2 60 90`, the bootloader's `lcd_id=0xa26090`), the init
+sequence is accepted; the DSI clocks are exact (VCO 495.5 MHz, byte 61.9 MHz, pixel 82.6 MHz); the
+MDP's INTF1 runs at 60 Hz without underruns.
+
+What doesn't: the panel stays black. The DSI's video FIFO underflows on every line (`FIFO_STATUS`
+0x88881000: VIDEO_MDP_FIFO_UNDERFLOW and the lanes' HS FIFO underflow; `dsi_err_worker: status=4`
+is DSI_ERR_STATE_FIFO, ~80000 interrupts a second, ~5 % CPU); a DCS command in high-speed mode
+times out (-110). Ruled out: the init sequence (black with the bootloader's panel setup too), the
+framebuffer contents (white written to the scanout buffer), burst vs non-burst, the DMA vs VIG
+pipe, downstream's PHY timings (`5C 16 0E 00 22 30 22 25 20 03 04 00`), downstream's MDP QoS/clock
+control and VBIF values, restarting the DSI while the MDP runs, the PHY regulator mode (downstream
+is DC-DC, mainline's default; LDO mode made no difference).
+
+Downstream for comparison (TWRP's kernel, display on, read with a static `mmap64` /dev/mem reader:
+busybox's devmem can't map above 2 GB there): DSI controller, INTF1 and the mixer are nearly
+register-identical, `FIFO_STATUS` 0x00001000 (no underflow); the PLL has the same post-dividers,
+only the sigma-delta seed and calibration differ; downstream scans out through VIG0 and enables
+DSPP. Still to compare: the clock controller (RCGs/branches of byte, pixel, MDP, AXI) and the
+downstream DSI driver's video-mode enable sequence.
+
+Without simpledrm (the simple-framebuffer node disabled) msm crashes in
+`dsi_pll_28nm_clk_recalc_rate` (external abort): nothing keeps the MDSS clocks on, and the PLL's
+registers are read unclocked; the simple-framebuffer node holds them until msm takes over.
+
+Other msm problems seen: blanking and unblanking the display (`fb0/blank`) crashes in
+`mdp5_crtc_atomic_flush` (external abort at 0xfd903200); fbcon warns "framebuffer is not in
+virtual address space" (msm's fbdev doesn't set FBINFO_VIRTFB; only a warning).
+
 ## Effort and blockers (estimates)
 
 | Step | Effort |

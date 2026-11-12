@@ -63,7 +63,6 @@ shift
 part=$(findfs PARTLABEL=boot)
 psize=$(sudo blockdev --getsize64 "$part")
 sudo cp /tmp/deploy/boot-partition.img /boot/boot-partition.prev.img
-old=$(sha256sum /boot/boot.img | cut -d' ' -f1)
 
 # Install these very files (a rebuild with the same version too: apk replaces it, where "fix"
 # wants the installed build's checksum); triggers mkinitfs/boot-deploy. Then the names again, so
@@ -77,8 +76,7 @@ done
 out=$($apk add $files 2>&1) || { echo "$out" >&2; exit 1; }
 echo "$out" | grep -E '^\(|^OK' || true
 if ! echo "$out" | grep -qE 'Replacing|Upgrading|Installing|Downgrading'; then
-	echo "apk installed nothing from /tmp/deploy: BOOT not touched" >&2
-	exit 1
+	echo "apk: these packages are installed already; checking BOOT against /boot/boot.img"
 fi
 $apk add "$@" >/dev/null
 
@@ -96,8 +94,9 @@ o = ps + pg(ks) + pg(rs) + pg(ss)
 assert dt and d[o:o + 4] == b'QCDT', 'no QCDT'
 print(f"boot.img: kernel {ks}, ramdisk {rs}, dt.img {dt}, command line {len(d[64:576].rstrip(bytes(1)))} chars")
 PY
-if [ "$(sha256sum "$img" | cut -d' ' -f1)" = "$old" ]; then
-	echo "boot.img unchanged: BOOT not touched"
+# against the partition itself (it may hold another image, e.g. one flashed with heimdall)
+if cmp -s -n "$size" "$img" /tmp/deploy/boot-partition.img; then
+	echo "BOOT already holds this boot.img: not touched"
 	exit 0
 fi
 echo "flashing $img ($size bytes) to $part ($psize bytes)"

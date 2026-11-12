@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+# Samsung Galaxy S III Neo bring-up: a telnet login on the USB network (172.16.42.1) from early
+# boot on, before udev, for when a driver or service hangs the boot before sshd starts. Password
+# login (/bin/login). Remove with: rc-update del s3ve3g-debug-telnet sysinit
+
+description="Telnet login on the USB network, early (bring-up)"
+command="/bin/busybox-extras"
+command_args="telnetd -F -b 172.16.42.1:23 -l /bin/login"
+command_background=true
+pidfile="/run/s3ve3g-debug-telnet.pid"
+
+depend() {
+	before udev udev-trigger
+}
+
+start_pre() {
+	# the initramfs set up the USB network; wait a little for the address if needed
+	local i=0
+	while ! ip addr show usb0 2>/dev/null | grep -q 172.16.42.1 && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	return 0
+}
