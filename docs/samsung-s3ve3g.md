@@ -244,6 +244,23 @@ its TURBO ceilings are 1.33/1.25/1.19 V (slow/nom/fast): the chip is slow or nom
 the top frequencies need 1.33 V (near S2's 1.35 V maximum, with VDD_MX as high); CPR would bring
 that to about 1.23 V.
 
+## Kernel updates over SSH
+
+Once the device runs (USB networking), new builds go to it without heimdall or a new rootfs:
+`tools/s3ve3g-deploy.sh` copies the packages to the device as a local repository, reinstalls them
+with apk (`fix -r`: a rebuild with the same version too; kernel and modules stay in step), and the
+device's mkinitfs/boot-deploy writes `/boot/boot.img`; the script checks it (Android header, QCDT,
+size against the partition), saves the current BOOT contents first (`out/s3ve3g/boot-*.img` here,
+for `heimdall flash --BOOT` if the new kernel doesn't boot; `/boot/boot-partition.prev.img` on the
+device), writes it to the `boot` partition, verifies it and reboots (`-n`: no reboot). An unchanged
+boot image isn't written. (boot-deploy's own `deviceinfo_flash_kernel_on_update` looks for the GPT
+label `BOOT`, heimdall's name for it; the GPT label is `boot`.)
+
+```sh
+pmbootstrap -c $C build --force linux-postmarketos-qcom-msm8226
+KNOWN_HOSTS=... tools/s3ve3g-deploy.sh            # default packages: kernel, device, device-openrc
+```
+
 ## Flashing
 
 Download mode: Volume Down + Home + Power, then Volume Up to confirm. heimdall on the PC
