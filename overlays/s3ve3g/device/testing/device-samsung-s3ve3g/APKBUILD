@@ -59,6 +59,17 @@ package() {
 	ln -s ../s3ve3g-firmware.service \
 		"$pkgdir"/usr/lib/systemd/system/sysinit.target.wants/s3ve3g-firmware.service
 
+	# nura-builds: the initramfs's mdev.conf (postmarketos-initramfs) runs
+	# /lib/mdev/persistent-storage (mdev-conf's /dev/disk/by-* links) for every block device, but
+	# the initramfs doesn't have it: "not found" for each of the eMMC's ~30 partitions, on the
+	# console at about 45 ms a line. The initramfs doesn't use those links (udev makes them in the
+	# rootfs): a no-op in its place, in the initramfs only
+	install -Dm755 /dev/stdin "$pkgdir"/usr/share/$pkgname/persistent-storage-noop <<-EOF
+	#!/bin/sh
+	EOF
+	echo "/usr/share/$pkgname/persistent-storage-noop:/lib/mdev/persistent-storage" |
+		install -Dm644 /dev/stdin "$pkgdir"/usr/share/mkinitfs/files/90-$pkgname.files
+
 	# nura-builds (systemd): services masked for a faster boot (their packages are dependencies of
 	# postmarketos-base-ui): systemd-nsresourced and -mountfsd (their BPF programs don't load on
 	# this kernel; nsresourced held up udevd, and so every device, for 32 s), nftables (the

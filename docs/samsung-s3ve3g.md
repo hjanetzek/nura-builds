@@ -179,7 +179,12 @@ LineageOS' android_device_samsung_msm8226-common, lineage-18.1, prima/; copy it 
 /lib/firmware/wlan/prima/ on the device). It replaces msm-firmware-loader, which mounted and scanned
 all firmware partitions on every boot (4 s at 787 MHz, before udev) and didn't find the NV file.
 
-Boot time (2026-11-12): 1:16 at first, 43 s now (kernel and initramfs 17 s, userspace 26 s):
+Boot time (2026-11-12): 1:16 at first, 43 s with systemd at 787 MHz, 35.1 s with OpenRC; 24.7 s
+with the CPU voltages (patches 0005/0006, up to 1190.4 MHz: from cpufreq-dt's module at 17 s on),
+17.8 s now: cpufreq-dt built in (the CPU at speed from 0.6 s), no `ignore_loglevel`, and a no-op
+`/lib/mdev/persistent-storage` in the initramfs (the device package; postmarketos-initramfs's
+mdev.conf calls it but doesn't include it: 30 "not found" lines). Root switched at 9.4 s, getty at
+17.8 s. Earlier (systemd, 43 s: kernel and initramfs 17 s, userspace 26 s):
 simpledrm built in, systemd-nsresourced/-mountfsd masked (their BPF programs fail on this kernel;
 nsresourced once held up udevd for 32 s), nftables (firewall) and plymouth masked, no
 msm-firmware-loader. What remains is the CPU at 787 MHz (higher frequencies need voltage scaling:
@@ -330,8 +335,11 @@ with heimdall (or Odin).
 - The kernel log from the first moments (kernel r108, device package r5): `earlycon=ramcon,0x1fb00000`,
   our early console (patch 0002) writing the last 4 KB of the log into the same buffer in the same
   format, from `setup_arch` on (ramoops only starts at `device_initcall`: with r107 the buffer still
-  held a downstream log, so our kernel dies before that). `ignore_loglevel`: the bootloader appends
-  `loglevel=4`, which hides most messages from every console. Read with the repacked TWRP
+  held a downstream log, so our kernel dies before that). The bootloader appends `loglevel=4`,
+  which hides most messages from every console, ramoops and ramcon included: for a full log put
+  `ignore_loglevel` back into `CONFIG_CMDLINE` (it was there for the bring-up; without it the
+  boot is about 7 s faster: each line printed costs about 45 ms on the serial and framebuffer
+  consoles). Read with the repacked TWRP
   (`/proc/last_kmsg`). Our `__log_buf` (0x0173d7f4) doesn't survive: TWRP's kernel data covers it.
 - The kernel log across resets (ramoops, kernel r107): the console goes to downstream's
   `ram_console` buffer (1 MB at 0x1FB00000, `RAMCONSOLE_PHYS_ADDR` in the downstream
