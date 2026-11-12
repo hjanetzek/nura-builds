@@ -222,6 +222,34 @@ with kmscube running), in LP and in HS mode alike; probably the gamma taking eff
 Untried: sending the table during vertical blanking, or downstream's order of commands (ELVSS,
 ACL, gamma update) around it.
 
+## Qt6 and compositors (2026-11-12)
+
+- **Qt6 under cage works, accelerated:** `postmarketos-ui-cage` (without `postmarketos-demos`; apk
+  doesn't install pmbootstrap's recommends anyway) and `qt6-qtwayland`; `tinydm` taken out of the
+  default runlevel so nothing autostarts (the package's install script adds it, with seatd and
+  elogind). Started by hand as root:
+  `XDG_RUNTIME_DIR=/tmp/xdg LIBSEAT_BACKEND=seatd WLR_RENDERER=gles2 cage -d -s -- env QT_QPA_PLATFORM=wayland python3 run.py test.qml`
+  (a PySide6 QML runner). cage uses the msm KMS device and freedreno; the QML scene runs at 60 fps
+  and shows correctly. Packages: `py3-pyside6 qt6-qtbase-x11 qt6-qtdeclarative font-dejavu`
+  (61 packages, ~370 MiB). Hot reload as in zynthian may need `-dev` packages (the `qml` tool alone
+  is in `qt6-qtdeclarative-dev`, 193 packages, 1.1 GB).
+- **Qt6 eglfs (no compositor) renders but shows black:** `qt6-qtbase-x11` has the eglfs KMS
+  plugins; with `QT_QPA_EGLFS_KMS_CONFIG` pointing at `/dev/dri/card1` Qt renders through FD305 at
+  60 fps, its XR24 buffer is on the primary plane (debugfs `dri/1/state`), no errors or underruns,
+  but the panel stays black (legacy and atomic modesetting alike). kmscube on the same device
+  works. Not investigated further. Careful: two Qt processes fight over DRM master
+  ("Could not queue DRM page flip ... Permission denied").
+- **niri:** not packaged for 32-bit by Alpine (its screencast feature needs pipewire-rs);
+  `overlays/s3ve3g/temp/niri` builds it without that feature (`--features dbus`); pmbootstrap
+  needs `sccache` in makedepends for Rust.
+- **Package downloads over USB:** the host routes and NATs the phone's subnet (ufw:
+  `net/ipv4/ip_forward=1`, a MASQUERADE rule for 172.16.42.0/24 in `before.rules`,
+  `ufw route allow in on <usb if> out on <uplink>`); on the phone
+  `ip route add default via 172.16.42.2 dev usb0 metric 100` (Wi-Fi stays as fallback, runtime
+  only) and an Alpine mirror close by (RWTH Aachen: ~1.5 MB/s vs ~550 KiB/s over Wi-Fi). Without
+  root on the host: `tools/s3ve3g-debug/http-proxy.py` on the USB address (sshd's
+  AllowTcpForwarding is off, so no `ssh -R`).
+
 ## Effort and blockers (estimates)
 
 | Step | Effort |
