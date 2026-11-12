@@ -170,6 +170,18 @@ console's blanking) doesn't work yet:
   `/sys/module/kernel/parameters/pause_on_oops` and a live `sudo cat /dev/kmsg` over SSH to get
   an oops out (netconsole doesn't work over the USB gadget network: no netpoll), msm.reglog=1.
 
+GPU (2026-11-12): kmscube (Alpine's, `kmscube -D /dev/dri/card1`) gets `vendor: freedreno`,
+`renderer: FD305`, OpenGL ES 3.0 (Mesa 26.2.6); its buffers in the VRAM carveout hold the rendered
+cube (grey background 0x808080, the cube's colours): the Adreno 305B renders. The panel keeps
+showing the console, though (once the cube appeared): msm flips at ~58 Hz (CTL flushes, vblank
+irq on; 0013 now also takes the irq masks from the new state in the CRTC's atomic_enable, which
+the changed commit order had left empty), but the DMA pipe's active source address stays on the
+console's buffer (0x5810a000) whatever is written, a manual CTL_FLUSH (DMA0 | LM0 | CTL, or all
+bits) included: after the timing engine's start the MDP doesn't take the double-buffered pipe
+updates. CTL0 FLUSH reads 0x1d7bf. Next: downstream's flush/start handling for video mode on
+MDP5 v1.1 (mdss_mdp_ctl.c, mdss_mdp_intf_video.c), and whether the flush needs the INTF's own
+bit or the vsync of another block.
+
 The panel driver's bring-up switches (`skip_init`, `no_reset`, the power-mode log) and 0010's
 register trace can go once that's done; no brightness control yet (no smart dimming). The camera setup for checking the screen:
 `tools/s3ve3g-screenshot.sh` (and the project skill `s3neo-screen`).

@@ -29,3 +29,22 @@ diff --git a/drivers/gpu/drm/msm/msm_atomic.c b/drivers/gpu/drm/msm/msm_atomic.c
  
  	if (async) {
  		struct msm_pending_timer *timer =
+diff --git a/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c b/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c
+--- a/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c
++++ b/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c
+@@ -565,6 +565,15 @@
+ 		}
+ 	}
+ 
++	/*
++	 * The irq masks from the new state: atomic_flush copies them too, but with the planes
++	 * committed after the modeset enables it runs after this, and the vblank irq would be
++	 * registered with an old (empty) mask: no vblank, page flips never complete
++	 */
++	mdp5_crtc->vblank.irqmask = mdp5_cstate->vblank_irqmask;
++	mdp5_crtc->err.irqmask = mdp5_cstate->err_irqmask;
++	mdp5_crtc->pp_done.irqmask = mdp5_cstate->pp_done_irqmask;
++
+ 	/* Restore vblank irq handling after power is enabled */
+ 	mdp5_crtc_vblank_on(crtc);
+ 
