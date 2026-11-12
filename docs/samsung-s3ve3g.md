@@ -185,6 +185,45 @@ Missing: battery and charging (no mainline driver for the PM8226 charger and fue
 a panel driver (S6E8AA0A: brightness, blanking), cpufreq above 787 MHz (CPR, speed bins), SD card
 (the controller probes, untested with a card), vibrator, LED, light/proximity sensor, NFC, modem.
 
+## CPU above 787 MHz: what mainline lacks (2026-11-12)
+
+The A7 PLL (`qcom,msm8226-a7pll`, up to 1344 MHz in its OPP table) and cpufreq are mainline
+(Luca Weiss, "Add CPU frequency scaling support for MSM8226", accepted 2024-06): its CPU OPP table
+stops at 787.2 MHz without voltages ("Higher CPU frequencies need speedbin support"; his cover
+letter: speedbin support planned after that; nothing on linux-arm-msm since, patchwork search
+2026-11-12; the msm8226-mainline fork's `*-wip-cpufreq` branches are that same series). Downstream
+(the S III Neo's device tree):
+
+- `qcom,clock-a7-8226`: frequency/corner tables per speed bin (qfprom row 0x16 at 0xfc4b80b0, bits
+  0-2: speed bin, 6-10: PVS): speed0/6 up to 1190.4 MHz, speed2/4/5/7 up to 1401.6 MHz, speed1
+  finer steps.
+- `qti,cpr-regulator` (`apc_corner`): 12 corners mapped to SVS/NOM/TURBO; ceilings per PVS class
+  slow/nom/fast: TURBO 1.28/1.20/1.14 V, SVS and NOM 1.14-1.15 V; closed-loop CPR on top;
+  VDD_MX (L3, RPM) must stay at or above the CPU voltage (`vdd-mx-vmin-method = 1`, max 1.35 V).
+- `qcom,spm-regulator` on PM8226 S2 (0x1700, 0.9-1.33 V): the voltage goes through the SAW2/SPM,
+  whose power-collapse sequence writes the PMIC itself.
+
+What exists in mainline and what is missing, in order:
+
+1. CPU rail through the SPM: `drivers/soc/qcom/spm.c` registers SPM regulators (`set_vdd` per SoC,
+   linear range) but implements only SAW2 v1.1 (APQ8064); MSM8226's SAW2 v2.1 entry exists for
+   cpuidle only. Needed: a v2.1 `set_vdd` (VCTL, PMIC_DATA_0/1; PM8226 S2's voltage encoding, see
+   downstream spm-regulator.c) and the regulator on the CPU SAW nodes. Setting S2 directly over SPMI
+   (`qcom,pm8226-regulators` has it) would be undone by the SPM after idle; the SAW coupling in
+   `qcom_spmi-regulator.c` is SAW3 only (MSM8996).
+2. VDD_MX: `rpmpd` has only CX for MSM8226; MX (L3 corners) has to be added, then OPPs with
+   `required-opps` keep MX at or above the CPU voltage.
+3. Speed bin: `qcom-cpufreq-nvmem` with an `msm8226` entry (`qcom_cpufreq_simple_get_version`, as
+   MSM8909) and an nvmem cell for the raw qfprom row (the qfprom node starts at 0xfc4bc000, the fuse
+   is at 0xfc4b80b0); OPPs with `opp-supported-hw` per bin and `opp-microvolt`.
+4. Voltages: open loop first, the slow-PVS ceilings for every chip (TURBO 1.28 V: safe, warmer);
+   PVS-dependent voltages need PVS reading in cpufreq-nvmem (as the Krait variants do).
+5. CPR (lower voltages, closed loop): `drivers/pmdomain/qcom/cpr.c` (CPR v1, genpd) knows only
+   qcs404; an MSM8226 description from downstream's `qti,cpr-*` fuse layout.
+
+1-3 with the slow ceilings would give 1190.4 MHz (or 1401.6 MHz on the higher bins) safely; the
+phone's bin is in qfprom (readable via /dev/mem in the repacked TWRP, or an nvmem cell).
+
 ## Flashing
 
 Download mode: Volume Down + Home + Power, then Volume Up to confirm. heimdall on the PC
