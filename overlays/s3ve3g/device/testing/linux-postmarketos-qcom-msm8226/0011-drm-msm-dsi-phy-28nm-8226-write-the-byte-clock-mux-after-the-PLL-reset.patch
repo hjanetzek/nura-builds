@@ -1,0 +1,56 @@
+From: nura-builds
+Subject: [PATCH] drm/msm/dsi/phy: 28nm-8226: write the byte clock mux after the PLL reset
+
+The 8226 VCO prepare starts with a PLL software reset (and the PHY is
+reset before that), which clears VREG_CFG and with it the byte clock mux
+(POSTDIV1_BYPASS_B). The clock framework keeps the parent it read when
+the mux was registered (the bootloader's: the indirect path, VCO/2), so
+nothing writes the mux again: the byte clock comes straight from the VCO,
+at twice the rate the controller and the clock framework assume. On the
+Galaxy S III Neo (720x1280 video mode, 4 lanes): the lanes' HS FIFOs
+underflow on every line, high-speed commands time out, the panel stays
+black. Write the mux as the framework has it.
+---
+diff --git a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm.c b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm.c
+index 90348a2..58040dc 100644
+--- a/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm.c
++++ b/drivers/gpu/drm/msm/dsi/phy/dsi_phy_28nm.c
+@@ -69,6 +69,7 @@ struct pll_28nm_cached_state {
+ 
+ struct dsi_pll_28nm {
+ 	struct clk_hw clk_hw;
++	struct clk_hw *byte_mux;
+ 
+ 	struct msm_dsi_phy *phy;
+ 
+@@ -404,6 +405,22 @@ static int dsi_pll_28nm_vco_prepare_8226(struct clk_hw *hw)
+ 
+ 	pll_28nm_software_reset(pll_28nm);
+ 
++	/*
++	 * The reset (and the PHY reset before it) cleared VREG_CFG, the byte clock mux, while the
++	 * clock framework still has the parent it read at registration (the bootloader's: the
++	 * indirect path), so it never writes it again: the byte clock would come straight from
++	 * the VCO, twice the rate the DSI controller is set up for (HS FIFO underflow on every
++	 * line, no high-speed transfers). Write the mux as the framework has it.
++	 */
++	if (pll_28nm->byte_mux) {
++		val = readl(base + REG_DSI_28nm_PHY_PLL_VREG_CFG);
++		if (clk_hw_get_parent_index(pll_28nm->byte_mux) == 1)
++			val |= DSI_28nm_PHY_PLL_VREG_CFG_POSTDIV1_BYPASS_B;
++		else
++			val &= ~DSI_28nm_PHY_PLL_VREG_CFG_POSTDIV1_BYPASS_B;
++		writel(val, base + REG_DSI_28nm_PHY_PLL_VREG_CFG);
++	}
++
+ 	/*
+ 	 * PLL power up sequence.
+ 	 * Add necessary delays recommended by hardware.
+@@ -679,6 +696,7 @@ static int pll_28nm_register(struct dsi_pll_28nm *pll_28nm, struct clk_hw **prov
+ 				REG_DSI_28nm_PHY_PLL_VREG_CFG, 1, 1, 0, NULL);
+ 	if (IS_ERR(byte_mux))
+ 		return PTR_ERR(byte_mux);
++	pll_28nm->byte_mux = byte_mux;
+ 
+ 	snprintf(clk_name, sizeof(clk_name), "dsi%dpllbyte", pll_28nm->phy->id);
+ 	hw = devm_clk_hw_register_fixed_factor_parent_hw(dev, clk_name,

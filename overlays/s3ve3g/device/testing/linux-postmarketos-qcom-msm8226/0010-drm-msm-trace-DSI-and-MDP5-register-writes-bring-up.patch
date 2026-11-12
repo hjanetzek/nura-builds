@@ -1,0 +1,66 @@
+From: nura-builds
+Subject: [PATCH] drm/msm: trace DSI and MDP5 register writes (bring-up)
+
+msm.reglog=1 (module parameter, also at runtime: /sys/module/msm/parameters/reglog)
+records every dsi_write() and mdp5_write() with trace_printk, without the
+interrupt acknowledgements, to compare the video-mode enable sequence with
+the downstream kernel's. Read from /sys/kernel/tracing/trace.
+---
+diff --git a/drivers/gpu/drm/msm/disp/mdp5/mdp5_kms.h b/drivers/gpu/drm/msm/disp/mdp5/mdp5_kms.h
+index 36b6842..95e52bd 100644
+--- a/drivers/gpu/drm/msm/disp/mdp5/mdp5_kms.h
++++ b/drivers/gpu/drm/msm/disp/mdp5/mdp5_kms.h
+@@ -171,6 +171,9 @@ struct mdp5_encoder {
+ static inline void mdp5_write(struct mdp5_kms *mdp5_kms, u32 reg, u32 data)
+ {
+ 	WARN_ON(mdp5_kms->enable_count <= 0);
++	/* bring-up trace; not INTR_CLEAR (0x18) */
++	if (unlikely(msm_reglog) && reg != 0x18)
++		trace_printk("mdp5 w %05x %08x\n", reg, data);
+ 	writel(data, mdp5_kms->mmio + reg);
+ }
+ 
+diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_host.c
+index 4d75529..2cbe105 100644
+--- a/drivers/gpu/drm/msm/dsi/dsi_host.c
++++ b/drivers/gpu/drm/msm/dsi/dsi_host.c
+@@ -186,6 +186,10 @@ static inline u32 dsi_read(struct msm_dsi_host *msm_host, u32 reg)
+ 
+ static inline void dsi_write(struct msm_dsi_host *msm_host, u32 reg, u32 data)
+ {
++	/* bring-up trace; not the interrupt acknowledgements (FIFO_STATUS 0x08, INTR_CTRL 0x10c, ...) */
++	if (unlikely(msm_reglog) && reg != 0x08 && reg != 0x10c && reg != 0x0b0 && reg != 0x064 &&
++	    reg != 0x0bc && reg != 0x004)
++		trace_printk("dsi w %03x %08x\n", reg, data);
+ 	writel(data, msm_host->ctrl_base + reg);
+ }
+ 
+diff --git a/drivers/gpu/drm/msm/msm_drv.c b/drivers/gpu/drm/msm/msm_drv.c
+index 86673c9..4026f8f 100644
+--- a/drivers/gpu/drm/msm/msm_drv.c
++++ b/drivers/gpu/drm/msm/msm_drv.c
+@@ -56,6 +56,11 @@ bool dumpstate;
+ MODULE_PARM_DESC(dumpstate, "Dump KMS state on errors");
+ module_param(dumpstate, bool, 0600);
+ 
++/* nura-builds bring-up: trace DSI and MDP5 register writes (trace_printk, /sys/kernel/tracing/trace) */
++bool msm_reglog;
++MODULE_PARM_DESC(reglog, "Trace DSI and MDP5 register writes (bring-up)");
++module_param_named(reglog, msm_reglog, bool, 0600);
++
+ static bool modeset = true;
+ MODULE_PARM_DESC(modeset, "Use kernel modesetting [KMS] (1=on (default), 0=disable)");
+ module_param(modeset, bool, 0600);
+diff --git a/drivers/gpu/drm/msm/msm_drv.h b/drivers/gpu/drm/msm/msm_drv.h
+index c8afb1e..8f7de00 100644
+--- a/drivers/gpu/drm/msm/msm_drv.h
++++ b/drivers/gpu/drm/msm/msm_drv.h
+@@ -41,6 +41,8 @@ struct drm_fb_helper;
+ struct drm_fb_helper_surface_size;
+ 
+ struct msm_kms;
++
++extern bool msm_reglog;
+ struct msm_gpu;
+ struct msm_mmu;
+ struct msm_mdss;

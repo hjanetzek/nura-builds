@@ -1,0 +1,104 @@
+From: nura-builds
+Subject: [PATCH] drm/msm/dsi: clock lane in LP-11 until the panel is initialized
+
+dsi_ctrl_enable() forced the clock lane to HS (continuous clock) in the
+bridge's pre_enable, before the panel's prepare, and left LANE_CTRL alone
+for a non-continuous clock, where a bootloader's HS force survives the
+controller reset. A panel reset and initialized in prepare then comes out
+of reset with the clock lane in HS: the Galaxy S III Neo's S6E8AA0A
+answers commands but never takes the video stream (black, booster off).
+The vendor kernel holds the lanes in LP-11 for the panel reset and forces
+the clock to HS afterwards. Do the same: clear the HS force in
+dsi_ctrl_enable(), set it for a continuous clock in a new bridge enable,
+which runs after the panel's prepare and before its enable.
+---
+diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_host.c
+--- a/drivers/gpu/drm/msm/dsi/dsi_host.c
++++ b/drivers/gpu/drm/msm/dsi/dsi_host.c
+@@ -820,15 +820,16 @@
+ 	dsi_write(msm_host, REG_DSI_LANE_SWAP_CTRL,
+ 		  DSI_LANE_SWAP_CTRL_DLN_SWAP_SEL(msm_host->dlane_swap));
+ 
+-	if (!(flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)) {
+-		lane_ctrl = dsi_read(msm_host, REG_DSI_LANE_CTRL);
+-
+-		if (msm_dsi_phy_set_continuous_clock(phy, true))
+-			lane_ctrl &= ~DSI_LANE_CTRL_HS_REQ_SEL_PHY;
+-
+-		dsi_write(msm_host, REG_DSI_LANE_CTRL,
+-			lane_ctrl | DSI_LANE_CTRL_CLKLN_HS_FORCE_REQUEST);
+-	}
++	/*
++	 * The clock lane in LP-11 while the panel is reset and initialized (its prepare runs after
++	 * this): a panel coming out of reset with the clock lane in HS may answer commands but
++	 * never take the video stream. The bootloader may have left it forced to HS, which the
++	 * controller reset keeps. A continuous clock is forced on in msm_dsi_host_clock_hs(),
++	 * from the bridge's enable, after the panel's prepare.
++	 */
++	lane_ctrl = dsi_read(msm_host, REG_DSI_LANE_CTRL);
++	dsi_write(msm_host, REG_DSI_LANE_CTRL,
++		  lane_ctrl & ~DSI_LANE_CTRL_CLKLN_HS_FORCE_REQUEST);
+ 
+ 	data |= DSI_CTRL_ENABLE;
+ 
+@@ -2332,6 +2333,22 @@
+ 	return 0;
+ }
+ 
++/* a continuous clock: the clock lane forced to HS, once the panel is initialized */
++void msm_dsi_host_clock_hs(struct mipi_dsi_host *host, struct msm_dsi_phy *phy)
++{
++	struct msm_dsi_host *msm_host = to_msm_dsi_host(host);
++	u32 lane_ctrl;
++
++	if (msm_host->mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
++		return;
++
++	lane_ctrl = dsi_read(msm_host, REG_DSI_LANE_CTRL);
++	if (msm_dsi_phy_set_continuous_clock(phy, true))
++		lane_ctrl &= ~DSI_LANE_CTRL_HS_REQ_SEL_PHY;
++	dsi_write(msm_host, REG_DSI_LANE_CTRL,
++		  lane_ctrl | DSI_LANE_CTRL_CLKLN_HS_FORCE_REQUEST);
++}
++
+ int msm_dsi_host_disable(struct mipi_dsi_host *host)
+ {
+ 	struct msm_dsi_host *msm_host = to_msm_dsi_host(host);
+diff --git a/drivers/gpu/drm/msm/dsi/dsi.h b/drivers/gpu/drm/msm/dsi/dsi.h
+--- a/drivers/gpu/drm/msm/dsi/dsi.h
++++ b/drivers/gpu/drm/msm/dsi/dsi.h
+@@ -70,6 +70,7 @@
+ 					u32 dma_base, u32 len);
+ int msm_dsi_host_enable(struct mipi_dsi_host *host);
+ int msm_dsi_host_disable(struct mipi_dsi_host *host);
++void msm_dsi_host_clock_hs(struct mipi_dsi_host *host, struct msm_dsi_phy *phy);
+ void msm_dsi_host_enable_irq(struct mipi_dsi_host *host);
+ void msm_dsi_host_disable_irq(struct mipi_dsi_host *host);
+ int msm_dsi_host_power_on(struct mipi_dsi_host *host,
+diff --git a/drivers/gpu/drm/msm/dsi/dsi_manager.c b/drivers/gpu/drm/msm/dsi/dsi_manager.c
+--- a/drivers/gpu/drm/msm/dsi/dsi_manager.c
++++ b/drivers/gpu/drm/msm/dsi/dsi_manager.c
+@@ -444,9 +444,23 @@
+ 				 bridge, flags);
+ }
+ 
++/* after the panel's prepare, with the video stream running, before the panel's enable */
++static void dsi_mgr_bridge_enable(struct drm_bridge *bridge)
++{
++	int id = dsi_mgr_bridge_get_id(bridge);
++	struct msm_dsi *msm_dsi = dsi_mgr_get_dsi(id);
++
++	/* as pre_enable: the slave of a bonded DSI pair isn't handled separately */
++	if (IS_BONDED_DSI() && !IS_MASTER_DSI_LINK(id))
++		return;
++
++	msm_dsi_host_clock_hs(msm_dsi->host, msm_dsi->phy);
++}
++
+ static const struct drm_bridge_funcs dsi_mgr_bridge_funcs = {
+ 	.attach = dsi_mgr_bridge_attach,
+ 	.pre_enable = dsi_mgr_bridge_pre_enable,
++	.enable = dsi_mgr_bridge_enable,
+ 	.post_disable = dsi_mgr_bridge_post_disable,
+ 	.mode_set = dsi_mgr_bridge_mode_set,
+ 	.mode_valid = dsi_mgr_bridge_mode_valid,

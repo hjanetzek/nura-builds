@@ -122,6 +122,42 @@ Other msm problems seen: blanking and unblanking the display (`fb0/blank`) crash
 `mdp5_crtc_atomic_flush` (external abort at 0xfd903200); fbcon warns "framebuffer is not in
 virtual address space" (msm's fbdev doesn't set FBINFO_VIRTFB; only a warning).
 
+## The display works (2026-11-12, patches 0008, 0011, 0012)
+
+With msm loaded (`modprobe msm`; still blacklisted at boot, see below) the panel shows the console,
+reset and initialized by our driver with the vendor tree's init sequence, stable. Three fixes:
+
+1. 0011, the DSI PLL's byte clock mux (VREG_CFG bit 1, POSTDIV1_BYPASS_B): the 8226 VCO prepare
+   resets the PLL, which clears it, while the clock framework keeps the parent it read from the
+   bootloader (the indirect path, VCO/2) and never writes it again; the byte clock then came
+   straight from the VCO, twice what the controller expects: the lanes' HS FIFOs underflowed on
+   every line (FIFO_STATUS 0x88881000; the earlier "VIDEO_MDP_FIFO_UNDERFLOW" reading was wrong,
+   bit 3 isn't set), high-speed commands timed out. Found by comparing with the downstream
+   kernel's registers (VREG_CFG 0x02 there, 0x00 here) and confirmed live: writing 0x02 made
+   FIFO_STATUS 0x00001000 (healthy) at once.
+2. 0012, the clock lane in LP-11 while the panel is reset and initialized: msm forced it to HS in
+   the bridge's pre_enable, before the panel's prepare (and for a non-continuous clock left the
+   bootloader's HS force in place, which the controller reset keeps). Out of reset with the clock
+   lane in HS the panel answered commands (id, power mode 0x18/0x1c, display on) but its booster
+   stayed off and it never took the video stream; with the bootloader's setup kept (no reset) the
+   same init sequence worked. The vendor kernel holds the lanes in LP-11 for the panel reset;
+   0012 clears the HS force in dsi_ctrl_enable and sets it in a new bridge enable (after the
+   panel's prepare, before its enable). A non-continuous clock instead made the picture fade
+   into magenta noise.
+3. In the panel driver (0008), display on in enable, with the video stream running.
+
+The bootloader's own command table for the panel (aboot, `mdss_dsi_samsung_720p_video_s6e8aa0a`,
+found by its byte patterns: Qualcomm LK's `{size, payload, wait}` entries, payloads with 4-byte
+DSI headers) differs from the vendor tree's (panel condition F8 0x19/0x04, gamma, ELVSS B1 04 00,
+no ACL); both work now, the vendor tree's gives the right colours.
+
+Still open: blanking and unblanking (`fb0/blank`, the console's 300 s blanking) crashes in
+`mdp5_crtc_atomic_flush` (external abort), so msm stays blacklisted at boot
+(`/etc/modprobe.d/s3ve3g-display-manual.conf`); the panel driver's bring-up switches
+(`skip_init`, `no_reset`, the power-mode log) and 0010's register trace can go once that's done;
+no brightness control yet (no smart dimming). The camera setup for checking the screen:
+`tools/s3ve3g-screenshot.sh` (and the project skill `s3neo-screen`).
+
 ## Effort and blockers (estimates)
 
 | Step | Effort |
