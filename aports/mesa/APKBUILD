@@ -96,8 +96,13 @@ case "$CARCH" in
 x86*)
 	_gallium_drivers="$_gallium_drivers,svga,i915,iris,crocus"
 	;;
-armhf|armv7)
+armhf)
 	_gallium_drivers="$_gallium_drivers,vc4,v3d,freedreno,lima,panfrost,etnaviv,tegra"
+	_gallium_drivers="${_gallium_drivers//r300,}"
+	;;
+armv7)
+	# nura-builds: without panfrost (needs clc, see below)
+	_gallium_drivers="$_gallium_drivers,vc4,v3d,freedreno,lima,etnaviv,tegra"
 	_gallium_drivers="${_gallium_drivers//r300,}"
 	;;
 aarch64)
@@ -177,9 +182,13 @@ aarch64|x86|x86_64|loongarch64)
 		$pkgname-rusticl
 		"
 	;;
-# nura-builds: armv7 without rusticl (OpenCL), as armhf: pmbootstrap cross-compiles armv7 and
-# meson finds no rustc for it ("Unknown compiler(s): [['rustc']]")
-armhf|armv7)
+# nura-builds: armv7 without rusticl (OpenCL) and without panfrost, the only armv7 driver that
+# needs Mesa's OpenCL C compiler (clc, LLVM SPIR-V): pmbootstrap cross-compiles armv7, and meson
+# finds neither rustc nor LLVMSPIRVLib for it. Not for Mali (panfrost) devices.
+armv7)
+	_rusticl=false
+	;;
+armhf)
 	# still requires clc for panfrost (https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/32720)
 	makedepends="
 		$makedepends
