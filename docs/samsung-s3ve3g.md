@@ -170,7 +170,15 @@ simpledrm built in, systemd-nsresourced/-mountfsd masked (their BPF programs fai
 nsresourced once held up udevd for 32 s), nftables (firewall) and plymouth masked, no
 msm-firmware-loader. What remains is the CPU at 787 MHz (higher frequencies need voltage scaling:
 speed bin/PVS fuses, the CPU rail through SAW/SPM, CPR; none in mainline for MSM8226), and
-NetworkManager (5 s) on the path to the login prompt. The `l24: unsupportable voltage range` warning is the
+NetworkManager (5 s) on the path to the login prompt.
+
+Init system: systemd was only nura-builds' default, so the local image switches to OpenRC
+(`service_manager = openrc` in `~/.config/pmbootstrap-s3ve3g.cfg`). The device package works with
+both: no boot splash for either (it depends on `postmarketos-base-nosplash`, the provider of
+`postmarketos-bootsplash-virtual` without plymouth); systemd: the masks above in `/etc/systemd/system`;
+OpenRC: the `device-samsung-s3ve3g-openrc` subpackage (installed with `postmarketos-base-openrc`),
+whose post-install script enables `s3ve3g-firmware` (sysinit) and removes `nftables` from the default
+runlevel (after `postmarketos-base-nftables-openrc` added it). The `l24: unsupportable voltage range` warning is the
 iris driver's default for vdddig; downstream feeds vddrfa and vdddig from l24 too.
 
 Missing: battery and charging (no mainline driver for the PM8226 charger and fuel gauge), sound,

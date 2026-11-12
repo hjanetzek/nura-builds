@@ -18,9 +18,14 @@ depends="
 	linux-postmarketos-qcom-msm8226
 	mkbootimg
 	postmarketos-base
+	postmarketos-base-nosplash
 	soc-qcom-msm8226
 "
 makedepends="devicepkg-dev"
+# nura-builds: no boot splash (postmarketos-base-ui wants postmarketos-bootsplash-virtual, which
+# postmarketos-base-nosplash provides without plymouth); OpenRC settings in the -openrc subpackage
+subpackages="$pkgname-openrc:_openrc"
+install="$pkgname-openrc.post-install $pkgname-openrc.post-upgrade"
 source="
 	deviceinfo
 	s3ve3g-firmware.sh
@@ -46,30 +51,34 @@ package() {
 	# nura-builds: the Wi-Fi firmware (apnhlos) and NV calibration file (system) copied from the
 	# stock partitions into /lib/firmware once, before udev, instead of msm-firmware-loader (which
 	# mounted and scanned all firmware partitions on every boot: 4 s at 787 MHz); for systemd and
-	# OpenRC
+	# OpenRC (its script in the -openrc subpackage)
 	install -Dm755 "$srcdir"/s3ve3g-firmware.sh "$pkgdir"/usr/libexec/s3ve3g-firmware
 	install -Dm644 "$srcdir"/s3ve3g-firmware.service \
 		"$pkgdir"/usr/lib/systemd/system/s3ve3g-firmware.service
 	mkdir -p "$pkgdir"/usr/lib/systemd/system/sysinit.target.wants
 	ln -s ../s3ve3g-firmware.service \
 		"$pkgdir"/usr/lib/systemd/system/sysinit.target.wants/s3ve3g-firmware.service
-	install -Dm755 "$srcdir"/s3ve3g-firmware.initd "$pkgdir"/etc/init.d/s3ve3g-firmware
-	mkdir -p "$pkgdir"/etc/runlevels/sysinit
-	ln -s /etc/init.d/s3ve3g-firmware "$pkgdir"/etc/runlevels/sysinit/s3ve3g-firmware
 
 	# nura-builds (systemd): services masked for a faster boot (their packages are dependencies of
 	# postmarketos-base-ui): systemd-nsresourced and -mountfsd (their BPF programs don't load on
 	# this kernel; nsresourced held up udevd, and so every device, for 32 s), nftables (the
-	# firewall: NetworkManager and the login prompt waited for it), plymouth (no splash with the
-	# console UI; the kernel command line has no "splash")
+	# firewall: NetworkManager and the login prompt waited for it); OpenRC: the -openrc
+	# subpackage's post-install script
 	local unit
 	for unit in systemd-nsresourced.service systemd-nsresourced.socket \
-		systemd-mountfsd.service systemd-mountfsd.socket nftables.service \
-		plymouth-start.service plymouth-read-write.service plymouth-quit.service \
-		plymouth-quit-wait.service plymouth-switch-root.service; do
+		systemd-mountfsd.service systemd-mountfsd.socket nftables.service; do
 		mkdir -p "$pkgdir"/etc/systemd/system
 		ln -s /dev/null "$pkgdir"/etc/systemd/system/$unit
 	done
+}
+
+_openrc() {
+	pkgdesc="Samsung Galaxy S III Neo: OpenRC services"
+	install_if="$pkgname=$pkgver-r$pkgrel postmarketos-base-openrc"
+	# after it: its post-install script enables nftables, ours disables it
+	depends="postmarketos-base-nftables-openrc"
+
+	install -Dm755 "$srcdir"/s3ve3g-firmware.initd "$subpkgdir"/etc/init.d/s3ve3g-firmware
 }
 
 sha512sums="
