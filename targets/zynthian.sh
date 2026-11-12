@@ -71,7 +71,7 @@ DEVICES_x86_64="qemu-amd64"
 # on. The kiosk package (postmarketos-ui-zynthian) depends on the plugins, so it isn't built: the
 # image is a plain one (UI "none") with zynthian-ui installed, for bringing up the device.
 # Overrides: <VAR>_<arch> (common.sh: STAGES, UI, IMAGE_PACKAGES; STAGE_<stage>_<arch>).
-STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian upstream mesa"
+STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian mesa"
 STAGE_engines="zynthian-jalv aeolus sooperlooper"
 # Last, so that a failure there doesn't hold up zynthian: Mesa with the freedreno a3xx fix for Qt
 # Quick's flicker on the S III Neo (aports/mesa)
