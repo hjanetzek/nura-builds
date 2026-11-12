@@ -229,8 +229,14 @@ What exists in mainline and what is missing, in order:
 5. CPR (lower voltages, closed loop): `drivers/pmdomain/qcom/cpr.c` (CPR v1, genpd) knows only
    qcs404; an MSM8226 description from downstream's `qti,cpr-*` fuse layout.
 
-1-3 with the slow ceilings would give 1190.4 MHz (or 1401.6 MHz on the higher bins) safely; the
-phone's bin is in qfprom (readable via /dev/mem in the repacked TWRP, or an nvmem cell).
+1-3 with the slow ceilings would give 1190.4 MHz (or 1401.6 MHz on the higher bins) safely.
+
+This phone (read in the repacked TWRP, downstream kernel; /dev/mem doesn't map the qfprom there):
+speed bin 1, cpufreq 300 MHz to 1593.6 MHz (the speed1 table); at 1593.6 MHz CPR held S2 at 1.23 V
+(corner 12). Speed bin 1 gets a 50 mV uplift (`qti,cpr-uplift-speed-bin = 1`, at most 1.35 V), so
+its TURBO ceilings are 1.33/1.25/1.19 V (slow/nom/fast): the chip is slow or nom. Open loop (no CPR)
+the top frequencies need 1.33 V (near S2's 1.35 V maximum, with VDD_MX as high); CPR would bring
+that to about 1.23 V.
 
 ## Flashing
 
