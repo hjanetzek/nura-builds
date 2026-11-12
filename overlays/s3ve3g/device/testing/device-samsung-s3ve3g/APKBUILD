@@ -1,7 +1,7 @@
-# nura-builds overlay (targets/s3ve3g.sh): pmaports' archived device package
-# (downstream kernel 3.4, too old for systemd), moved to the mainline kernel and to device/testing
-# (setup.sh removes the archived one: pmbootstrap init doesn't take an archived device unasked)
-# linux-postmarketos-qcom-msm8226, whose s3ve3g device tree is ours (the kernel's overlay).
+# nura-builds overlay (targets/s3ve3g.sh): pmaports' archived device package (downstream kernel
+# 3.4, too old for systemd), moved to the mainline kernel linux-postmarketos-qcom-msm8226 (whose
+# s3ve3g device tree is ours, the kernel's overlay) and to device/testing (setup.sh removes the
+# archived one: pmbootstrap init doesn't take an archived device unasked).
 # Reference: <https://postmarketos.org/devicepkg>
 maintainer=""
 pkgname=device-samsung-s3ve3g
@@ -17,15 +17,15 @@ depends="
 	firmware-qcom-adreno-a330
 	linux-postmarketos-qcom-msm8226
 	mkbootimg
-	msm-firmware-loader
 	postmarketos-base
 	soc-qcom-msm8226
 "
 makedepends="devicepkg-dev"
 source="
 	deviceinfo
-	s3ve3g-wcnss-nv.sh
-	s3ve3g-wcnss-nv.service
+	s3ve3g-firmware.sh
+	s3ve3g-firmware.service
+	s3ve3g-firmware.initd
 "
 
 build() {
@@ -43,16 +43,21 @@ package() {
 	install -Dm644 /dev/null "$pkgdir"/etc/kernel-cmdline.d/00-base.conf
 	install -Dm644 /dev/null "$pkgdir"/etc/kernel-cmdline.d/20-plymouth.conf
 
-	# nura-builds: the Wi-Fi NV calibration file from the stock system partition, once, before
-	# msm-firmware-loader (which doesn't look there)
-	install -Dm755 "$srcdir"/s3ve3g-wcnss-nv.sh "$pkgdir"/usr/libexec/s3ve3g-wcnss-nv
-	install -Dm644 "$srcdir"/s3ve3g-wcnss-nv.service \
-		"$pkgdir"/usr/lib/systemd/system/s3ve3g-wcnss-nv.service
+	# nura-builds: the Wi-Fi firmware (apnhlos) and NV calibration file (system) copied from the
+	# stock partitions into /lib/firmware once, before udev, instead of msm-firmware-loader (which
+	# mounted and scanned all firmware partitions on every boot: 4 s at 787 MHz); for systemd and
+	# OpenRC
+	install -Dm755 "$srcdir"/s3ve3g-firmware.sh "$pkgdir"/usr/libexec/s3ve3g-firmware
+	install -Dm644 "$srcdir"/s3ve3g-firmware.service \
+		"$pkgdir"/usr/lib/systemd/system/s3ve3g-firmware.service
 	mkdir -p "$pkgdir"/usr/lib/systemd/system/sysinit.target.wants
-	ln -s ../s3ve3g-wcnss-nv.service \
-		"$pkgdir"/usr/lib/systemd/system/sysinit.target.wants/s3ve3g-wcnss-nv.service
+	ln -s ../s3ve3g-firmware.service \
+		"$pkgdir"/usr/lib/systemd/system/sysinit.target.wants/s3ve3g-firmware.service
+	install -Dm755 "$srcdir"/s3ve3g-firmware.initd "$pkgdir"/etc/init.d/s3ve3g-firmware
+	mkdir -p "$pkgdir"/etc/runlevels/sysinit
+	ln -s /etc/init.d/s3ve3g-firmware "$pkgdir"/etc/runlevels/sysinit/s3ve3g-firmware
 
-	# nura-builds: services masked for a faster boot (their packages are dependencies of
+	# nura-builds (systemd): services masked for a faster boot (their packages are dependencies of
 	# postmarketos-base-ui): systemd-nsresourced and -mountfsd (their BPF programs don't load on
 	# this kernel; nsresourced held up udevd, and so every device, for 32 s), nftables (the
 	# firewall: NetworkManager and the login prompt waited for it), plymouth (no splash with the
@@ -69,6 +74,7 @@ package() {
 
 sha512sums="
 706b9f038f6808535f6d88af43c481055bcf4ad5962ebb44fd47cded6161cf4627b935e088251f15a2151a03c174a74faabac66bd14611d62c44b987113a6f74  deviceinfo
-76d5b82d4dc0862cd35f5228bdbeef2d913747c9fef95be0936a02113249004da98e828ae44d85f360203f507cfae0fc82578af09cb0f740f71619bf8b0aaa54  s3ve3g-wcnss-nv.sh
-5fe3fc4a536b06b719cff65a9b4bb7efae09f7dc577678920c22aa7c665482dc2b0e5c69b01ae04a78bdccb0ed768086456341f6d3b155ad61c32ee7c629b79c  s3ve3g-wcnss-nv.service
+caee3b7efe4bf59c491cb4942575adb07db9a3fcdd510a240cf8b66f248ae98d6956ff9613e8647c2900519493c78a055d3cf848daf03d718737d44f6e7573d4  s3ve3g-firmware.sh
+cb233173ada34d8bca56e9e947246f494cc1f5a96404f360dce3826d9bd69744731c3b21cd758f80bc66281205b9e0d5e7456fd70ab3421191641d8d6dcf1837  s3ve3g-firmware.service
+dd83c92e45be16613d51d0a75748549d672f4f901a3e2d3e36400da3a13c3cfbb9da6d2958d21f158d4da34a68ca92ed775bd321c599ae6888db9b6e87f0d13e  s3ve3g-firmware.initd
 "

@@ -1,0 +1,13 @@
+[Unit]
+Description=Firmware from the stock partitions (Samsung Galaxy S III Neo)
+DefaultDependencies=no
+Before=systemd-udevd.service systemd-udev-trigger.service
+ConditionPathExists=|!/lib/firmware/wcnss.mdt
+ConditionPathExists=|!/lib/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/s3ve3g-firmware
+
+[Install]
+WantedBy=sysinit.target

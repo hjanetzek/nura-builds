@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+# Firmware from the stock partitions (Samsung Galaxy S III Neo), see /usr/libexec/s3ve3g-firmware
+
+description="Firmware from the stock partitions"
+
+depend() {
+	before udev udev-trigger
+}
+
+start() {
+	if [ -e /lib/firmware/wcnss.mdt ] && [ -e /lib/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin ]; then
+		return 0
+	fi
+	ebegin "Copying firmware from the stock partitions"
+	/usr/libexec/s3ve3g-firmware
+	eend $?
+}

@@ -158,10 +158,19 @@ a level trigger),
 magnetometer (yas532), IMU (mpu6500), PMIC ADCs, Wi-Fi (2.4 and 5 GHz; `hal_start_scan ... err=5`
 from the old firmware is harmless), Bluetooth (registers), 4 CPUs with cpufreq up to 787 MHz.
 
-Wi-Fi needs the NV calibration file `wlan/prima/WCNSS_qcom_wlan_nv.bin` (without it the WCNSS
-firmware crashes in a loop): it is on the stock system partition (`/etc/firmware/wlan/prima/`),
-where msm-firmware-loader doesn't look; the device package's `s3ve3g-wcnss-nv.service` copies it to
-`/lib/firmware` once, before the loader. The `l24: unsupportable voltage range` warning is the
+Firmware: the device package copies what the device needs from the stock partitions into
+`/lib/firmware` once, before udev (`s3ve3g-firmware`, systemd unit and OpenRC script): the Wi-Fi
+core's firmware (`wcnss.mdt`, `wcnss.b*`, apnhlos/image; the only remote processor enabled) and the
+NV calibration file `wlan/prima/WCNSS_qcom_wlan_nv.bin` (system/etc/firmware/wlan/prima; without it
+the WCNSS firmware crashes in a loop). It replaces msm-firmware-loader, which mounted and scanned
+all firmware partitions on every boot (4 s at 787 MHz, before udev) and didn't find the NV file.
+
+Boot time (2026-11-12): 1:16 at first, 43 s now (kernel and initramfs 17 s, userspace 26 s):
+simpledrm built in, systemd-nsresourced/-mountfsd masked (their BPF programs fail on this kernel;
+nsresourced once held up udevd for 32 s), nftables (firewall) and plymouth masked, no
+msm-firmware-loader. What remains is the CPU at 787 MHz (higher frequencies need voltage scaling:
+speed bin/PVS fuses, the CPU rail through SAW/SPM, CPR; none in mainline for MSM8226), and
+NetworkManager (5 s) on the path to the login prompt. The `l24: unsupportable voltage range` warning is the
 iris driver's default for vdddig; downstream feeds vddrfa and vdddig from l24 too.
 
 Missing: battery and charging (no mainline driver for the PM8226 charger and fuel gauge), sound,
