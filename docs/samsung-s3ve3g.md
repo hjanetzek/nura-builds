@@ -76,16 +76,24 @@ device = samsung-s3ve3g
 hostname = s3neo
 is_default_channel = False
 locale = C.UTF-8
-service_manager = systemd
+service_manager = openrc
 ssh_key_glob = ~/.ssh/id_ed25519.pub
 ssh_keys = True
 timezone = Europe/Berlin
 ui = console
 user = <user>
+work = /home/<user>/.local/var/pmbootstrap-s3ve3g
 
 [providers]
 postmarketos-base-ui-audio-backend = postmarketos-base-ui-audio-backend-pipewire
 ```
+
+Give it a work directory of its own (`work = ...`): pmbootstrap treats systemd and OpenRC as
+different channels (`systemd-edge`, `edge`) and refuses chroots of the other one, so a shared work
+dir would need a `zap` at every switch between projects. `pmbootstrap init` on a new work dir
+resets `aports` to that work dir's own pmaports clone unless the worktree is entered as the
+pmaports path: then pmaports' archived device package and the downstream kernel get installed
+(a 13 MB boot image, "BOOT partition is too small").
 
 ```sh
 C=~/.config/pmbootstrap-s3ve3g.cfg
