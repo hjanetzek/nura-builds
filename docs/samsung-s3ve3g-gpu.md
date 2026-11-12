@@ -191,8 +191,21 @@ The camera app's `/video/snapshot` can return a stale picture: `tools/s3ve3g-scr
 the newest frame of the MJPEG stream (`/video/mjpeg`) and turns it upright.
 
 The panel driver's bring-up switches (`skip_init`, `no_reset`, the power-mode log) and 0010's
-register trace can go once that's done; no brightness control yet (no smart dimming). The camera setup for checking the screen:
+register trace can go once that's done. The camera setup for checking the screen:
 `tools/s3ve3g-screenshot.sh` (and the project skill `s3neo-screen`).
+
+## Brightness (2026-11-12, patch 0008)
+
+The AMOLED has no backlight: brightness is the gamma table (DCS 0xFA, 26 bytes, then 0xF7 0x03
+"gamma update"). The panel reports id `a2 60 90`, version 0x60 = 96, which mainline's
+`panel-samsung-s6e8aa0.c` (the Exynos Galaxy S III's panel) has 25 tables for
+(`s6e8aa0_gamma_tables_v96`, about 30-300 cd/m²). The vendor dtsi's fixed table is closest to the
+top one. Our driver registers a backlight device with those tables:
+`/sys/class/backlight/fd922800.dsi.0/brightness`, 0-24, default 24. It's sent in LP mode while the
+video stream runs, applied again on enable (it survives DPMS off/on), and skipped while the panel is
+off. Checked through the camera: in the MJPEG stream the screen jumps about 2× (saturated) going
+from 0 to 24, before the camera's auto exposure catches up. Not done: smart dimming from the
+panel's MTP (per-panel calibrated gamma, as downstream does); 0 is dim but not off (use DPMS).
 
 ## Effort and blockers (estimates)
 
@@ -201,7 +214,7 @@ register trace can go once that's done; no brightness control yet (no smart dimm
 | GPU, MDSS, DSI enabled in the DT, command line, firmware | about half a day |
 | Generated panel driver, DSI timing and power sequence debugged over SSH | 1-3 days |
 | GPU acceleration with a fixed brightness, in total | about 3-5 focused days |
-| Brightness and gamma (porting MTP/smart dimming, or extending s6e8aa0.c) | 1-2 more weeks |
+| Brightness and gamma (porting MTP/smart dimming, or extending s6e8aa0.c) | 1-2 more weeks (fixed tables done) |
 
 Blockers, in order: the panel driver and its power sequence; the handover from the bootloader's
 framebuffer (resetting the MDSS clocks may blank the screen: test with SSH at hand); no IOMMU
