@@ -239,11 +239,37 @@ ACL, gamma update) around it.
   but the panel stays black (legacy and atomic modesetting alike). kmscube on the same device
   works. Not investigated further. Careful: two Qt processes fight over DRM master
   ("Could not queue DRM page flip ... Permission denied").
-- **niri:** not packaged for 32-bit by Alpine (its screencast feature needs pipewire-rs);
-  `overlays/s3ve3g/temp/niri` builds it without that feature (`--features dbus`); pmbootstrap
-  needs `sccache` in makedepends for Rust.
+- **niri:** not packaged for 32-bit by Alpine (its screencast feature needs pipewire-rs); built
+  without that feature (`--features dbus`) by the armv7 CI (branch `zynthian-arm7`,
+  `aports/niri`, stage niri; pmbootstrap needs `sccache` in makedepends for Rust).
 - **Package downloads:** over the USB network through the host, see "Network over USB" in
   `samsung-s3ve3g.md`.
+
+## zynthian's Qt UI: flicker on touch, a Mesa bug (2026-11-12)
+
+zynthian (armv7 package repository, Qt 6.12, PySide6 6.12) runs under cage and also straight on
+KMS (eglfs). `ZYNTHIAN_UI=qt` is what selects the Qt UI (without it the launcher starts the Tk UI
+through XWayland); the rest of the environment as in zynthian-ui's cage session before niri
+(`58512830^:nura/postmarketos-ui-zynthian/zynthian.sh`): `QT_QPA_PLATFORM=wayland`,
+`QT_WAYLAND_DISABLE_WINDOWDECORATION=1`, `ZYNTHIAN_FULLSCREEN=1`, `ZYNTHIAN_UI_SCALE=auto`, output
+`wlr-randr --transform 90 --scale 1.5` (853x480 logical). Touch rotated with it by a udev rule
+(`LIBINPUT_CALIBRATION_MATRIX=0 -1 1 1 0 0` for "MELFAS MMS114 Touchscreen", the matrix of
+zynthian-ui's Pixel 3 rule). JACK with the dummy backend (no audio codec driver yet).
+
+Touching or dragging sliders made the UI flicker; button backgrounds turned black until the next
+touch. The same under cage and on eglfs, gone with `QT_QUICK_BACKEND=software`; not helped by
+direct scanout off, hardware cursor off, `QSG_RENDER_LOOP=basic`, `QSG_NO_DEPTH_BUFFER=1`,
+`FD_MESA_DEBUG=sysmem`. Test scenes (rectangles, KeypadBlur's ShaderEffectSource + MultiEffect,
+changing text and a clipped list, zynthian-ui's spike with mock mixer strips) rendered correctly
+when changed by timers; synthetic touches (uinput) into the real zynthian reproduced it only at a
+finger's rate (events every 10 ms), not with pauses between events.
+
+Cause: Mesa freedreno on a3xx, fixed on Mesa main by 1f0763a96af1 ("freedreno/a3xx: honor sampler
+view targets for buffer blits", MR 45580, "Fixing Flickering on A3xx", 2026-10-26), not in
+26.2.x: partial buffer uploads to buffers the GPU is still using go through a staging blit that
+samples the buffer through a 1D texture view, which a3xx encoded wrongly, corrupting Qt Quick's
+vertex data. `FD_MESA_DEBUG=inorder` (no staging for busy buffers) makes the flicker go away:
+the workaround until the fixed Mesa (the armv7 CI's `aports/mesa`, 26.2.6-r1) is installed.
 
 ## Effort and blockers (estimates)
 
