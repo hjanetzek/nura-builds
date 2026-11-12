@@ -128,10 +128,18 @@ With the command line fixed, pmOS boots to the login prompt (framebuffer console
 framebuffer, Terminus 16x32). Found on the way:
 
 - Kernel modules must match: `flasher flash_kernel` only replaces the boot image; the modules in
-  the rootfs stay those of the installed kernel and are refused when the kernel changed (BTF
-  mismatch, `failed to validate module [ext2] BTF: -22`: no /boot, emergency mode). After a kernel
-  change: `install`, `flash_rootfs`, `flash_kernel` (new UUIDs each install, so all three), or
-  update the kernel on the device with apk.
+  the rootfs stay those of the installed kernel and were refused when the kernel changed (BTF
+  mismatch, `failed to validate module [ext2] BTF: -22`: no /boot, emergency mode). Since r113
+  `CONFIG_MODULE_ALLOW_BTF_MISMATCH=y`: test builds keep the version and only the boot image is
+  flashed (as long as the kernel's core structures don't change):
+
+  ```sh
+  pmbootstrap -c $C build --force linux-postmarketos-qcom-msm8226
+  pmbootstrap -c $C chroot -r -- apk fix -r linux-postmarketos-qcom-msm8226   # same version: reinstall
+  pmbootstrap -c $C flasher flash_kernel
+  ```
+
+  A new rootfs (`install`) needs `flash_rootfs` and `flash_kernel` (new UUIDs each install).
 - No USB networking in the booted system: pmOS's initramfs sets up the gadget once, early in
   stage 1, and found no UDC: the USB controller waits for the USB switch (extcon), and
   extcon-sm5502 was a module that probed later. Built in (kernel r113: `EXTCON_SM5502`,
