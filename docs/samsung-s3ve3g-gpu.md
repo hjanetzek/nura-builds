@@ -256,6 +256,24 @@ through XWayland); the rest of the environment as in zynthian-ui's cage session 
 (`LIBINPUT_CALIBRATION_MATRIX=0 -1 1 1 0 0` for "MELFAS MMS114 Touchscreen", the matrix of
 zynthian-ui's Pixel 3 rule). JACK with the dummy backend (no audio codec driver yet).
 
+**Without a compositor (the setup for the S III Neo):** `tools/s3ve3g-debug/zynthian-eglfs.sh`
+runs the Qt UI on Qt's eglfs (KMS, the GPU's `/dev/dri/card1`) as the logged-in user, which gets
+DRM master as the device's only client:
+- eglfs doesn't rotate Qt Quick (`QT_QPA_EGLFS_ROTATION` only rotates raster windows) and the
+  MDP planes only flip, a 90 degree turn would need the hardware rotator: zynthian-ui rotates the
+  UI in QML instead, `ZYNTHIAN_UI_ROTATION=90` (zynthian-ui 780cf605). Scale: `QT_SCALE_FACTOR=1.5`.
+- Touch: Qt's evdevtouch (`QT_QPA_EGLFS_NO_LIBINPUT=1`) with raw panel coordinates, mapped by the
+  QML rotation. libinput would apply the udev calibration matrix that cage needs.
+- Qt Quick's DragHandlers without a target measure in window coordinates
+  (`qquickdraghandler.cpp`: translation, axis constraints and threshold from scene positions):
+  taps were right but faders moved on the panel's axis; zynthian-ui maps those drags into their
+  item (`Theme.localDrag`).
+- `zynthian_desktop.sh` restarts zynthian when it exits: stop it first when restarting by hand,
+  otherwise two instances compete for DRM master (`/sys/kernel/debug/dri/1/clients`; the one
+  without master gets "Could not queue DRM page flip ... Permission denied").
+- No compositor, so no `grim`: check the screen by eye or with the camera.
+- The flicker workaround `FD_MESA_DEBUG=inorder` is in the script until the fixed Mesa is installed.
+
 Touching or dragging sliders made the UI flicker; button backgrounds turned black until the next
 touch. The same under cage and on eglfs, gone with `QT_QUICK_BACKEND=software`; not helped by
 direct scanout off, hardware cursor off, `QSG_RENDER_LOOP=basic`, `QSG_NO_DEPTH_BUFFER=1`,
