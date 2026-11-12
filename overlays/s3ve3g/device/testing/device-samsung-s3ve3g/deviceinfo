@@ -37,6 +37,7 @@ deviceinfo_flash_heimdall_partition_kernel="BOOT"
 deviceinfo_flash_heimdall_partition_rootfs="USERDATA"
 deviceinfo_flash_sparse="true"
 # BOOT is about 10 MB: the large parts of the initramfs (filesystem tools, udev, the FDE unlocker)
-# in initramfs-extra on the boot partition of the rootfs, the rest compressed best
+# in initramfs-extra on the boot partition of the rootfs; the rest with zstd (1.6 MB, as small as
+# lzma within a few 100 KB, and much faster to unpack at 787 MHz)
 deviceinfo_create_initfs_extra="true"
-deviceinfo_initfs_compression="lzma"
+deviceinfo_initfs_compression="zstd"

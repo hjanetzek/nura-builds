@@ -51,10 +51,24 @@ package() {
 	mkdir -p "$pkgdir"/usr/lib/systemd/system/sysinit.target.wants
 	ln -s ../s3ve3g-wcnss-nv.service \
 		"$pkgdir"/usr/lib/systemd/system/sysinit.target.wants/s3ve3g-wcnss-nv.service
+
+	# nura-builds: services masked for a faster boot (their packages are dependencies of
+	# postmarketos-base-ui): systemd-nsresourced and -mountfsd (their BPF programs don't load on
+	# this kernel; nsresourced held up udevd, and so every device, for 32 s), nftables (the
+	# firewall: NetworkManager and the login prompt waited for it), plymouth (no splash with the
+	# console UI; the kernel command line has no "splash")
+	local unit
+	for unit in systemd-nsresourced.service systemd-nsresourced.socket \
+		systemd-mountfsd.service systemd-mountfsd.socket nftables.service \
+		plymouth-start.service plymouth-read-write.service plymouth-quit.service \
+		plymouth-quit-wait.service plymouth-switch-root.service; do
+		mkdir -p "$pkgdir"/etc/systemd/system
+		ln -s /dev/null "$pkgdir"/etc/systemd/system/$unit
+	done
 }
 
 sha512sums="
-2ff0d9ad3c17b479100be68ac1b9b2275ce56c2da55a11b6ef959c56f5c03855d093caf173eeab005c590ca3aaaddf56688825a6528e3775b205042d4d065805  deviceinfo
+706b9f038f6808535f6d88af43c481055bcf4ad5962ebb44fd47cded6161cf4627b935e088251f15a2151a03c174a74faabac66bd14611d62c44b987113a6f74  deviceinfo
 76d5b82d4dc0862cd35f5228bdbeef2d913747c9fef95be0936a02113249004da98e828ae44d85f360203f507cfae0fc82578af09cb0f740f71619bf8b0aaa54  s3ve3g-wcnss-nv.sh
 5fe3fc4a536b06b719cff65a9b4bb7efae09f7dc577678920c22aa7c665482dc2b0e5c69b01ae04a78bdccb0ed768086456341f6d3b155ad61c32ee7c629b79c  s3ve3g-wcnss-nv.service
 "
