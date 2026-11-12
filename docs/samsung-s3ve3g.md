@@ -151,7 +151,9 @@ framebuffer, Terminus 16x32). Found on the way:
 ## Hardware status (2026-11-12, kernel r113)
 
 Works: boot to the login prompt, USB networking (cdc_ncm, SSH at 172.16.42.1), simpledrm on the
-splash framebuffer (720x1280), eMMC, keys, hall sensor, power key, touchscreen (MMS114 registers),
+splash framebuffer (720x1280), eMMC, keys, hall sensor, power key, touchscreen (MMS144 with the
+mms114 driver: whole screen, axes right, multitouch; its open-drain interrupt needs the pull-up and
+a level trigger),
 magnetometer (yas532), IMU (mpu6500), PMIC ADCs, Wi-Fi (2.4 and 5 GHz; `hal_start_scan ... err=5`
 from the old firmware is harmless), Bluetooth (registers), 4 CPUs with cpufreq up to 787 MHz.
 
