@@ -104,8 +104,15 @@ Downstream for comparison (TWRP's kernel, display on, read with a static `mmap64
 busybox's devmem can't map above 2 GB there): DSI controller, INTF1 and the mixer are nearly
 register-identical, `FIFO_STATUS` 0x00001000 (no underflow); the PLL has the same post-dividers,
 only the sigma-delta seed and calibration differ; downstream scans out through VIG0 and enables
-DSPP. Still to compare: the clock controller (RCGs/branches of byte, pixel, MDP, AXI) and the
-downstream DSI driver's video-mode enable sequence.
+DSPP. The clock controller (0xfd8c0000, 0xfd8c2000, 0xfd8c5000) too: pixel and byte clocks have
+the same source (the DSI PLL) and configuration (M/N/D bypassed), the MDSS branches and GDSC are
+the same; downstream runs the MDP at 92.3 MHz (mainline 200 MHz) and MMSS AXI at 37.5 MHz
+(mainline 100 MHz). So the static configuration matches; what differs is behaviour: with
+mainline's INTF1 timing engine stopped, the DSI's `FIFO_STATUS` reads 0x11111000 (FIFOs empty,
+no underflow), and the underflow comes back as soon as INTF1 runs, while INTF1 itself reports no
+underrun. Next: the downstream DSI/MDP video-mode enable sequence (mdss_dsi_host.c,
+mdss_mdp_intf_video.c) against mainline's, register writes in order (e.g. with msm's register
+tracing), and asking the msm8226-mainline people (video-mode DSI panels on 8226).
 
 Without simpledrm (the simple-framebuffer node disabled) msm crashes in
 `dsi_pll_28nm_clk_recalc_rate` (external abort): nothing keeps the MDSS clocks on, and the PLL's
