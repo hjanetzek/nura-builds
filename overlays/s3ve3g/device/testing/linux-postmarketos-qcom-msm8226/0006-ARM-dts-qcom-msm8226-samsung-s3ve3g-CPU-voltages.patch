@@ -1,0 +1,133 @@
+From: nura-builds
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: CPU voltages, up to 1593.6 MHz
+
+The CPU rail through the L2 SAW's regulator and OPP voltages for speed bin 1
+(open loop, no CPR): SVS 1.05 V, NOM 1.15 V, TURBO 1.28 V; 998.4-1190.4 MHz
+on by default, 1305.6-1593.6 MHz as boost frequencies.
+---
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -251,6 +251,108 @@
+ 	};
+ };
+ 
++&cpu0 {
++	cpu-supply = <&saw_l2_vreg>;
++};
++
++&cpu1 {
++	cpu-supply = <&saw_l2_vreg>;
++};
++
++&cpu2 {
++	cpu-supply = <&saw_l2_vreg>;
++};
++
++&cpu3 {
++	cpu-supply = <&saw_l2_vreg>;
++};
++
++/*
++ * CPU voltages open loop (no CPR), for speed bin 1 (this phone, up to 1593.6 MHz; downstream's
++ * speed1 table): SVS 1.05 V, NOM 1.15 V, TURBO 1.28 V, the slow-PVS TURBO ceiling without
++ * the speed-bin uplift: CPR held 1.23 V at 1593.6 MHz here, and VDD_MX (L3, 1.2875 V) stays
++ * above it. 1305.6 MHz and up as boost frequencies (off until enabled in
++ * /sys/devices/system/cpu/cpufreq/boost) while they are being tested.
++ */
++&cpu_opp_table {
++	opp-300000000 {
++		opp-hz = /bits/ 64 <300000000>;
++		opp-microvolt = <1050000>;
++		clock-latency-ns = <200000>;
++	};
++
++	opp-384000000 {
++		opp-hz = /bits/ 64 <384000000>;
++		opp-microvolt = <1050000>;
++		clock-latency-ns = <200000>;
++	};
++
++	opp-600000000 {
++		opp-hz = /bits/ 64 <600000000>;
++		opp-microvolt = <1150000>;
++		clock-latency-ns = <200000>;
++	};
++
++	opp-787200000 {
++		opp-hz = /bits/ 64 <787200000>;
++		opp-microvolt = <1150000>;
++		clock-latency-ns = <200000>;
++	};
++
++	opp-998400000 {
++		opp-hz = /bits/ 64 <998400000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++	};
++
++	opp-1094400000 {
++		opp-hz = /bits/ 64 <1094400000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++	};
++
++	opp-1190400000 {
++		opp-hz = /bits/ 64 <1190400000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++	};
++
++	opp-1305600000 {
++		opp-hz = /bits/ 64 <1305600000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++		turbo-mode;
++	};
++
++	opp-1344000000 {
++		opp-hz = /bits/ 64 <1344000000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++		turbo-mode;
++	};
++
++	opp-1401600000 {
++		opp-hz = /bits/ 64 <1401600000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++		turbo-mode;
++	};
++
++	opp-1497600000 {
++		opp-hz = /bits/ 64 <1497600000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++		turbo-mode;
++	};
++
++	opp-1593600000 {
++		opp-hz = /bits/ 64 <1593600000>;
++		opp-microvolt = <1280000>;
++		clock-latency-ns = <200000>;
++		turbo-mode;
++	};
++};
++
+ &blsp1_i2c2 {
+ 	status = "okay";
+ 
+@@ -487,6 +589,13 @@
+ 	};
+ };
+ 
++&saw_l2 {
++	saw_l2_vreg: regulator {
++		regulator-min-microvolt = <1050000>;
++		regulator-max-microvolt = <1280000>;
++	};
++};
++
+ &sdhc_1 {
+ 	vmmc-supply = <&pm8226_l17>;
+ 	vqmmc-supply = <&pm8226_l6>;

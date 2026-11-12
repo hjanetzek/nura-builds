@@ -65,16 +65,22 @@ psize=$(sudo blockdev --getsize64 "$part")
 sudo cp /tmp/deploy/boot-partition.img /boot/boot-partition.prev.img
 old=$(sha256sum /boot/boot.img | cut -d' ' -f1)
 
-# Reinstall from the local repository (/tmp/deploy/armv7; same versions included); triggers
-# mkinitfs/boot-deploy
+# Install these very files (a rebuild with the same version too: apk replaces it, where "fix"
+# wants the installed build's checksum); triggers mkinitfs/boot-deploy. Then the names again, so
+# that world doesn't stay pinned to these files' builds.
 apk="sudo apk --no-network --no-interactive --repository /tmp/deploy"
-$apk add --upgrade "$@" >/dev/null
-out=$($apk fix -r "$@" 2>&1) || { echo "$out" >&2; exit 1; }
+files=
+for p in "$@"; do
+	files="$files $(ls /tmp/deploy/armv7/"$p"-[0-9]*.apk)"
+done
+# shellcheck disable=SC2086 # file list
+out=$($apk add $files 2>&1) || { echo "$out" >&2; exit 1; }
 echo "$out" | grep -E '^\(|^OK' || true
-if echo "$out" | grep -q 'unavailable'; then
-	echo "apk didn't find the packages in /tmp/deploy: nothing reinstalled, BOOT not touched" >&2
+if ! echo "$out" | grep -qE 'Replacing|Upgrading|Installing|Downgrading'; then
+	echo "apk installed nothing from /tmp/deploy: BOOT not touched" >&2
 	exit 1
 fi
+$apk add "$@" >/dev/null
 
 img=/boot/boot.img
 size=$(stat -c %s "$img")

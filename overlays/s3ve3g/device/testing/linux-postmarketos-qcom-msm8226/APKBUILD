@@ -58,6 +58,8 @@ source="
 	0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 	0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 	0004-ARM-COMMAND_LINE_SIZE-2048.patch
+	0005-soc-qcom-spm-MSM8226-L2-SAW2-CPU-rail-regulator.patch
+	0006-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-voltages.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-${_tag#v}"
@@ -101,5 +103,7 @@ a85d8df7adb71eeb19cbba9a241513cf0a2ba7771ca6f0a4de938dce4b7efa5b4e0815bf7a85e3e2
 99a2975dd8d90a6bed5d6f998739b612b1743dfc68f3d2765801f17f2f3c6ae840d73df4b15d99b60790f81dc44c03635de203e7360ca7309bd6829e0b6078bf  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 f9b8510ace1f6c9efb7da0326aec04fb65f5567b46801ad510fdab82c89d76f2d0e0954f5c9be22ffff0dd7409aaff712c4d81400c832d34b55e5a95388fdf68  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 c116ee70206a39b8d63d2357cb8410a43c0748e38d30eda79862605d72bd7189106b26f5bc2e67c46be5cb0011cb91518bfdc7065e91264ffc59b8a5cf75cd87  0004-ARM-COMMAND_LINE_SIZE-2048.patch
+2be136c1c0a1d1e98e3e16dc76a4722d04d19a3ba53e741bff24c3cd51757c9a582d604c0836bdf89e09a456c7b8fbad2df09f76e2679118b288e9e5d3c5b3f7  0005-soc-qcom-spm-MSM8226-L2-SAW2-CPU-rail-regulator.patch
+ce3b8e2e5fdb7f7cfd7ad1f4635c77916076bf3b5a88b30285f95b2015bbf711676b4eb8dc7d642585037e8f9af853c94a1d790b30b57c57bc40e4f07c33b2be  0006-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-voltages.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "

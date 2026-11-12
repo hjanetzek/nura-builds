@@ -225,8 +225,8 @@ What exists in mainline and what is missing, in order:
    downstream spm-regulator.c) and the regulator on the CPU SAW nodes. Setting S2 directly over SPMI
    (`qcom,pm8226-regulators` has it) would be undone by the SPM after idle; the SAW coupling in
    `qcom_spmi-regulator.c` is SAW3 only (MSM8996).
-2. VDD_MX: `rpmpd` has only CX for MSM8226; MX (L3 corners) has to be added, then OPPs with
-   `required-opps` keep MX at or above the CPU voltage.
+2. VDD_MX: downstream's `vdd-mx-supply` is PM8226 L3 (`pm8226_l3_ao`, an RPM LDO voltage, not a
+   corner), raised to the CPU voltage when that goes higher; cpufreq-dt has one supply only.
 3. Speed bin: `qcom-cpufreq-nvmem` with an `msm8226` entry (`qcom_cpufreq_simple_get_version`, as
    MSM8909) and an nvmem cell for the raw qfprom row (the qfprom node starts at 0xfc4bc000, the fuse
    is at 0xfc4b80b0); OPPs with `opp-supported-hw` per bin and `opp-microvolt`.
@@ -244,11 +244,43 @@ its TURBO ceilings are 1.33/1.25/1.19 V (slow/nom/fast): the chip is slow or nom
 the top frequencies need 1.33 V (near S2's 1.35 V maximum, with VDD_MX as high); CPR would bring
 that to about 1.23 V.
 
+### What the overlay does (patches 0005, 0006)
+
+Read on the running phone (mainline, `/dev/mem` and `/sys/kernel/debug/regmap/0-01/registers`;
+read single PMIC registers with `dd bs=9 skip=$((0xADDR)) count=1` on that file: reading all of it
+asks the arbiter for 64K registers, most of them denied and logged):
+
+- Only the L2/APCS SAW (0xf9012000) has the PMIC arbiter port: SAW2_ID 0x2010086f (bit 2 set), the
+  CPU SAWs 0x120f0861. SAW2 version 0x20010000 (v2.1).
+- S2: FTS2 (type 0x1c, subtype 0x08), range 1 (0x1740 = 1: 700-2040 mV, 10 mV steps), setpoint
+  0x73 (1.15 V, from the bootloader), mode PWM (0x80), step control 0x81 (9.6 mV/us with
+  downstream's margin).
+- L3 (VDD_MX): 0x49 in range 0, 1.2875 V; the CPU voltage stays below that.
+- A write of the voltage (mV / 10) to the L2 SAW's VCTL (0x1c, port 0; after RST 0x18 := 1) sets
+  S2 at once: PMIC_STS (0x14) and S2's setpoint 0x1741 follow (tried 0x73 -> 0x74 -> 0x73).
+
+0005 adds that to `spm.c`, a regulator on the `qcom,msm8226-saw2-v2.1-l2` node (shared by all
+CPUs, written from any). 0006 (s3ve3g) supplies the CPUs from it, with OPP voltages open loop for
+speed bin 1: SVS 1.05 V (300, 384 MHz), NOM 1.15 V (600, 787.2 MHz), TURBO 1.28 V (998.4-1190.4 MHz,
+and 1305.6-1593.6 MHz as boost frequencies, off by default):
+
+```sh
+echo 1 | sudo tee /sys/devices/system/cpu/cpufreq/boost   # up to 1593.6 MHz (until reboot)
+```
+
+No speed-bin reading (the OPPs are for this phone's bin), no CPR, no MX scaling.
+
+Tested (2026-11-12): S2 follows the frequency (0x69 at 300 MHz, 0x73 at 600/787.2 MHz, 0x80 from
+998.4 MHz); 3 minutes of sha256 over a 16 MB file on all four cores, every result compared, at
+1190.4 MHz (925 runs, none wrong, 62 °C) and with boost at 1593.6 MHz (1088 runs, none wrong,
+67 °C, levelling off).
+
 ## Kernel updates over SSH
 
 Once the device runs (USB networking), new builds go to it without heimdall or a new rootfs:
-`tools/s3ve3g-deploy.sh` copies the packages to the device as a local repository, reinstalls them
-with apk (`fix -r`: a rebuild with the same version too; kernel and modules stay in step), and the
+`tools/s3ve3g-deploy.sh` copies the packages to the device as a local repository, installs those
+files with apk (a rebuild with the same version too; apk's `fix` would want the installed build's
+checksum; kernel and modules stay in step), and the
 device's mkinitfs/boot-deploy writes `/boot/boot.img`; the script checks it (Android header, QCDT,
 size against the partition), saves the current BOOT contents first (`out/s3ve3g/boot-*.img` here,
 for `heimdall flash --BOOT` if the new kernel doesn't boot; `/boot/boot-partition.prev.img` on the
@@ -259,6 +291,19 @@ label `BOOT`, heimdall's name for it; the GPT label is `boot`.)
 ```sh
 pmbootstrap -c $C build --force linux-postmarketos-qcom-msm8226
 KNOWN_HOSTS=... tools/s3ve3g-deploy.sh            # default packages: kernel, device, device-openrc
+```
+
+Without sudo here: `tools/s3ve3g-builder.sh` runs pmbootstrap in a QEMU VM (zynthian-ui's
+`nura/tools/run_qemu.sh` and `qemu_setup.sh`, see the script's header: own directory, SSH port 2240,
+headless), with its own work dir and pmaports there, the overlays synced into it; sources already
+downloaded here are copied over (GitHub rate-limits tarball downloads from the VM):
+
+```sh
+tools/s3ve3g-builder.sh setup                       # once
+tools/s3ve3g-builder.sh build                       # kernel and device package (--force)
+tools/s3ve3g-builder.sh fetch                       # to out/s3ve3g/packages/armv7
+KNOWN_HOSTS=... tools/s3ve3g-builder.sh key         # once: the phone trusts the VM's signing key
+REPO=out/s3ve3g/packages/armv7 KNOWN_HOSTS=... tools/s3ve3g-deploy.sh
 ```
 
 ## Flashing
