@@ -179,6 +179,13 @@ LineageOS' android_device_samsung_msm8226-common, lineage-18.1, prima/; copy it 
 /lib/firmware/wlan/prima/ on the device). It replaces msm-firmware-loader, which mounted and scanned
 all firmware partitions on every boot (4 s at 787 MHz, before udev) and didn't find the NV file.
 
+Wi-Fi stability (2026-11-12): with NetworkManager's default power save the WCNSS firmware crashed
+after 6 to 16 minutes in every run (after failed `hal_enter_bmps` power-save entries), with and
+without CPU scaling. With power save off (`wifi.powersave = 2` in
+`/etc/NetworkManager/conf.d/90-wifi-powersave-off.conf`, on the phone only so far) a 25-minute run
+had no crash, with CPU scaling on and a download of about 540 KiB/s for most of it. Power save is
+the likely trigger; it isn't in the device package yet. A WCNSS restart after a crash still fails.
+
 Boot time (2026-11-12): 1:16 at first, 43 s with systemd at 787 MHz, 35.1 s with OpenRC; 24.7 s
 with the CPU voltages (patches 0005/0006, up to 1190.4 MHz: from cpufreq-dt's module at 17 s on),
 17.8 s now: cpufreq-dt built in (the CPU at speed from 0.6 s), no `ignore_loglevel`, and a no-op
