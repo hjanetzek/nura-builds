@@ -201,8 +201,10 @@ runlevel (after `postmarketos-base-nftables-openrc` added it). The `l24: unsuppo
 iris driver's default for vdddig; downstream feeds vddrfa and vdddig from l24 too.
 
 Missing: battery and charging (no mainline driver for the PM8226 charger and fuel gauge), sound,
-a panel driver (S6E8AA0A: brightness, blanking), cpufreq above 787 MHz (CPR, speed bins), SD card
+a panel driver (S6E8AA0A: brightness, blanking; see samsung-s3ve3g-gpu.md for the panel, GPU and
+display path), CPR and speed-bin reading for the CPU, SD card
 (the controller probes, untested with a card), vibrator, LED, light/proximity sensor, NFC, modem.
+Audio (WCD9306 codec on SLIMbus, no mainline driver): samsung-s3ve3g-audio.md.
 
 Screen: without a panel driver there is no brightness control (the bootloader's framebuffer,
 simpledrm; `fb0/blank` doesn't turn it dark). The AMOLED's black pixels are off, so the device
