@@ -8,7 +8,8 @@
 # Usage: tools/s3ve3g-pmaports.sh [COMMIT]
 #   COMMIT  pmaports commit (default: the one the overlays are based on, see their APKBUILDs)
 # Environment: PMAPORTS (the main checkout, default pmbootstrap's), WORKTREE (default
-# <PMAPORTS>-s3ve3g)
+# <PMAPORTS>-s3ve3g; the same as PMAPORTS: the overlays go into that checkout itself, at COMMIT,
+# as in the builder VM, tools/s3ve3g-builder.sh)
 set -eu
 
 here=$(cd "$(dirname "$0")/.." && pwd)
@@ -18,7 +19,11 @@ WORKTREE=${WORKTREE:-$PMAPORTS-s3ve3g}
 commit=${1:-6b904fc480}
 
 git -C "$PMAPORTS" cat-file -e "$commit^{commit}" 2>/dev/null || git -C "$PMAPORTS" fetch -q origin main
-if [ ! -d "$WORKTREE" ]; then
+if [ "$WORKTREE" -ef "$PMAPORTS" ]; then
+	git -C "$WORKTREE" checkout -q --detach "$commit"
+	git -C "$WORKTREE" reset -q --hard
+	git -C "$WORKTREE" clean -qfd
+elif [ ! -d "$WORKTREE" ]; then
 	git -C "$PMAPORTS" worktree add -q --detach "$WORKTREE" "$commit"
 else
 	git -C "$WORKTREE" checkout -q --detach "$commit"

@@ -12,7 +12,8 @@
 # Usage: tools/s3ve3g-deploy.sh [-n] [PACKAGE...]
 #   -n        don't reboot afterwards
 #   PACKAGE   default: linux-postmarketos-qcom-msm8226 device-samsung-s3ve3g device-samsung-s3ve3g-openrc
-# Environment: PMB_WORK (pmbootstrap work dir, default ~/.local/var/pmbootstrap-s3ve3g),
+# Environment: PMB_WORK (pmbootstrap work dir, default ~/.local/var/pmbootstrap-s3ve3g), REPO (an
+# armv7 repository directory instead, e.g. from the builder VM: out/s3ve3g/packages/armv7),
 # TARGET (ssh target, default jeff@172.16.42.1), KNOWN_HOSTS (ssh known_hosts file),
 # BACKUP_DIR (where the old BOOT image goes on this machine, default ./out/s3ve3g)
 set -eu
@@ -26,7 +27,7 @@ BACKUP_DIR=${BACKUP_DIR:-$(cd "$(dirname "$0")/.." && pwd)/out/s3ve3g}
 ssh_opts="-o BatchMode=yes"
 [ -n "${KNOWN_HOSTS:-}" ] && ssh_opts="$ssh_opts -o UserKnownHostsFile=$KNOWN_HOSTS"
 
-repo=$(find "$PMB_WORK/packages" -type d -name armv7 | head -n 1)
+repo=${REPO:-$(find "$PMB_WORK/packages" -type d -name armv7 | head -n 1)}
 [ -n "$repo" ] && [ -f "$repo/APKINDEX.tar.gz" ] || { echo "no armv7 repository in $PMB_WORK/packages" >&2; exit 1; }
 
 # The newest .apk of each package (and the index, for apk's repository)
