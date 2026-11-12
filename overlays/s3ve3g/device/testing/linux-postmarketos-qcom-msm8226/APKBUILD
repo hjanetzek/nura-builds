@@ -9,7 +9,8 @@
 # earlycon=ramcon writes to RAM at 0x1FB00000. The USB switch (extcon-sm5502 on i2c-gpio) is built in:
 # as modules it probed after the initramfs's USB gadget setup, which found no UDC and gave up.
 # MODULE_ALLOW_BTF_MISMATCH: rebuilt kernels (pmbootstrap build --force, same version) load the
-# modules installed with an earlier build.
+# modules installed with an earlier build. simpledrm built in: it holds the splash framebuffer's
+# clocks and power domain from early on, and the console is on the screen before the initramfs.
 # Co-Maintainer: Luca Weiss <luca@lucaweiss.eu>
 maintainer="Stefan Hansson <newbyte@postmarketos.org>"
 _flavor="postmarketos-qcom-msm8226"
@@ -56,7 +57,6 @@ source="
 	$_config
 	0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 	0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
-	0003-ARM-s3ve3g-debug-boot-markers-in-the-RAM-log-buffer.patch
 	0004-ARM-COMMAND_LINE_SIZE-2048.patch
 	mkqcdt-v1.py
 "
@@ -97,10 +97,9 @@ package() {
 
 sha512sums="
 63bd2038d6ac22e104f36e31e3137c1cd000de713ef79c8ad13a6b81a64e975c2e8259c25490b96766c500a4df1a8623fbba9be9fc40ddc868032a11cb516679  linux-v6.16.12-msm8226-u2.tar.gz
-d50ddef2326452e1781fec8fffd13791481cdd2c07f906c3184296fd2d634b764e36f37959e788ee060dab33086ce0497c973a562f826c0c80ecbe6976c6e08c  config-postmarketos-qcom-msm8226.armv7
+a85d8df7adb71eeb19cbba9a241513cf0a2ba7771ca6f0a4de938dce4b7efa5b4e0815bf7a85e3e292067db07355821d1c4121eae283734faae83b2d15a15258  config-postmarketos-qcom-msm8226.armv7
 99a2975dd8d90a6bed5d6f998739b612b1743dfc68f3d2765801f17f2f3c6ae840d73df4b15d99b60790f81dc44c03635de203e7360ca7309bd6829e0b6078bf  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 f9b8510ace1f6c9efb7da0326aec04fb65f5567b46801ad510fdab82c89d76f2d0e0954f5c9be22ffff0dd7409aaff712c4d81400c832d34b55e5a95388fdf68  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
-1f8d8ecdc63c4615177d8a7a8f1abb0f418a0bae47065bd8106c810f2fdcddddf7a2664fa5e537345e3257d8556fdc1eb01f124fab2d9f36bf77d3c9c058417f  0003-ARM-s3ve3g-debug-boot-markers-in-the-RAM-log-buffer.patch
 c116ee70206a39b8d63d2357cb8410a43c0748e38d30eda79862605d72bd7189106b26f5bc2e67c46be5cb0011cb91518bfdc7065e91264ffc59b8a5cf75cd87  0004-ARM-COMMAND_LINE_SIZE-2048.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
