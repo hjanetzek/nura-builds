@@ -6,7 +6,8 @@
 # a RAM buffer (earlycon=ramcon,<address>: the log until a reset, read from TWRP as /proc/last_kmsg).
 # The device options are built in (CONFIG_CMDLINE, appended to the bootloader's): Samsung's
 # bootloader adds ~840 characters and refuses more than 1024 in total. Only for the S III Neo:
-# earlycon=ramcon writes to RAM at 0x1FB00000.
+# earlycon=ramcon writes to RAM at 0x1FB00000. The USB switch (extcon-sm5502 on i2c-gpio) is built in:
+# as modules it probed after the initramfs's USB gadget setup, which found no UDC and gave up.
 # Co-Maintainer: Luca Weiss <luca@lucaweiss.eu>
 maintainer="Stefan Hansson <newbyte@postmarketos.org>"
 _flavor="postmarketos-qcom-msm8226"
@@ -15,8 +16,8 @@ pkgver=6.16.12
 # nura-builds: pmaports' pkgrel + 100, above the published package (+1: Terminus 16x32 font, +1: reserved memory as downstream,
 # +1: ramoops, +1: earlycon ramcon, +1: dt.img with soc_rev,
 # +1: debug boot markers, +1: free space in the DTB,
-# +1: built-in command line)
-pkgrel=112
+# +1: built-in command line, +1: sm5502, i2c-gpio, evdev built in)
+pkgrel=113
 pkgdesc="Mainline Kernel fork for APQ8026/MSM8226/MSM8926 devices"
 arch="armv7"
 _carch="arm"
@@ -94,7 +95,7 @@ package() {
 
 sha512sums="
 63bd2038d6ac22e104f36e31e3137c1cd000de713ef79c8ad13a6b81a64e975c2e8259c25490b96766c500a4df1a8623fbba9be9fc40ddc868032a11cb516679  linux-v6.16.12-msm8226-u2.tar.gz
-3cf56917dbfef7679991a557e061819b5ce9c8fd196ef7cdc8321ebfdae349c597c83effa88674fa71ccbde7ca21c299fe813abbaaa452bb3e17588ff8f21626  config-postmarketos-qcom-msm8226.armv7
+959f82f3a374aaab16d6a5cba04ca948373bc31cb9b4597edcd823664487e406d597c47df0df05dd85b82ff75ae8fb0253f1d19c637d04b9bf69268d9585bd34  config-postmarketos-qcom-msm8226.armv7
 e4187045f48bce2602dd781e8cad678a5eb12db790d524aad4d6acc2c19e3d27a84c481570b6df7be9015da6df0f18cf7ed347179e807526f737fb2561fc156c  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 f9b8510ace1f6c9efb7da0326aec04fb65f5567b46801ad510fdab82c89d76f2d0e0954f5c9be22ffff0dd7409aaff712c4d81400c832d34b55e5a95388fdf68  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 1f8d8ecdc63c4615177d8a7a8f1abb0f418a0bae47065bd8106c810f2fdcddddf7a2664fa5e537345e3257d8556fdc1eb01f124fab2d9f36bf77d3c9c058417f  0003-ARM-s3ve3g-debug-boot-markers-in-the-RAM-log-buffer.patch

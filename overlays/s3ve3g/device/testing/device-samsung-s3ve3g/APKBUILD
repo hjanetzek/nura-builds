@@ -8,7 +8,7 @@ pkgname=device-samsung-s3ve3g
 pkgdesc="Samsung Galaxy S III Neo"
 # nura-builds: pmaports' pkgver 4 + 100
 pkgver=104
-pkgrel=7
+pkgrel=8
 url="https://postmarketos.org"
 license="MIT"
 arch="armv7"
@@ -45,5 +45,5 @@ package() {
 
 sha512sums="
 2ff0d9ad3c17b479100be68ac1b9b2275ce56c2da55a11b6ef959c56f5c03855d093caf173eeab005c590ca3aaaddf56688825a6528e3775b205042d4d065805  deviceinfo
-44d0a4f26340925c01894e61b05b6c84628c8425742b21cc11d3183269655734f5fcb70cfda601048ab1106155e3bf3f6ed8068c8d476647963173b081be9ff2  modules-initfs
+5a05e62ede286b2c4c6ca73b1d76bf989f0219a12b4700cb33664b4e9b8a34cb4592f1580fa7c7ce0abc59eff86a043df699371b80118b82c7b8712e659e89a0  modules-initfs
 "
