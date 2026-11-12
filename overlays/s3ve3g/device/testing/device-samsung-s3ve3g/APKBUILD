@@ -25,7 +25,7 @@ makedepends="devicepkg-dev"
 # nura-builds: no boot splash (postmarketos-base-ui wants postmarketos-bootsplash-virtual, which
 # postmarketos-base-nosplash provides without plymouth); OpenRC settings in the -openrc subpackage
 subpackages="$pkgname-openrc:_openrc"
-install="$pkgname-openrc.post-install $pkgname-openrc.post-upgrade"
+install="$pkgname.post-install $pkgname.post-upgrade $pkgname-openrc.post-install $pkgname-openrc.post-upgrade"
 source="
 	deviceinfo
 	s3ve3g-firmware.sh

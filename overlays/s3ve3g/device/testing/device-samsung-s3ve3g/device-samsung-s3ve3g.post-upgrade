@@ -1,0 +1,9 @@
+#!/bin/sh
+# nura-builds: no console blanking. postmarketos-release's /etc/issue ends with ESC[9;5], which
+# sets the console blank timeout to 5 minutes whenever getty shows the login prompt (overriding
+# consoleblank=0); blanking powers the display down through DPMS, which crashes the msm display
+# driver on this phone so far. Take it out (apk keeps a modified /etc/issue on upgrades).
+if [ -f /etc/issue ] && grep -q "$(printf '\033')\[9;" /etc/issue; then
+	sed -i "s/$(printf '\033')\[9;[0-9]*\]//g" /etc/issue
+fi
+exit 0
