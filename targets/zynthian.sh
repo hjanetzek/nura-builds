@@ -71,15 +71,12 @@ DEVICES_x86_64="qemu-amd64"
 # on. The kiosk package (postmarketos-ui-zynthian) depends on the plugins, so it isn't built: the
 # image is a plain one (UI "none") with zynthian-ui installed, for bringing up the device.
 # Overrides: <VAR>_<arch> (common.sh: STAGES, UI, IMAGE_PACKAGES; STAGE_<stage>_<arch>).
-STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian upstream mesa niri"
+STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian upstream mesa"
 STAGE_engines="zynthian-jalv aeolus sooperlooper"
 # Last, so that a failure there doesn't hold up zynthian: Mesa with the freedreno a3xx fix for Qt
-# Quick's flicker on the S III Neo (aports/mesa), and niri for zynthian's niri session (aports/niri:
-# Alpine's recipe without the screencast feature, which doesn't build on 32-bit)
+# Quick's flicker on the S III Neo (aports/mesa)
 STAGE_mesa="mesa"
 INPUTS_mesa="aports/mesa"
-STAGE_niri="niri"
-INPUTS_niri="aports/niri"
 INPUTS_engines="aports/zynthian-jalv aports/engines/aeolus aports/engines/sooperlooper"
 STAGE_zynthian_armv7="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none
