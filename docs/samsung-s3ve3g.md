@@ -93,7 +93,10 @@ different channels (`systemd-edge`, `edge`) and refuses chroots of the other one
 dir would need a `zap` at every switch between projects. `pmbootstrap init` on a new work dir
 resets `aports` to that work dir's own pmaports clone unless the worktree is entered as the
 pmaports path: then pmaports' archived device package and the downstream kernel get installed
-(a 13 MB boot image, "BOOT partition is too small").
+(a 13 MB boot image, "BOOT partition is too small"), and `flash_rootfs` writes the rootfs to SYSTEM
+(the archived deviceinfo has no `flash_heimdall_partition_rootfs`): that happened once
+(2026-11-12) and overwrote stock Android's system partition, with the Wi-Fi NV file (see above
+for a copy; Android itself needs the stock firmware's system.img to come back).
 
 ```sh
 C=~/.config/pmbootstrap-s3ve3g.cfg
@@ -170,7 +173,10 @@ Firmware: the device package copies what the device needs from the stock partiti
 `/lib/firmware` once, before udev (`s3ve3g-firmware`, systemd unit and OpenRC script): the Wi-Fi
 core's firmware (`wcnss.mdt`, `wcnss.b*`, apnhlos/image; the only remote processor enabled) and the
 NV calibration file `wlan/prima/WCNSS_qcom_wlan_nv.bin` (system/etc/firmware/wlan/prima; without it
-the WCNSS firmware crashes in a loop). It replaces msm-firmware-loader, which mounted and scanned
+the WCNSS firmware crashes in a loop; if the system partition no longer has it, the same file,
+29816 bytes, sha256 5e235506a12c5e7cde329c045d702f801b4fa7a2ac036a49445c12f0d5347701, is in
+LineageOS' android_device_samsung_msm8226-common, lineage-18.1, prima/; copy it to
+/lib/firmware/wlan/prima/ on the device). It replaces msm-firmware-loader, which mounted and scanned
 all firmware partitions on every boot (4 s at 787 MHz, before udev) and didn't find the NV file.
 
 Boot time (2026-11-12): 1:16 at first, 43 s now (kernel and initramfs 17 s, userspace 26 s):

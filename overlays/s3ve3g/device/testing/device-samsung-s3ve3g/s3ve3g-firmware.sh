@@ -29,7 +29,10 @@ copy_from() {
 	dev=$(partition "$part")
 	[ -n "$dev" ] || { echo "s3ve3g-firmware: no $part partition"; return; }
 	mnt=$(mktemp -d -p /run) || return
-	if mount -o ro,nodev,noexec,nosuid "$dev" "$mnt"; then
+	if ! mount -o ro,nodev,noexec,nosuid "$dev" "$mnt" 2>/dev/null; then
+		# e.g. system overwritten by a rootfs image (flash_rootfs with another device package)
+		echo "s3ve3g-firmware: can't mount $part ($dev); missing: $*"
+	else
 		mkdir -p "$fw/$dest"
 		for pattern in "$@"; do
 			for f in "$mnt/$dir"/$pattern; do
@@ -39,6 +42,10 @@ copy_from() {
 		done
 		umount "$mnt"
 	fi
+	for pattern in "$@"; do
+		case $pattern in *'['*) continue ;; esac
+		[ -e "$fw/$dest/$pattern" ] || echo "s3ve3g-firmware: no $pattern in $part:/$dir (see docs/samsung-s3ve3g.md)"
+	done
 	rmdir "$mnt"
 }
 
