@@ -8,10 +8,10 @@ wiring from its downstream device tree (msm8226-sec-s3ve3geur-r04), and
 qcom,msm-id for Samsung's bootloader (appended DTB).
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-index 288cacd..535b3de 100644
+index 288cacd..ae87522 100644
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-@@ -1,24 +1,586 @@
+@@ -1,24 +1,587 @@
  // SPDX-License-Identifier: BSD-3-Clause
  /*
   * Copyright (c) 2020, The Linux Foundation. All rights reserved.
@@ -296,7 +296,8 @@ index 288cacd..535b3de 100644
 +	touchscreen@48 {
 +		compatible = "melfas,mms114";
 +		reg = <0x48>;
-+		interrupts-extended = <&tlmm 17 IRQ_TYPE_EDGE_FALLING>;
++		/* open drain, held low while data is pending (downstream: IRQF_TRIGGER_LOW) */
++		interrupts-extended = <&tlmm 17 IRQ_TYPE_LEVEL_LOW>;
 +
 +		touchscreen-size-x = <720>;
 +		touchscreen-size-y = <1280>;
@@ -577,7 +578,7 @@ index 288cacd..535b3de 100644
 +		pins = "gpio17";
 +		function = "gpio";
 +		drive-strength = <2>;
-+		bias-disable;
++		bias-pull-up;
 +	};
 +
 +	wcnss_pin_a: wcnss-pin-active-state {
