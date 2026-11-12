@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+# Samsung Galaxy S III Neo: the screen black after boot (AMOLED burn-in), see /usr/bin/s3ve3g-screen;
+# "s3ve3g-screen on" or stopping this service brings the console back
+
+description="Screen off after boot"
+
+depend() {
+	after local
+}
+
+start() {
+	ebegin "Turning the screen off (s3ve3g-screen on: back)"
+	/usr/bin/s3ve3g-screen off
+	eend $?
+}
+
+stop() {
+	/usr/bin/s3ve3g-screen on
+}

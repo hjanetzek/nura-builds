@@ -204,6 +204,13 @@ Missing: battery and charging (no mainline driver for the PM8226 charger and fue
 a panel driver (S6E8AA0A: brightness, blanking), cpufreq above 787 MHz (CPR, speed bins), SD card
 (the controller probes, untested with a card), vibrator, LED, light/proximity sensor, NFC, modem.
 
+Screen: without a panel driver there is no brightness control (the bootloader's framebuffer,
+simpledrm; `fb0/blank` doesn't turn it dark). The AMOLED's black pixels are off, so the device
+package turns the screen black after boot against burn-in: `s3ve3g-screen off` detaches the text
+console from the framebuffer and clears it (OpenRC `s3ve3g-screen-off` in the default runlevel,
+systemd `s3ve3g-screen-off.service`); `s3ve3g-screen on` brings the console back (or
+`rc-service s3ve3g-screen-off stop`). buffyboard (on-screen keyboard) draws on its own.
+
 ## CPU above 787 MHz: what mainline lacks (2026-11-12)
 
 The A7 PLL (`qcom,msm8226-a7pll`, up to 1344 MHz in its OPP table) and cpufreq are mainline

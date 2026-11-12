@@ -1,7 +1,8 @@
 #!/bin/sh
 # nura-builds, OpenRC: the counterparts of the systemd unit settings of device-samsung-s3ve3g:
-# the firmware copy before udev, and no firewall (postmarketos-base-ui pulls in nftables, and
+# the firmware copy before udev, the screen off after boot, and no firewall (postmarketos-base-ui pulls in nftables, and
 # postmarketos-base-nftables-openrc, which this package depends on and so comes first, enables it)
 rc-update -q add s3ve3g-firmware sysinit
+rc-update -q add s3ve3g-screen-off default
 rc-update -q del nftables default 2>/dev/null || true
 exit 0

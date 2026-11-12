@@ -1,0 +1,12 @@
+[Unit]
+Description=Screen off after boot (Samsung Galaxy S III Neo, AMOLED burn-in)
+After=getty.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/s3ve3g-screen off
+ExecStop=/usr/bin/s3ve3g-screen on
+
+[Install]
+WantedBy=multi-user.target
