@@ -3136,7 +3136,7 @@ Xperia Z2 project's WCD9320 port.
 +#endif
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306.c
-@@ -0,0 +1,5497 @@
+@@ -0,0 +1,5511 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Qualcomm WCD9306 (Tapan) audio codec on SLIMbus.
@@ -3174,6 +3174,9 @@ Xperia Z2 project's WCD9320 port.
 +
 +#include "wcd9306-regs.h"
 +#include "wcd9306-clsh.h"
++
++/* exported by the SLIMbus core, declared in its private drivers/slimbus/slimbus.h */
++void slim_report_absent(struct slim_device *sbdev);
 +
 +#define WCD9306_SLIM_MANF_ID		0x217	/* Qualcomm */
 +#define WCD9306_SLIM_PROD_CODE		0x0e0
@@ -8329,8 +8332,9 @@ Xperia Z2 project's WCD9320 port.
 +	if (tapan_is_digital_gain_register(reg))
 +		return true;
 +
-+	/* HPH status registers */
-+	if (reg == TAPAN_A_RX_HPH_L_STATUS || reg == TAPAN_A_RX_HPH_R_STATUS)
++	/* HPH and speaker driver status registers */
++	if (reg == TAPAN_A_RX_HPH_L_STATUS || reg == TAPAN_A_RX_HPH_R_STATUS ||
++	    reg == TAPAN_A_SPKR_DRV_STATUS_OCP || reg == TAPAN_A_SPKR_DRV_STATUS_PA)
 +		return true;
 +
 +	if (reg == TAPAN_A_MBHC_INSERT_DET_STATUS)
@@ -8507,6 +8511,7 @@ Xperia Z2 project's WCD9320 port.
 +static int tapan_slim_probe(struct slim_device *slim)
 +{
 +	struct device *dev = &slim->dev;
++	struct device_node *ifc_np;
 +	struct tapan_priv *tapan;
 +	int ret;
 +
@@ -8529,17 +8534,26 @@ Xperia Z2 project's WCD9320 port.
 +	if (ret)
 +		return ret;
 +
++	/*
++	 * The reset below drops the codec off the bus: forget a logical address from before (a
++	 * rebind), so that the core gets a new one after the probe and reports the device up again
++	 */
++	if (slim->is_laddr_valid)
++		slim_report_absent(slim);
++	ifc_np = of_parse_phandle(dev->of_node, "slim-ifc-dev", 0);
++	if (ifc_np) {
++		struct slim_device *ifc = of_slim_get_device(slim->ctrl, ifc_np);
++
++		of_node_put(ifc_np);
++		if (ifc && ifc->is_laddr_valid)
++			slim_report_absent(ifc);
++	}
++
 +	ret = tapan_power_on_reset(tapan);
 +	if (ret)
 +		return ret;
 +
 +	dev_set_drvdata(dev, tapan);
-+
-+	/*
-+	 * The codec was just reset: have the core report it up again after the probe (on a rebind
-+	 * the device's status is still up from before, and the status callback wouldn't come)
-+	 */
-+	slim->status = SLIM_DEVICE_STATUS_DOWN;
 +
 +	return 0;
 +}
