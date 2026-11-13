@@ -272,7 +272,16 @@ DRM master as the device's only client:
   otherwise two instances compete for DRM master (`/sys/kernel/debug/dri/1/clients`; the one
   without master gets "Could not queue DRM page flip ... Permission denied").
 - No compositor, so no `grim`: check the screen by eye or with the camera.
-- The flicker workaround `FD_MESA_DEBUG=inorder` is in the script until the fixed Mesa is installed.
+- Audio: the script starts jackd on the card "Neo" (48 kHz, 512 frames, 2 periods, 16 bit, RT
+  priority 70) unless one runs, the dummy backend without the card. Alpine's jackd 1.9.22 on armv7
+  only reads attached option values (`-r48000 -p512`; with a space they come out as 0) and needs
+  `JACK_NO_AUDIO_RESERVATION=1` (no D-Bus session). 256 frames gave xruns even with jackd alone,
+  512 none with zynthian and Aeolus.
+- Restarting: the script stops the running zynthian (its launcher first) and waits until
+  `/dev/dri/card1` is closed: only the first client of a DRM device without a master becomes
+  master.
+- With Mesa 26.2.6-r1 (armv7 repository) the flicker is fixed; with Alpine's r0 set
+  `FD_MESA_DEBUG=inorder`.
 
 Touching or dragging sliders made the UI flicker; button backgrounds turned black until the next
 touch. The same under cage and on eglfs, gone with `QT_QUICK_BACKEND=software`; not helped by
