@@ -37,6 +37,10 @@ source="
 	s3ve3g-debug-telnet.initd
 	s3ve3g-display-manual.conf
 	s3ve3g-panic.sysctl
+	ucm-s3ve3g.conf
+	ucm-HiFi.conf
+	s3ve3g-audio.sh
+	s3ve3g-audio.initd
 "
 
 build() {
@@ -89,6 +93,15 @@ package() {
 	install -Dm644 "$srcdir"/s3ve3g-display-manual.conf "$pkgdir"/etc/modprobe.d/s3ve3g-display-manual.conf
 	# the MDSS kept from runtime suspend (its resume leaves the MDP unreachable; DPMS works with it)
 
+	# nura-builds: the ALSA UCM profile (speaker, headphones) for the card "Samsung Galaxy S III
+	# Neo" of the APQ8096 machine driver
+	install -Dm644 "$srcdir"/ucm-s3ve3g.conf \
+		"$pkgdir/usr/share/alsa/ucm2/conf.d/apq8096/Samsung Galaxy S III Neo.conf"
+	install -Dm644 "$srcdir"/ucm-HiFi.conf "$pkgdir"/usr/share/alsa/ucm2/Samsung/s3ve3g/HiFi.conf
+	# "s3ve3g-audio speaker|headphones": switch the output with that profile, remembered for the
+	# next boot (OpenRC service s3ve3g-audio in the -openrc subpackage)
+	install -Dm755 "$srcdir"/s3ve3g-audio.sh "$pkgdir"/usr/bin/s3ve3g-audio
+
 	# bring-up: restart on an oops (alpine's 00-alpine.conf has kernel.panic = 120, no panic_on_oops)
 	install -Dm644 "$srcdir"/s3ve3g-panic.sysctl "$pkgdir"/etc/sysctl.d/90-s3ve3g-panic.conf
 
@@ -113,6 +126,7 @@ _openrc() {
 
 	install -Dm755 "$srcdir"/s3ve3g-firmware.initd "$subpkgdir"/etc/init.d/s3ve3g-firmware
 	install -Dm755 "$srcdir"/s3ve3g-screen-off.initd "$subpkgdir"/etc/init.d/s3ve3g-screen-off
+	install -Dm755 "$srcdir"/s3ve3g-audio.initd "$subpkgdir"/etc/init.d/s3ve3g-audio
 	# bring-up: a telnet login on the USB network before udev (busybox-extras' telnetd)
 	install -Dm755 "$srcdir"/s3ve3g-debug-telnet.initd "$subpkgdir"/etc/init.d/s3ve3g-debug-telnet
 }
@@ -128,4 +142,8 @@ c7d995717b9bfb0d9cab20f833201802d86453468e5afbb6dee39ac8b23732446a2c8f8026f1e731
 ede70db74354ed147024175125fe84dc2050837f9e7671baf737152059b172ce5718fc169acf6b4f41185c206039d20949ca99a19af8d6e59ae52fd255da6883  s3ve3g-debug-telnet.initd
 22f4af7df5cd6d589405f242ad2ca44b4884938be80ffdbb5493b667e6c77dadecd96700d8c32ef31af343350d525b8296b934880f72f0a1c5eea68ce02a7a7e  s3ve3g-display-manual.conf
 4cf2bf2ec71f13109700620017c44b1829b0700c1d8f88480e2b17555d37bf52a399263d26ff96a445de5b87de6fd0457c68e5b8659db9068a168529af14025e  s3ve3g-panic.sysctl
+95459bf568a939caf0a1892369ac8219e241be67407033deb2cbe58a2607444944c7cb5db0b045543a895e98786cb2868759ef51eb41c79c1cdf7e7b716e5b26  ucm-s3ve3g.conf
+145dd2d13b2dbd7873809d80d7ee8b963506e7bd5a1913d42626c8778fd90d1a82c6666aeb52984f375aa0c744daf10797d841ba89de76e0fd3f883a222dfbee  ucm-HiFi.conf
+2d9bed36f384d94bad93719dcf9ba118826aecf4cc7f877d29e7a9ba54c0dd3c804778ef04b9ebd3fc08c56b000c5a7a4005e9fcec1d2c400b384d6689914c47  s3ve3g-audio.sh
+be41a4728a6ea0c5545e9c9a7683c22952d425be11886bde571949a63d723325ddc0aa5ac90ac7459a8f4518d3af23ac6085f1c21bdd3a0b130ecab2d193b405  s3ve3g-audio.initd
 "

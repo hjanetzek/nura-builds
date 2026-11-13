@@ -4,6 +4,8 @@
 # postmarketos-base-nftables-openrc, which this package depends on and so comes first, enables it)
 rc-update -q add s3ve3g-firmware sysinit
 rc-update -q add s3ve3g-screen-off default
+# the audio output chosen last (s3ve3g-audio)
+rc-update -q add s3ve3g-audio default
 # bring-up: an early telnet login on the USB network
 rc-update -q add s3ve3g-debug-telnet sysinit
 rc-update -q del nftables default 2>/dev/null || true
