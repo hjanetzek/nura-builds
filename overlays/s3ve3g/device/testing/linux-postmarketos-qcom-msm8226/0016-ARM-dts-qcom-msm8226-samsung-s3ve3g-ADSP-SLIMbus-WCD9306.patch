@@ -7,15 +7,18 @@ downstream msm8226.dtsi.
 ---
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-@@ -12,6 +12,7 @@
+@@ -12,6 +12,10 @@
  /dts-v1/;
  
  #include <dt-bindings/input/input.h>
++#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 +#include <dt-bindings/soc/qcom,apr.h>
++#include <dt-bindings/sound/qcom,q6afe.h>
++#include <dt-bindings/sound/qcom,q6asm.h>
  #include "qcom-msm8226.dtsi"
  #include "pm8226.dtsi"
  
-@@ -758,3 +759,133 @@ &usb_hs_phy {
+@@ -758,3 +762,235 @@ &usb_hs_phy {
  	v1p8-supply = <&pm8226_l10>;
  	v3p3-supply = <&pm8226_l20>;
  };
@@ -62,6 +65,18 @@ downstream msm8226.dtsi.
 +					#address-cells = <1>;
 +					#size-cells = <0>;
 +					#sound-dai-cells = <1>;
++
++					dai@0 {
++						reg = <0>;
++					};
++
++					dai@1 {
++						reg = <1>;
++					};
++
++					dai@2 {
++						reg = <2>;
++					};
 +				};
 +			};
 +
@@ -114,8 +129,15 @@ downstream msm8226.dtsi.
 +				compatible = "slim217,e0";
 +				reg = <1 0>;
 +
-+				pinctrl-0 = <&cdc_reset_default &cdc_int_default>;
++				pinctrl-0 = <&cdc_reset_default &cdc_int_default &cdc_mclk_default>;
 +				pinctrl-names = "default";
++
++				/* 9.6 MHz: the PMIC's divided crystal clock, on PM8226 GPIO1 */
++				clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
++				clock-names = "mclk";
++
++				/* downstream qcom,cdc-micbias1-ext-cap (s3ve3g) */
++				qcom,micbias1-ext-cap;
 +
 +				interrupts-extended = <&tlmm 68 IRQ_TYPE_LEVEL_HIGH>;
 +				reset-gpios = <&tlmm 72 GPIO_ACTIVE_LOW>;
@@ -147,5 +169,88 @@ downstream msm8226.dtsi.
 +		function = "gpio";
 +		drive-strength = <2>;
 +		bias-pull-down;
++	};
++};
++
++&pm8226_gpios {
++	/*
++	 * The codec's MCLK (downstream XO_PMIC_CDC_MCLK): digital output, CMOS, no pull, VIN3,
++	 * high strength, function 1
++	 */
++	cdc_mclk_default: cdc-mclk-default-state {
++		pins = "gpio1";
++		function = PMIC_GPIO_FUNC_FUNC1;
++		power-source = <3>;
++		drive-push-pull;
++		qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
++		bias-disable;
++		output-high;
++	};
++};
++
++/ {
++	/*
++	 * The sound card: mainline's APQ8096 machine driver (DT links, SLIMbus channels 144+ and
++	 * 128+ as downstream msm8226.c). Microphones and their biases from the downstream board
++	 * routing: main mic AMIC1 and sub mic AMIC3 on MIC BIAS1, headset mic AMIC2 on MIC BIAS2.
++	 */
++	sound {
++		compatible = "qcom,apq8096-sndcard";
++		model = "Samsung Galaxy S III Neo";
++
++		audio-routing =
++			"AMIC1", "MIC BIAS1 External",
++			"AMIC2", "MIC BIAS2 External",
++			"AMIC3", "MIC BIAS1 External";
++
++		mm1-dai-link {
++			link-name = "MultiMedia1";
++
++			cpu {
++				sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA1>;
++			};
++		};
++
++		mm2-dai-link {
++			link-name = "MultiMedia2";
++
++			cpu {
++				sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA2>;
++			};
++		};
++
++		slim-playback-dai-link {
++			link-name = "SLIM Playback";
++
++			cpu {
++				sound-dai = <&q6afedai SLIMBUS_0_RX>;
++			};
++
++			platform {
++				sound-dai = <&q6routing>;
++			};
++
++			codec {
++				/* tapan_rx1, "AIF1 Playback" */
++				sound-dai = <&wcd9306 0>;
++			};
++		};
++
++		slim-capture-dai-link {
++			link-name = "SLIM Capture";
++
++			cpu {
++				sound-dai = <&q6afedai SLIMBUS_0_TX>;
++			};
++
++			platform {
++				sound-dai = <&q6routing>;
++			};
++
++			codec {
++				/* tapan_tx1, "AIF1 Capture" */
++				sound-dai = <&wcd9306 1>;
++			};
++		};
 +	};
 +};
