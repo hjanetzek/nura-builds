@@ -69,6 +69,8 @@ source="
 	0013-drm-msm-commit-planes-after-the-modeset-enables.patch
 	0014-drm-msm-mdss-an-optional-misc_ahb-clock-for-MDP5.patch
 	0015-drm-msm-mdss-MSM8226-restore-the-MDP-IOMMU-and-VBIF-after-a-power-collapse.patch
+	0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
+	0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-${_tag#v}"
@@ -108,7 +110,7 @@ package() {
 
 sha512sums="
 63bd2038d6ac22e104f36e31e3137c1cd000de713ef79c8ad13a6b81a64e975c2e8259c25490b96766c500a4df1a8623fbba9be9fc40ddc868032a11cb516679  linux-v6.16.12-msm8226-u2.tar.gz
-7c7d272aa9bd78091964566c1c0e4ab46ccb051c9dcbddf64949844245de24e530b2dc1597b1802f33a5ff73130360a693ac337821528c9f696a626b99132f17  config-postmarketos-qcom-msm8226.armv7
+c272c97b8b24bc38ef7fde7a1bc25377d35f350955e2d9cb0968da24966cd6870358d6fc2d19de7791cf5ab6aefeba34f1dbdc6e23092c9431cc70c43c6a44a5  config-postmarketos-qcom-msm8226.armv7
 99a2975dd8d90a6bed5d6f998739b612b1743dfc68f3d2765801f17f2f3c6ae840d73df4b15d99b60790f81dc44c03635de203e7360ca7309bd6829e0b6078bf  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 f9b8510ace1f6c9efb7da0326aec04fb65f5567b46801ad510fdab82c89d76f2d0e0954f5c9be22ffff0dd7409aaff712c4d81400c832d34b55e5a95388fdf68  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 c116ee70206a39b8d63d2357cb8410a43c0748e38d30eda79862605d72bd7189106b26f5bc2e67c46be5cb0011cb91518bfdc7065e91264ffc59b8a5cf75cd87  0004-ARM-COMMAND_LINE_SIZE-2048.patch
@@ -123,5 +125,7 @@ d2213d1ef2ed95fa38e9bb5971eb6f9605b2913eb1e272d0f801b4c7e3068d06b675c96eee1b9e69
 3a3776170178c80de577132cf2651a63ed686edb2d1c630b7cdd9dcaa001319412f5d75125d38ac8e03c3535de44d515cdaca289a06963efde9895e0909e538c  0013-drm-msm-commit-planes-after-the-modeset-enables.patch
 8657c75b676a56a0ae1317b402939e2702fe866b6cc4cd40852c813e1ca99710b5b2357ff5c6017a1134bc611db10179fa9f96a0b6f9a9aa0ba8d42e5e668864  0014-drm-msm-mdss-an-optional-misc_ahb-clock-for-MDP5.patch
 9ac9ab790543926904faab3248ebae13cffaa29267814dee3077dbb71c6c3712eb2e9592047190e4bdc0c444c7da62496a790c3c4afd197ffeb8f36c11532d7a  0015-drm-msm-mdss-MSM8226-restore-the-MDP-IOMMU-and-VBIF-after-a-power-collapse.patch
+3c1178b9560eee89893497056eb54a1730b9a0214c12d1fc2e32f666743994df1c07e6ade6e5690a5bad47a8789085f03e5cd0cd083f1473c9dae704cc0cb4f4  0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
+d1c00012b824281048a0d00083cedb02f66b07b8bee4c98c3dd15d7b1a6ac612a31ea42514e22116b226f229c9f1689d37bed36ecf2c5ec1f29217160c7a70d4  0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "

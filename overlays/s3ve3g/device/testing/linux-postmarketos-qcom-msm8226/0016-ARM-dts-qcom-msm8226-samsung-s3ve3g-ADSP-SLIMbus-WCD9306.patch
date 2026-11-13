@@ -1,0 +1,151 @@
+From: s3ve3g bring-up
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: ADSP, APR, SLIMbus and the WCD9306 codec
+
+The ADSP with the APR audio services (q6core, q6afe, q6asm, q6adm), the SLIMbus NGD
+controller with its BAM and the WCD9306 (Tapan) codec and its interface device, from the
+downstream msm8226.dtsi.
+---
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -12,6 +12,7 @@
+ /dts-v1/;
+ 
+ #include <dt-bindings/input/input.h>
++#include <dt-bindings/soc/qcom,apr.h>
+ #include "qcom-msm8226.dtsi"
+ #include "pm8226.dtsi"
+ 
+@@ -758,3 +759,133 @@ &usb_hs_phy {
+ 	v1p8-supply = <&pm8226_l10>;
+ 	v3p3-supply = <&pm8226_l20>;
+ };
++
++/*
++ * Audio: the ADSP (LPASS Hexagon) with the APR audio services, the SLIMbus controller (NGD, the
++ * ADSP is the bus manager) and the WCD9306 (Tapan) codec on it. From the downstream msm8226.dtsi
++ * (slim_msm, tapan_codec, qcom,lpass) and the MSM8974 work (z3ntu, the Xperia Z2 project).
++ */
++&adsp {
++	status = "okay";
++
++	smd-edge {
++		apr {
++			compatible = "qcom,apr-v2";
++			qcom,smd-channels = "apr_audio_svc";
++			qcom,domain = <APR_DOMAIN_ADSP>;
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			service@3 {
++				reg = <APR_SVC_ADSP_CORE>;
++				compatible = "qcom,q6core";
++			};
++
++			q6afe: service@4 {
++				compatible = "qcom,q6afe";
++				reg = <APR_SVC_AFE>;
++
++				q6afedai: dais {
++					compatible = "qcom,q6afe-dais";
++					#address-cells = <1>;
++					#size-cells = <0>;
++					#sound-dai-cells = <1>;
++				};
++			};
++
++			q6asm: service@7 {
++				compatible = "qcom,q6asm";
++				reg = <APR_SVC_ASM>;
++
++				q6asmdai: dais {
++					compatible = "qcom,q6asm-dais";
++					#address-cells = <1>;
++					#size-cells = <0>;
++					#sound-dai-cells = <1>;
++				};
++			};
++
++			q6adm: service@8 {
++				compatible = "qcom,q6adm";
++				reg = <APR_SVC_ADM>;
++
++				q6routing: routing {
++					compatible = "qcom,q6adm-routing";
++					#sound-dai-cells = <0>;
++				};
++			};
++		};
++	};
++};
++
++&soc {
++	slimbam: dma-controller@fe104000 {
++		compatible = "qcom,bam-v1.4.0";
++		reg = <0xfe104000 0x20000>;
++		interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
++		#dma-cells = <1>;
++		qcom,controlled-remotely;
++		num-channels = <31>;
++		qcom,ee = <1>;
++		qcom,num-ees = <2>;
++	};
++
++	slim_msm: slim-ngd@fe12f000 {
++		compatible = "qcom,slim-ngd-v1.5.0";
++		reg = <0xfe12f000 0x35000>;
++		interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
++		dmas = <&slimbam 3>, <&slimbam 4>;
++		dma-names = "rx", "tx";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		ngd@1 {
++			reg = <1>;
++			#address-cells = <2>;
++			#size-cells = <0>;
++
++			/* elemental addresses 00 00 e0 00 17 02 and 00 01 e0 00 17 02 */
++			tapan_ifd: ifd@0,0 {
++				compatible = "slim217,e0";
++				reg = <0 0>;
++			};
++
++			wcd9306: codec@1,0 {
++				compatible = "slim217,e0";
++				reg = <1 0>;
++
++				pinctrl-0 = <&cdc_reset_default &cdc_int_default>;
++				pinctrl-names = "default";
++
++				interrupts-extended = <&tlmm 68 IRQ_TYPE_LEVEL_HIGH>;
++				reset-gpios = <&tlmm 72 GPIO_ACTIVE_LOW>;
++
++				slim-ifc-dev = <&tapan_ifd>;
++
++				vdd-buck-supply = <&pm8226_s4>;
++				vdd-buckhelper-supply = <&pm8226_l25>;
++				vdd-h-supply = <&pm8226_l6>;
++				vdd-px-supply = <&pm8226_l6>;
++				vdd-cx-supply = <&pm8226_l4>;
++
++				#sound-dai-cells = <1>;
++			};
++		};
++	};
++};
++
++&tlmm {
++	cdc_reset_default: cdc-reset-default-state {
++		pins = "gpio72";
++		function = "gpio";
++		drive-strength = <16>;
++		bias-disable;
++	};
++
++	cdc_int_default: cdc-int-default-state {
++		pins = "gpio68";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-pull-down;
++	};
++};

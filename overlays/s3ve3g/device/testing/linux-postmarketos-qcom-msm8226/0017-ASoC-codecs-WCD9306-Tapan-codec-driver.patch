@@ -1,0 +1,274 @@
+From: s3ve3g bring-up
+Subject: [PATCH] ASoC: codecs: WCD9306 (Tapan) codec driver
+
+Ported from the downstream msm-3.4 wcd9xxx-core.c and wcd9306.c, in the structure of wcd9335.c.
+---
+--- a/sound/soc/codecs/Kconfig
++++ b/sound/soc/codecs/Kconfig
+@@ -2227,6 +2227,15 @@ config SND_SOC_UDA1380
+ config SND_SOC_WCD_CLASSH
+ 	tristate
+ 
++config SND_SOC_WCD9306
++	tristate "WCD9306 (Tapan) Codec"
++	depends on SLIMBUS
++	select REGMAP_SLIMBUS
++	select REGMAP_IRQ
++	help
++	  The WCD9306 (Tapan) is the SLIMbus audio codec of MSM8226 phones
++	  such as the Samsung Galaxy S III Neo.
++
+ config SND_SOC_WCD9335
+ 	tristate "WCD9335 Codec"
+ 	depends on SLIMBUS
+--- a/sound/soc/codecs/Makefile
++++ b/sound/soc/codecs/Makefile
+@@ -339,6 +339,7 @@ snd-soc-uda1342-y := uda1342.o
+ snd-soc-uda1380-y := uda1380.o
+ snd-soc-wcd-classh-y := wcd-clsh-v2.o
+ snd-soc-wcd-mbhc-y := wcd-mbhc-v2.o
++snd-soc-wcd9306-y := wcd9306.o
+ snd-soc-wcd9335-y := wcd9335.o
+ snd-soc-wcd934x-y := wcd934x.o
+ snd-soc-wcd937x-y := wcd937x.o
+@@ -760,6 +761,7 @@ obj-$(CONFIG_SND_SOC_UDA1342)	+= snd-soc-uda1342.o
+ obj-$(CONFIG_SND_SOC_UDA1380)	+= snd-soc-uda1380.o
+ obj-$(CONFIG_SND_SOC_WCD_CLASSH)	+= snd-soc-wcd-classh.o
+ obj-$(CONFIG_SND_SOC_WCD_MBHC)	+= snd-soc-wcd-mbhc.o
++obj-$(CONFIG_SND_SOC_WCD9306)	+= snd-soc-wcd9306.o
+ obj-$(CONFIG_SND_SOC_WCD9335)	+= snd-soc-wcd9335.o
+ obj-$(CONFIG_SND_SOC_WCD934X)	+= snd-soc-wcd934x.o
+ obj-$(CONFIG_SND_SOC_WCD937X)	+= snd-soc-wcd937x.o
+--- /dev/null
++++ b/sound/soc/codecs/wcd9306.c
+@@ -0,0 +1,230 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Qualcomm WCD9306 (Tapan) audio codec on SLIMbus.
++ *
++ * Ported from the downstream msm-3.4 drivers (drivers/mfd/wcd9xxx-core.c,
++ * sound/soc/codecs/wcd9306.c; Copyright (c) 2011-2014, The Linux Foundation), in the structure of
++ * mainline's wcd9335.c.
++ *
++ * Stage 1: power, reset, SLIMbus enumeration of the codec and its interface device, chip id.
++ */
++
++#include <linux/delay.h>
++#include <linux/gpio/consumer.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/regmap.h>
++#include <linux/regulator/consumer.h>
++#include <linux/slimbus.h>
++
++/* registers common to the wcd9xxx codecs (downstream wcd9xxx_registers.h) */
++#define WCD9XXX_A_CHIP_CTL		0x000
++#define WCD9XXX_A_CHIP_STATUS		0x001
++#define WCD9XXX_A_CHIP_ID_BYTE_0	0x004
++#define WCD9XXX_A_CHIP_ID_BYTE_1	0x005
++#define WCD9XXX_A_CHIP_ID_BYTE_2	0x006
++#define WCD9XXX_A_CHIP_ID_BYTE_3	0x007
++#define WCD9XXX_A_CHIP_VERSION		0x008
++#define WCD9XXX_A_CDC_CTL		0x080
++#define WCD9XXX_A_LEAKAGE_CTL		0x088
++
++#define WCD9306_MAX_REGISTER		0x3ff
++
++#define WCD9306_SLIM_MANF_ID		0x217	/* Qualcomm */
++#define WCD9306_SLIM_PROD_CODE		0x0e0
++
++/* the downstream "static" supplies (on from probe); buck and buckhelper are the charge pump's */
++static const char * const wcd9306_supplies[] = {
++	"vdd-h", "vdd-px", "vdd-cx", "vdd-buck", "vdd-buckhelper",
++};
++#define WCD9306_NUM_SUPPLIES ARRAY_SIZE(wcd9306_supplies)
++
++struct wcd9306_codec {
++	struct device *dev;
++	struct slim_device *slim;
++	struct slim_device *slim_ifc_dev;
++	struct regmap *regmap;
++	struct regmap *if_regmap;
++	struct gpio_desc *reset_gpio;
++	struct regulator_bulk_data supplies[WCD9306_NUM_SUPPLIES];
++	u8 id[4];
++	u8 version;
++};
++
++/*
++ * Over SLIMbus the codec's registers are the value elements from 0x800 on (downstream
++ * WCD9XXX_REGISTER_START_OFFSET); the driver uses the register numbers of the datasheet
++ */
++#define WCD9306_SLIM_REG_BASE		0x800
++
++static const struct regmap_config wcd9306_regmap_config = {
++	.reg_bits = 16,
++	.val_bits = 8,
++	.reg_base = WCD9306_SLIM_REG_BASE,
++	.max_register = WCD9306_MAX_REGISTER,
++	.cache_type = REGCACHE_NONE,
++};
++
++static const struct regmap_config wcd9306_ifc_regmap_config = {
++	.reg_bits = 16,
++	.val_bits = 8,
++	.reg_base = WCD9306_SLIM_REG_BASE,
++	.max_register = 0x3ff,
++	.cache_type = REGCACHE_NONE,
++};
++
++static int wcd9306_parse_dt(struct wcd9306_codec *wcd)
++{
++	struct device *dev = wcd->dev;
++	int i, ret;
++
++	wcd->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
++	if (IS_ERR(wcd->reset_gpio))
++		return dev_err_probe(dev, PTR_ERR(wcd->reset_gpio), "Reset GPIO missing\n");
++
++	for (i = 0; i < WCD9306_NUM_SUPPLIES; i++)
++		wcd->supplies[i].supply = wcd9306_supplies[i];
++
++	ret = devm_regulator_bulk_get(dev, WCD9306_NUM_SUPPLIES, wcd->supplies);
++	if (ret)
++		return dev_err_probe(dev, ret, "Failed to get supplies\n");
++
++	return 0;
++}
++
++static int wcd9306_power_on_reset(struct wcd9306_codec *wcd)
++{
++	struct device *dev = wcd->dev;
++	int ret;
++
++	ret = regulator_bulk_enable(WCD9306_NUM_SUPPLIES, wcd->supplies);
++	if (ret)
++		return dev_err_probe(dev, ret, "Failed to enable supplies\n");
++
++	usleep_range(5, 10);
++
++	/* downstream wcd9xxx_reset(): low 20 ms, high 20 ms (the line is active low) */
++	gpiod_set_value_cansleep(wcd->reset_gpio, 1);
++	msleep(20);
++	gpiod_set_value_cansleep(wcd->reset_gpio, 0);
++	msleep(20);
++
++	return 0;
++}
++
++/* downstream wcd9xxx_bring_up() */
++static int wcd9306_bring_up(struct wcd9306_codec *wcd)
++{
++	struct regmap *rm = wcd->regmap;
++	unsigned int v[5] = { 0 };
++	int ret, i;
++
++	for (i = 0; i < 4; i++) {
++		ret = regmap_read(rm, WCD9XXX_A_CHIP_ID_BYTE_0 + i, &v[i]);
++		if (ret)
++			return dev_err_probe(wcd->dev, ret, "Failed to read the chip id\n");
++		wcd->id[i] = v[i];
++	}
++	ret = regmap_read(rm, WCD9XXX_A_CHIP_VERSION, &v[4]);
++	if (ret)
++		return ret;
++	wcd->version = v[4] & 0x1f;
++
++	/* Tapan: major 0x0103 (bytes 2, 3), minor 0x0000 or 0x0001 (bytes 0, 1) */
++	dev_info(wcd->dev, "chip id %02x %02x %02x %02x, version %#x\n",
++		 wcd->id[0], wcd->id[1], wcd->id[2], wcd->id[3], wcd->version);
++	if (wcd->id[2] != 0x03 || wcd->id[3] != 0x01)
++		dev_warn(wcd->dev, "not a WCD9306/9302 (Tapan)?\n");
++
++	regmap_write(rm, WCD9XXX_A_LEAKAGE_CTL, 0x04);
++	regmap_write(rm, WCD9XXX_A_CDC_CTL, 0x00);
++	usleep_range(5000, 5500);
++	regmap_write(rm, WCD9XXX_A_CDC_CTL, 0x03);
++	regmap_write(rm, WCD9XXX_A_LEAKAGE_CTL, 0x03);
++
++	return 0;
++}
++
++static int wcd9306_slim_probe(struct slim_device *slim)
++{
++	struct device *dev = &slim->dev;
++	struct wcd9306_codec *wcd;
++	int ret;
++
++	/* the interface device shares the compatible: only the codec (device index 1) has the rest */
++	if (!of_property_present(dev->of_node, "slim-ifc-dev"))
++		return -ENODEV;
++
++	wcd = devm_kzalloc(dev, sizeof(*wcd), GFP_KERNEL);
++	if (!wcd)
++		return -ENOMEM;
++
++	wcd->dev = dev;
++	ret = wcd9306_parse_dt(wcd);
++	if (ret)
++		return ret;
++
++	ret = wcd9306_power_on_reset(wcd);
++	if (ret)
++		return ret;
++
++	dev_set_drvdata(dev, wcd);
++	dev_info(dev, "powered and out of reset, waiting for enumeration\n");
++
++	return 0;
++}
++
++static int wcd9306_slim_status(struct slim_device *sdev, enum slim_device_status status)
++{
++	struct device *dev = &sdev->dev;
++	struct device_node *ifc_dev_np;
++	struct wcd9306_codec *wcd = dev_get_drvdata(dev);
++	int ret;
++
++	dev_info(dev, "status %d, logical address %#x\n", status, sdev->laddr);
++	if (!wcd || status != SLIM_DEVICE_STATUS_UP || wcd->regmap)
++		return 0;
++
++	ifc_dev_np = of_parse_phandle(dev->of_node, "slim-ifc-dev", 0);
++	if (!ifc_dev_np)
++		return dev_err_probe(dev, -EINVAL, "No interface device\n");
++
++	wcd->slim = sdev;
++	wcd->slim_ifc_dev = of_slim_get_device(sdev->ctrl, ifc_dev_np);
++	of_node_put(ifc_dev_np);
++	if (!wcd->slim_ifc_dev)
++		return dev_err_probe(dev, -EINVAL, "Unable to get the SLIMbus interface device\n");
++
++	ret = slim_get_logical_addr(wcd->slim_ifc_dev);
++	dev_info(dev, "interface device logical address %#x (%d)\n", wcd->slim_ifc_dev->laddr, ret);
++
++	wcd->regmap = regmap_init_slimbus(sdev, &wcd9306_regmap_config);
++	if (IS_ERR(wcd->regmap))
++		return dev_err_probe(dev, PTR_ERR(wcd->regmap), "Failed to allocate the register map\n");
++
++	wcd->if_regmap = regmap_init_slimbus(wcd->slim_ifc_dev, &wcd9306_ifc_regmap_config);
++	if (IS_ERR(wcd->if_regmap))
++		return dev_err_probe(dev, PTR_ERR(wcd->if_regmap),
++				     "Failed to allocate the interface register map\n");
++
++	return wcd9306_bring_up(wcd);
++}
++
++static const struct slim_device_id wcd9306_slim_id[] = {
++	{ WCD9306_SLIM_MANF_ID, WCD9306_SLIM_PROD_CODE, 0x1, 0x0 },
++	{}
++};
++MODULE_DEVICE_TABLE(slim, wcd9306_slim_id);
++
++static struct slim_driver wcd9306_slim_driver = {
++	.driver = {
++		.name = "wcd9306-slim",
++	},
++	.probe = wcd9306_slim_probe,
++	.device_status = wcd9306_slim_status,
++	.id_table = wcd9306_slim_id,
++};
++module_slim_driver(wcd9306_slim_driver);
++
++MODULE_DESCRIPTION("WCD9306 (Tapan) audio codec driver");
++MODULE_LICENSE("GPL");

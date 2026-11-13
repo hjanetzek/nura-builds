@@ -2,15 +2,15 @@
 # Samsung Galaxy S III Neo: copy the firmware the device needs from the stock partitions into
 # /lib/firmware, once (instead of msm-firmware-loader, which mounted and scanned all firmware
 # partitions on every boot, 4 s at 787 MHz, before udev):
-# - the Wi-Fi core's firmware (wcnss.mdt, wcnss.b*) from apnhlos/image (the only remote processor
-#   the device tree enables: no modem, ADSP or video core yet)
+# - the Wi-Fi core's firmware (wcnss.mdt, wcnss.b*) from apnhlos/image
+# - the audio DSP's firmware (adsp.mdt, adsp.b*) from modem/image (not apnhlos on this phone)
 # - the Wi-Fi NV calibration file (per device) from system/etc/firmware/wlan/prima
 # Runs before udev (the Wi-Fi driver asks for its firmware once, when it probes); does nothing
 # when the files are there.
 set -u
 fw=/lib/firmware
 nv=$fw/wlan/prima/WCNSS_qcom_wlan_nv.bin
-[ -e "$fw/wcnss.mdt" ] && [ -e "$nv" ] && exit 0
+[ -e "$fw/wcnss.mdt" ] && [ -e "$fw/adsp.mdt" ] && [ -e "$nv" ] && exit 0
 
 # /dev/disk/by-partlabel doesn't exist yet (before udev): partition names from sysfs
 partition() {
@@ -50,5 +50,6 @@ copy_from() {
 }
 
 [ -e "$fw/wcnss.mdt" ] || copy_from apnhlos image . 'wcnss.mdt' 'wcnss.b[0-9][0-9]'
+[ -e "$fw/adsp.mdt" ] || copy_from modem image . 'adsp.mdt' 'adsp.b[0-9][0-9]'
 [ -e "$nv" ] || copy_from system etc/firmware/wlan/prima wlan/prima WCNSS_qcom_wlan_nv.bin
 exit 0
