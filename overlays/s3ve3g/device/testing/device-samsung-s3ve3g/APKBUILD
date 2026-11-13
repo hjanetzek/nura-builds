@@ -37,6 +37,10 @@ source="
 	s3ve3g-debug-telnet.initd
 	s3ve3g-display-manual.conf
 	s3ve3g-panic.sysctl
+	s3ve3g-powerkey.sh
+	s3ve3g-powerkey.initd
+	s3ve3g-powerkey.service
+	s3ve3g-powerkey-logind.conf
 "
 
 build() {
@@ -89,6 +93,19 @@ package() {
 	install -Dm644 "$srcdir"/s3ve3g-display-manual.conf "$pkgdir"/etc/modprobe.d/s3ve3g-display-manual.conf
 	# the MDSS kept from runtime suspend (its resume leaves the MDP unreachable; DPMS works with it)
 
+	# nura-builds: the power key switches the screen off and on (panel and touchscreen; works
+	# under a Qt eglfs application too), instead of logind powering the phone off (elogind
+	# doesn't read pmOS's /usr/lib/elogind/logind.conf with HandlePowerKey=ignore)
+	install -Dm755 "$srcdir"/s3ve3g-powerkey.sh "$pkgdir"/usr/bin/s3ve3g-powerkey
+	install -Dm644 "$srcdir"/s3ve3g-powerkey-logind.conf \
+		"$pkgdir"/etc/elogind/logind.conf.d/50-s3ve3g-powerkey.conf
+	install -Dm644 "$srcdir"/s3ve3g-powerkey-logind.conf \
+		"$pkgdir"/etc/systemd/logind.conf.d/50-s3ve3g-powerkey.conf
+	install -Dm644 "$srcdir"/s3ve3g-powerkey.service \
+		"$pkgdir"/usr/lib/systemd/system/s3ve3g-powerkey.service
+	ln -s ../s3ve3g-powerkey.service \
+		"$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/s3ve3g-powerkey.service
+
 	# bring-up: restart on an oops (alpine's 00-alpine.conf has kernel.panic = 120, no panic_on_oops)
 	install -Dm644 "$srcdir"/s3ve3g-panic.sysctl "$pkgdir"/etc/sysctl.d/90-s3ve3g-panic.conf
 
@@ -113,6 +130,7 @@ _openrc() {
 
 	install -Dm755 "$srcdir"/s3ve3g-firmware.initd "$subpkgdir"/etc/init.d/s3ve3g-firmware
 	install -Dm755 "$srcdir"/s3ve3g-screen-off.initd "$subpkgdir"/etc/init.d/s3ve3g-screen-off
+	install -Dm755 "$srcdir"/s3ve3g-powerkey.initd "$subpkgdir"/etc/init.d/s3ve3g-powerkey
 	# bring-up: a telnet login on the USB network before udev (busybox-extras' telnetd)
 	install -Dm755 "$srcdir"/s3ve3g-debug-telnet.initd "$subpkgdir"/etc/init.d/s3ve3g-debug-telnet
 }
@@ -128,4 +146,8 @@ c7d995717b9bfb0d9cab20f833201802d86453468e5afbb6dee39ac8b23732446a2c8f8026f1e731
 ede70db74354ed147024175125fe84dc2050837f9e7671baf737152059b172ce5718fc169acf6b4f41185c206039d20949ca99a19af8d6e59ae52fd255da6883  s3ve3g-debug-telnet.initd
 22f4af7df5cd6d589405f242ad2ca44b4884938be80ffdbb5493b667e6c77dadecd96700d8c32ef31af343350d525b8296b934880f72f0a1c5eea68ce02a7a7e  s3ve3g-display-manual.conf
 4cf2bf2ec71f13109700620017c44b1829b0700c1d8f88480e2b17555d37bf52a399263d26ff96a445de5b87de6fd0457c68e5b8659db9068a168529af14025e  s3ve3g-panic.sysctl
+11374cf54aff7dbe9f9142b623686cc9eb38be5d80d62a0f7f9c1f8be12cc1247fb0378e886241b3c0d210a19a44bdd59074039446635fd2d5d6211c5798d103  s3ve3g-powerkey.sh
+bd34eb0dd4383596ee930b23114ce976c47a357c7d216db7ea7cf1420d9c6a92ce49c40949258ddcf8d48b95847e6047bdbbc64c5ede3620831923b1216d2abb  s3ve3g-powerkey.initd
+b8ad7c9037238c6b740ffeb8d34c677d1cc413f43a419e798089d17af493ebe9bffef7912c2e6669bc48ceb3decb5a2f955e05ac4dfd19948156f72a59a98f91  s3ve3g-powerkey.service
+0b5a8e1a3c3b70de174f759879bf3c23e8b753359a6887954ee3bce6418db7e3f87b9def27bc26b4d89a28b0b989806cbf8593d734d0e62c71381c096d5fecd5  s3ve3g-powerkey-logind.conf
 "

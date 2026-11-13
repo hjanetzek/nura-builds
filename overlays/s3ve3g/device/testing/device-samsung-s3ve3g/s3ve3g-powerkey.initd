@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+# Samsung Galaxy S III Neo: the power key switches the screen off and on (/usr/bin/s3ve3g-powerkey)
+
+description="Power key: screen off and on"
+supervisor=supervise-daemon
+command=/usr/bin/s3ve3g-powerkey
+
+depend() {
+	after udev-settle
+}
+
+stop_post() {
+	# the screen and the touchscreen back on
+	for d in /sys/class/backlight/*; do echo 0 > "$d/bl_power"; done 2>/dev/null
+	for d in /sys/class/input/input*; do
+		[ "$(cat "$d/name" 2>/dev/null)" = "MELFAS MMS114 Touchscreen" ] && echo 0 > "$d/inhibited"
+	done
+	return 0
+}

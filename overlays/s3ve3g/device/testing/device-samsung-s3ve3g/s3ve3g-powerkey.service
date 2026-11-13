@@ -1,0 +1,11 @@
+# Samsung Galaxy S III Neo: the power key switches the screen off and on (/usr/bin/s3ve3g-powerkey)
+[Unit]
+Description=Power key: screen off and on
+After=systemd-udev-settle.service
+
+[Service]
+ExecStart=/usr/bin/s3ve3g-powerkey
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
