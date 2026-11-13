@@ -3136,7 +3136,7 @@ Xperia Z2 project's WCD9320 port.
 +#endif
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306.c
-@@ -0,0 +1,5511 @@
+@@ -0,0 +1,5519 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Qualcomm WCD9306 (Tapan) audio codec on SLIMbus.
@@ -8256,8 +8256,16 @@ Xperia Z2 project's WCD9320 port.
 +		WCD9XXX_BG_CLK_UNLOCK(&tapan->resmgr);
 +	}
 +
++	/* the mux state from scratch too (the component is probed again when the card is rebound) */
 +	for (i = 0; i < NUM_CODEC_DAIS; i++)
 +		INIT_LIST_HEAD(&tapan->dai[i].wcd9xxx_ch_list);
++	for (i = 0; i < TAPAN_RX_MAX; i++) {
++		INIT_LIST_HEAD(&tapan->rx_chs[i].list);
++		tapan->rx_port_value[i] = 0;
++	}
++	for (i = 0; i < TAPAN_TX_MAX; i++)
++		INIT_LIST_HEAD(&tapan->tx_chs[i].list);
++	tapan->tx_port_value = 0;
 +
 +	if (tapan->codec_ver == WCD9306) {
 +		snd_soc_add_component_controls(codec, tapan_9306_snd_controls,

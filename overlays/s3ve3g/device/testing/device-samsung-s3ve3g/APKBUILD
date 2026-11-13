@@ -41,6 +41,7 @@ source="
 	ucm-HiFi.conf
 	s3ve3g-audio.sh
 	s3ve3g-audio.initd
+	s3ve3g-audio-rt.conf
 "
 
 build() {
@@ -101,6 +102,8 @@ package() {
 	# "s3ve3g-audio speaker|headphones": switch the output with that profile, remembered for the
 	# next boot (OpenRC service s3ve3g-audio in the -openrc subpackage)
 	install -Dm755 "$srcdir"/s3ve3g-audio.sh "$pkgdir"/usr/bin/s3ve3g-audio
+	# realtime scheduling and locked memory for the audio group (JACK, zynthian)
+	install -Dm644 "$srcdir"/s3ve3g-audio-rt.conf "$pkgdir"/etc/security/limits.d/95-s3ve3g-audio-rt.conf
 
 	# bring-up: restart on an oops (alpine's 00-alpine.conf has kernel.panic = 120, no panic_on_oops)
 	install -Dm644 "$srcdir"/s3ve3g-panic.sysctl "$pkgdir"/etc/sysctl.d/90-s3ve3g-panic.conf
@@ -146,4 +149,5 @@ ede70db74354ed147024175125fe84dc2050837f9e7671baf737152059b172ce5718fc169acf6b4f
 145dd2d13b2dbd7873809d80d7ee8b963506e7bd5a1913d42626c8778fd90d1a82c6666aeb52984f375aa0c744daf10797d841ba89de76e0fd3f883a222dfbee  ucm-HiFi.conf
 2d9bed36f384d94bad93719dcf9ba118826aecf4cc7f877d29e7a9ba54c0dd3c804778ef04b9ebd3fc08c56b000c5a7a4005e9fcec1d2c400b384d6689914c47  s3ve3g-audio.sh
 be41a4728a6ea0c5545e9c9a7683c22952d425be11886bde571949a63d723325ddc0aa5ac90ac7459a8f4518d3af23ac6085f1c21bdd3a0b130ecab2d193b405  s3ve3g-audio.initd
+0be37e5e590659526a81589d96645833a42cad13b7cd08331a11e4143e09229dddbc82cc681bff9d1891fd2cca95ecb22c99f2c0641a6aa796d11357ffcd080f  s3ve3g-audio-rt.conf
 "
