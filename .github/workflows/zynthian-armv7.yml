@@ -59,6 +59,9 @@ jobs:
       key_mesa: ${{ steps.plan.outputs.key_mesa }}
       run_mesa: ${{ steps.plan.outputs.run_mesa }}
       rebuild_mesa: ${{ steps.plan.outputs.rebuild_mesa }}
+      key_plugins: ${{ steps.plan.outputs.key_plugins }}
+      run_plugins: ${{ steps.plan.outputs.run_plugins }}
+      rebuild_plugins: ${{ steps.plan.outputs.rebuild_plugins }}
     steps:
       - uses: actions/checkout@v7
       - id: refs
@@ -115,8 +118,6 @@ jobs:
     secrets: inherit
     permissions: { contents: read, actions: write }
 
-  # The device images only when asked for (Run workflow > images): without the kiosk package (it
-  # depends on the plugins), UI "none" with zynthian-ui installed (IMAGE_PACKAGES_armv7)
   # Mesa with the freedreno a3xx fix (targets/zynthian.sh), after the zynthian stages
   mesa:
     needs: [plan, zynthian]
@@ -125,6 +126,19 @@ jobs:
     with: { target: zynthian, arch: armv7, stage: mesa, previous: zynthian, previous-key: "${{ needs.plan.outputs.key_zynthian }}", previous-cached: "${{ needs.plan.outputs.run_zynthian != 'true' }}", key: "${{ needs.plan.outputs.key_mesa }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_mesa == 'true' }}" }
     secrets: inherit
     permissions: { contents: read, actions: write }
+
+  # The small plugins (< 2 MB on aarch64, targets/zynthian.sh): last, a failing plugin doesn't stop
+  # the others (KEEPGOING_plugins_armv7)
+  plugins:
+    needs: [plan, mesa]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.run_plugins == 'true' }}
+    uses: ./.github/workflows/stage.yml
+    with: { target: zynthian, arch: armv7, stage: plugins, previous: mesa, previous-key: "${{ needs.plan.outputs.key_mesa }}", previous-cached: "${{ needs.plan.outputs.run_mesa != 'true' }}", key: "${{ needs.plan.outputs.key_plugins }}", refs: "${{ needs.plan.outputs.refs }}", rebuild: "${{ needs.plan.outputs.rebuild_plugins == 'true' }}" }
+    secrets: inherit
+    permissions: { contents: read, actions: write }
+
+  # The device images only when asked for (Run workflow > images): without the kiosk package (it
+  # depends on the plugins), UI "none" with zynthian-ui installed (IMAGE_PACKAGES_armv7)
   image:
     needs: [plan, zynthian]
     if: ${{ inputs.images && !cancelled() && !failure() }}
@@ -186,7 +200,7 @@ jobs:
   # Releases (zynthian-arm7 only): the package repository (release "armv7", the same repository URL
   # as aarch64) and the images (release "zynthian-armv7-latest"), see scripts/publish.sh
   publish:
-    needs: [zynthian, mesa, image]
+    needs: [zynthian, mesa, plugins, image]
     if: ${{ !cancelled() && needs.zynthian.result == 'success' && needs.image.result != 'failure' && github.ref == 'refs/heads/zynthian-arm7' }}
     runs-on: ubuntu-latest
     permissions:
@@ -198,7 +212,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
-          name: packages-zynthian-${{ needs.mesa.result == 'success' && 'mesa' || 'zynthian' }}
+          name: packages-zynthian-${{ needs.plugins.result == 'success' && 'plugins' || needs.mesa.result == 'success' && 'mesa' || 'zynthian' }}
           path: out
       - uses: actions/download-artifact@v8
         if: needs.image.result == 'success'

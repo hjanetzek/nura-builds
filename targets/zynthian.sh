@@ -71,12 +71,19 @@ DEVICES_x86_64="qemu-amd64"
 # on. The kiosk package (postmarketos-ui-zynthian) depends on the plugins, so it isn't built: the
 # image is a plain one (UI "none") with zynthian-ui installed, for bringing up the device.
 # Overrides: <VAR>_<arch> (common.sh: STAGES, UI, IMAGE_PACKAGES; STAGE_<stage>_<arch>).
-STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian mesa"
+STAGES_armv7="qt1 qt2 qt3 pyside engines zynthian mesa plugins"
 STAGE_engines="zynthian-jalv aeolus sooperlooper"
 # Last, so that a failure there doesn't hold up zynthian: Mesa with the freedreno a3xx fix for Qt
 # Quick's flicker on the S III Neo (aports/mesa)
 STAGE_mesa="mesa"
 INPUTS_mesa="aports/mesa"
+# The plugins whose aarch64 package is smaller than 2 MB (the release "aarch64", 2026-11-13; not
+# the meta packages zynthian-lv2-plugins and zynthian-puredata, which depend on all of them, nor
+# aeolus and sooperlooper, built by engines), one pmbootstrap build each (dependencies first);
+# KEEPGOING: a plugin that fails on armv7 doesn't stop the others (scripts/build.sh). After mesa,
+# so that a long run doesn't hold up the rest; the inputs are those of the aarch64 plugins stage.
+STAGE_plugins_armv7="libgig;puredata;fluid-soundfont;linuxsampler;setbfree;abgate-lv2;aether-lv2;aida-x-lv2;ams-lv2;artyfx-lv2;avldrums-lv2;bolliedelay-lv2;chow-centaur-lv2;chow-kick-lv2;dexed-lv2;dpf-plugins-lv2;dragonfly-reverb-lv2;eq10q-lv2;fabla-lv2;foo-yc20-lv2;granulator-lv2;gula-plugins-lv2;gxplugins-lv2;infamous-lv2;invada-lv2;lv2-examples;mimid-lv2;miniopl3-lv2;mod-arpeggiator-lv2;mod-distortion-lv2;neural-amp-modeler-lv2;padthv1-lv2;punk-console-lv2;qmidiarp-lv2;ratatouille-lv2;regrader-lv2;samplv1-lv2;shiro-lv2;string-machine-lv2;swh-lv2;synthv1-lv2;talentedhack-lv2;triceratops-lv2;ykchorus-lv2;zynmi-lv2;pd-abl-link;pd-clocker;pd-freeverb;pd-ggee;pd-grids;pd-hcs;pd-iemlib;pd-midifile;pd-osc;pd-plaits;pd-tb-peakcomp;pd-unauthorized"
+KEEPGOING_plugins_armv7=1
 INPUTS_engines="aports/zynthian-jalv aports/engines/aeolus aports/engines/sooperlooper"
 STAGE_zynthian_armv7="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none
@@ -87,4 +94,5 @@ IMAGE_PACKAGES_armv7="zynthian-ui"
 DEVICES_armv7="qcom-msm8226"
 # Recipes of the other repositories whose arch= lacks armv7 (aarch64 x86_64): setup.sh adds it in
 # the checkouts until the recipes list armv7 themselves
-ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder @drivenbymoss-rust/nura/drivenbymoss"
+ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder @drivenbymoss-rust/nura/drivenbymoss
+	aports/lv2/aida-x-lv2 aports/lv2/chow-centaur-lv2 aports/lv2/chow-kick-lv2 aports/lv2/neural-amp-modeler-lv2 aports/lv2/ratatouille-lv2"
