@@ -1,12 +1,18 @@
 From: s3ve3g bring-up
-Subject: [PATCH] ASoC: qcom: apq8096: 16 bit on the back end
+Subject: [PATCH] ASoC: qcom: apq8096: 16 bit back end; qcom,msm8226-sndcard with 16 bit front ends
 
-As sdm845.c: the MSM8226 ADSP firmware refuses to start a 24 bit SLIMbus AFE port
-(AFE_PORT_CMD_DEVICE_START error 1); the DSP converts from the front end's format.
+As sdm845.c, the back end at 16 bit: the MSM8226 ADSP firmware refuses to start a 24 bit
+SLIMbus AFE port (AFE_PORT_CMD_DEVICE_START error 1). For qcom,msm8226-sndcard also the front
+ends at 16 bit: that firmware plays 24 bit streams distorted and attenuated (as if packed).
 ---
 --- a/sound/soc/qcom/apq8096.c
 +++ b/sound/soc/qcom/apq8096.c
-@@ -7,6 +7,7 @@
+@@ -3,10 +3,12 @@
+ 
+ #include <linux/mod_devicetable.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ #include <linux/platform_device.h>
  #include <sound/soc.h>
  #include <sound/soc-dapm.h>
  #include <sound/pcm.h>
@@ -14,7 +20,7 @@ As sdm845.c: the MSM8226 ADSP firmware refuses to start a 24 bit SLIMbus AFE por
  #include "common.h"
  
  #define SLIM_MAX_TX_PORTS 16
-@@ -21,8 +22,16 @@ static int apq8096_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+@@ -21,8 +23,16 @@ static int apq8096_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
  	struct snd_interval *channels = hw_param_interval(params,
  					SNDRV_PCM_HW_PARAM_CHANNELS);
  
@@ -31,3 +37,50 @@ As sdm845.c: the MSM8226 ADSP firmware refuses to start a 24 bit SLIMbus AFE por
  
  	return 0;
  }
+@@ -89,7 +99,21 @@ static int apq8096_init(struct snd_soc_pcm_runtime *rtd)
+ 	return 0;
+ }
+ 
+-static void apq8096_add_be_ops(struct snd_soc_card *card)
++/*
++ * MSM8226: the ADSP firmware plays 24 bit front end streams wrongly (as if packed, distorted and
++ * attenuated): 16 bit only on the front ends
++ */
++static int msm8226_fe_startup(struct snd_pcm_substream *substream)
++{
++	return snd_pcm_hw_constraint_mask64(substream->runtime, SNDRV_PCM_HW_PARAM_FORMAT,
++					    SNDRV_PCM_FMTBIT_S16_LE);
++}
++
++static const struct snd_soc_ops msm8226_fe_ops = {
++	.startup = msm8226_fe_startup,
++};
++
++static void apq8096_add_be_ops(struct snd_soc_card *card, bool fe_s16_only)
+ {
+ 	struct snd_soc_dai_link *link;
+ 	int i;
+@@ -99,6 +123,8 @@ static void apq8096_add_be_ops(struct snd_soc_card *card)
+ 			link->be_hw_params_fixup = apq8096_be_hw_params_fixup;
+ 			link->init = apq8096_init;
+ 			link->ops = &apq8096_ops;
++		} else if (fe_s16_only) {
++			link->ops = &msm8226_fe_ops;
+ 		}
+ 	}
+ }
+@@ -121,12 +147,13 @@ static int apq8096_platform_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
+-	apq8096_add_be_ops(card);
++	apq8096_add_be_ops(card, of_device_is_compatible(dev->of_node, "qcom,msm8226-sndcard"));
+ 	return devm_snd_soc_register_card(dev, card);
+ }
+ 
+ static const struct of_device_id msm_snd_apq8096_dt_match[] = {
+ 	{.compatible = "qcom,apq8096-sndcard"},
++	{.compatible = "qcom,msm8226-sndcard"},
+ 	{}
+ };
+ 

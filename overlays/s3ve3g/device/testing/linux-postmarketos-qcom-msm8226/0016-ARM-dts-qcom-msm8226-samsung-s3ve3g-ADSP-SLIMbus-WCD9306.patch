@@ -18,7 +18,7 @@ downstream msm8226.dtsi.
  #include "qcom-msm8226.dtsi"
  #include "pm8226.dtsi"
  
-@@ -758,3 +762,246 @@ &usb_hs_phy {
+@@ -758,3 +762,247 @@ &usb_hs_phy {
  	v1p8-supply = <&pm8226_l10>;
  	v3p3-supply = <&pm8226_l20>;
  };
@@ -203,16 +203,17 @@ downstream msm8226.dtsi.
 +	/*
 +	 * The sound card: mainline's APQ8096 machine driver (DT links, SLIMbus channels 144+ and
 +	 * 128+ as downstream msm8226.c). Microphones and their biases from the downstream board
-+	 * routing: main mic AMIC1 and sub mic AMIC3 on MIC BIAS1, headset mic AMIC2 on MIC BIAS2.
++	 * routing: main mic AMIC1 and AMIC3 on MIC BIAS1, headset mic AMIC2 and AMIC4 on MIC BIAS2.
 +	 */
 +	sound {
-+		compatible = "qcom,apq8096-sndcard";
++		compatible = "qcom,msm8226-sndcard";
 +		model = "Samsung Galaxy S III Neo";
 +
 +		audio-routing =
 +			"AMIC1", "MIC BIAS1 External",
 +			"AMIC2", "MIC BIAS2 External",
-+			"AMIC3", "MIC BIAS1 External";
++			"AMIC3", "MIC BIAS1 External",
++			"AMIC4", "MIC BIAS2 External";
 +
 +		mm1-dai-link {
 +			link-name = "MultiMedia1";
