@@ -7,7 +7,7 @@ options are built in (CONFIG_CMDLINE, CONFIG_CMDLINE_EXTEND); appended
 after the bootloader's line they need a buffer larger than 1024.
 ---
 diff --git a/arch/arm/include/uapi/asm/setup.h b/arch/arm/include/uapi/asm/setup.h
-index 8e50e03..11b9f8f 100644
+index 8e50e034fec7..11b9f8f2765b 100644
 --- a/arch/arm/include/uapi/asm/setup.h
 +++ b/arch/arm/include/uapi/asm/setup.h
 @@ -17,7 +17,7 @@

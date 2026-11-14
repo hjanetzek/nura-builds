@@ -9,9 +9,10 @@ mismatch, failed to map hwirq-177", "IRQ tx not found"): no Wi-Fi until
 reboot. Declare them as the driver uses them.
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index ae875226c6fb..f124ef15a902 100644
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-@@ -421,6 +421,17 @@
+@@ -319,6 +319,17 @@ iris {
  	smd-edge {
  		wcnss {
  			status = "okay";

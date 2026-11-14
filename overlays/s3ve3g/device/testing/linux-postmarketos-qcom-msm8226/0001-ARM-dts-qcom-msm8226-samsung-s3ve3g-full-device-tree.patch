@@ -8,7 +8,7 @@ wiring from its downstream device tree (msm8226-sec-s3ve3geur-r04), and
 qcom,msm-id for Samsung's bootloader (appended DTB).
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
-index 288cacd..ae87522 100644
+index 288cacd5d1fa..ae875226c6fb 100644
 --- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 +++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 @@ -1,24 +1,587 @@

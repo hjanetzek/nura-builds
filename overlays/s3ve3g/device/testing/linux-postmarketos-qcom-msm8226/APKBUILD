@@ -1,5 +1,7 @@
 # nura-builds overlay (targets/s3ve3g.sh): pmaports' recipe at 6b904fc480
-# (6.16.12-r4), copied over the pmaports recipe by scripts/setup.sh. Changes are marked
+# (6.16.12-r4), copied over the pmaports recipe by scripts/setup.sh. Since 7.3.4: mainline (kernel.org)
+# with msm8226-mainline's patch stack (its 56 commits on top of v6.16.12 in tag v6.16.12-msm8226-u2,
+# ported to v7.3.4: patch 0000, one mbox with the commits), as msm8226-mainline has no newer branch. Changes are marked
 # "nura-builds:": the Samsung Galaxy S III Neo's device tree (eMMC, SD card, USB, keys, touch,
 # sensors, Wi-Fi, splash framebuffer; it had the serial port only), the ALSA sequencer, the
 # YAS532 magnetometer and the Terminus 16x32 console font in the config; an early console into
@@ -15,12 +17,9 @@
 maintainer="Stefan Hansson <newbyte@postmarketos.org>"
 _flavor="postmarketos-qcom-msm8226"
 pkgname=linux-$_flavor
-pkgver=6.16.12
-# nura-builds: pmaports' pkgrel + 100, above the published package (+1: Terminus 16x32 font, +1: reserved memory as downstream,
-# +1: ramoops, +1: earlycon ramcon, +1: dt.img with soc_rev,
-# +1: debug boot markers, +1: free space in the DTB,
-# +1: built-in command line, +1: sm5502, i2c-gpio, evdev built in)
-pkgrel=113
+pkgver=7.3.4
+# nura-builds: pkgrel + 100 as for pmaports' 6.16.12 (pmaports has no 7.3.4 yet)
+pkgrel=100
 pkgdesc="Mainline Kernel fork for APQ8026/MSM8226/MSM8926 devices"
 arch="armv7"
 _carch="arm"
@@ -49,32 +48,19 @@ makedepends="
 "
 
 _config="config-$_flavor.$arch"
-_tag="v${pkgver/_/-}-msm8226-u2"
 
 # Source
 source="
-	https://github.com/msm8226-mainline/linux/archive/$_tag/linux-$_tag.tar.gz
+	https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-$pkgver.tar.xz
 	$_config
+	0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.4.patch
 	0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 	0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 	0004-ARM-COMMAND_LINE_SIZE-2048.patch
-	0005-soc-qcom-spm-MSM8226-L2-SAW2-CPU-rail-regulator.patch
-	0006-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-voltages.patch
 	0007-ARM-dts-qcom-msm8226-samsung-s3ve3g-level-wcnss-wifi-IRQs.patch
-	0008-drm-panel-msm8226-generated-Samsung-S6E8AA0A-s3ve3g.patch
-	0009-ARM-dts-qcom-msm8226-samsung-s3ve3g-display-and-GPU.patch
-	0010-drm-msm-trace-DSI-and-MDP5-register-writes-bring-up.patch
-	0011-drm-msm-dsi-phy-28nm-8226-write-the-byte-clock-mux-after-the-PLL-reset.patch
-	0012-drm-msm-dsi-clock-lane-in-LP-11-until-the-panel-is-initialized.patch
-	0013-drm-msm-commit-planes-after-the-modeset-enables.patch
-	0014-drm-msm-mdss-an-optional-misc_ahb-clock-for-MDP5.patch
-	0015-drm-msm-mdss-MSM8226-restore-the-MDP-IOMMU-and-VBIF-after-a-power-collapse.patch
-	0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
-	0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
-	0018-ASoC-qcom-apq8096-16-bit-SLIMbus-back-end.patch
 	mkqcdt-v1.py
 "
-builddir="$srcdir/linux-${_tag#v}"
+builddir="$srcdir/linux-$pkgver"
 
 prepare() {
 	default_prepare
@@ -87,6 +73,17 @@ build() {
 	unset LDFLAGS
 	make ARCH="$_carch" LLVM=1 \
 		KBUILD_BUILD_VERSION="$((pkgrel + 1 ))-$_flavor"
+
+	# nura-builds: the zImage is loaded at 0x8000, where the kernel goes; its decompressor first
+	# copies itself past the end of the decompressed kernel, and that copy must end below the device
+	# tree, which the bootloader puts at 0x01e00000 (deviceinfo_flash_offset_tags). 7.3.4 with BTF
+	# (4.3 MB more) ran over it and hung at the boot logo; 6.16.12 had 0.7 MB to spare.
+	local _end=$((0x8000 + $(stat -c %s arch/arm/boot/Image) + $(stat -c %s arch/arm/boot/zImage) + 0x40000))
+	if [ $_end -ge $((0x01e00000)) ]; then
+		printf "zImage relocation would end at %#x, over the DTB at 0x01e00000\n" $_end >&2
+		return 1
+	fi
+	printf "zImage relocation ends at %#x (DTB at 0x01e00000)\n" $_end
 }
 
 package() {
@@ -110,24 +107,12 @@ package() {
 }
 
 sha512sums="
-63bd2038d6ac22e104f36e31e3137c1cd000de713ef79c8ad13a6b81a64e975c2e8259c25490b96766c500a4df1a8623fbba9be9fc40ddc868032a11cb516679  linux-v6.16.12-msm8226-u2.tar.gz
-1ed590daa36878e484e53f9dca78ad8643cfe05c7585bc0bc131b7d256fd69c94fcf2ac497c3a99e0aafc41e4f324aaeeea499d120f40491e7d04d9b8b4bd077  config-postmarketos-qcom-msm8226.armv7
-99a2975dd8d90a6bed5d6f998739b612b1743dfc68f3d2765801f17f2f3c6ae840d73df4b15d99b60790f81dc44c03635de203e7360ca7309bd6829e0b6078bf  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
-f9b8510ace1f6c9efb7da0326aec04fb65f5567b46801ad510fdab82c89d76f2d0e0954f5c9be22ffff0dd7409aaff712c4d81400c832d34b55e5a95388fdf68  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
-c116ee70206a39b8d63d2357cb8410a43c0748e38d30eda79862605d72bd7189106b26f5bc2e67c46be5cb0011cb91518bfdc7065e91264ffc59b8a5cf75cd87  0004-ARM-COMMAND_LINE_SIZE-2048.patch
-2be136c1c0a1d1e98e3e16dc76a4722d04d19a3ba53e741bff24c3cd51757c9a582d604c0836bdf89e09a456c7b8fbad2df09f76e2679118b288e9e5d3c5b3f7  0005-soc-qcom-spm-MSM8226-L2-SAW2-CPU-rail-regulator.patch
-ce3b8e2e5fdb7f7cfd7ad1f4635c77916076bf3b5a88b30285f95b2015bbf711676b4eb8dc7d642585037e8f9af853c94a1d790b30b57c57bc40e4f07c33b2be  0006-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-voltages.patch
-56e1cfa45182932f8948d65461f58388199f8c8b94aab6969ddc6bc91a3bfc2661ca7e83cd79c95b50fafc0ef5e79a79e7c2d77a571cd4ebef6a863804390d58  0007-ARM-dts-qcom-msm8226-samsung-s3ve3g-level-wcnss-wifi-IRQs.patch
-28793990a3d96be4dc093b8a3da46794c775ebb8828d8a40cbb33c40ec37c7b8ecb2f44bdc773ae754c21e997eae7b4252298c427b190e683ab96ec24be1c8d5  0008-drm-panel-msm8226-generated-Samsung-S6E8AA0A-s3ve3g.patch
-977a762ebaf5949af4636b3e0c524270bce5dcbfbaafd8f3f0afbbd4ea0cb617f1ba4f9ad1faa8d0ade8ca9d813a1109322568f491bf433221c5d3a17273723f  0009-ARM-dts-qcom-msm8226-samsung-s3ve3g-display-and-GPU.patch
-b60184fc857cb023da3a8df5080dbc19e37455f6d43c22f7bd347311d2d141d81b6b2d4c8e4083bb1470d17bddf36e21f8eadc0387cab62a1950679b3d9bd712  0010-drm-msm-trace-DSI-and-MDP5-register-writes-bring-up.patch
-d2213d1ef2ed95fa38e9bb5971eb6f9605b2913eb1e272d0f801b4c7e3068d06b675c96eee1b9e697d649154e7a3678365e7e8eaed21e55de53625f31c7d73fb  0011-drm-msm-dsi-phy-28nm-8226-write-the-byte-clock-mux-after-the-PLL-reset.patch
-4c8b74a30222583b8036cbc2f9539a28fbeffd29c800c83c6577da3a00d972682f19f8ac05d7b269dcfc09ff4dd536da14296841e61dc4a2911ad8d49e5b0737  0012-drm-msm-dsi-clock-lane-in-LP-11-until-the-panel-is-initialized.patch
-3a3776170178c80de577132cf2651a63ed686edb2d1c630b7cdd9dcaa001319412f5d75125d38ac8e03c3535de44d515cdaca289a06963efde9895e0909e538c  0013-drm-msm-commit-planes-after-the-modeset-enables.patch
-8657c75b676a56a0ae1317b402939e2702fe866b6cc4cd40852c813e1ca99710b5b2357ff5c6017a1134bc611db10179fa9f96a0b6f9a9aa0ba8d42e5e668864  0014-drm-msm-mdss-an-optional-misc_ahb-clock-for-MDP5.patch
-9ac9ab790543926904faab3248ebae13cffaa29267814dee3077dbb71c6c3712eb2e9592047190e4bdc0c444c7da62496a790c3c4afd197ffeb8f36c11532d7a  0015-drm-msm-mdss-MSM8226-restore-the-MDP-IOMMU-and-VBIF-after-a-power-collapse.patch
-137985e4dda200dff648612394e6947464415a01f01396e1cfd9845fbdac5665249be50104be952ce849722263870ead6daeb3ead0711095c935a247750f4443  0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
-c68abe542b2ba9fb46d6a6d8b58e1922088418aff547ca32e5cf74f1b82f04850ae448af990febaa3674292efb9a3989084b9329ea3c75e93aca07d5e756a270  0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
-a7e60c9d9fae6abd9fb8b577f99f322605bb7bb757a63a319f1143662863591007635566a620580e2276330cb9cbdfd69c9eeeeec5d476671f564fb24e22b7eb  0018-ASoC-qcom-apq8096-16-bit-SLIMbus-back-end.patch
+db5508c3cf8b613b4680022eb785c036bcf8a5c952f8d0b2f3c2c7dc16779cf8bd954e0bca0b0b52451bac61430a687ae73205574f002f3b60de886640ebb9b0  linux-7.3.4.tar.xz
+a395d25dc6a3e270b628db277d73f9ac372254012bf4dbf28ba09f14f5e728b63887181c7a5c3f08e4b78d6ea13d02307af51193001ad2b34e553e3ed131d120  config-postmarketos-qcom-msm8226.armv7
+685d26394e13c2b88ae18671c89fe6dcb1db3809fbd6734700dedc6d467e746784743c3b94ffdc67cd31c3a023e0f816e90ec748028dbea27baa378f2561feac  0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.4.patch
+6d332d7e93027c5aee62b6497bd15be1cd20e38dbae884dc28f81b1f1983f818bc07c8751c1a8d2e2acdbbc790179e9f48e02a9fe15db9c6a0480f4a54dda736  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
+54a64cacb2e06014f207bc824ae9731e5416e3ad594179f09721219567066140fc3feee7fd5e56926964164b8b9fb6ce593e1198b8b40d97aba9f69272d499dc  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
+21673d72f7fd6554c7eb6b17c948a85820e4eb25c5165b2f14fcb192c16478f3ffcb85da1daed91ba160ebd779ea390a4bb180765b1fae80b2114c5ac4822a12  0004-ARM-COMMAND_LINE_SIZE-2048.patch
+1a728fe7743e5d63b56e7541848b66e6fec0f0b5ec154097f9cde9337446a65a3bea72ec585aa85098d5b1cbb9a3486aeb9192f4ffa0c224aaf28a96aabf3ea3  0007-ARM-dts-qcom-msm8226-samsung-s3ve3g-level-wcnss-wifi-IRQs.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "

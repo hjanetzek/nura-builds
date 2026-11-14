@@ -8,7 +8,7 @@ downstream kernel shows it as /proc/last_kmsg after a warm reset.
 earlycon=ramcon,<physical address>; one page (the fixmap), as a ring.
 ---
 diff --git a/drivers/tty/serial/Makefile b/drivers/tty/serial/Makefile
-index d58d9f7..cb7e332 100644
+index bba7b21a4a1d..6ecd0aefbdb8 100644
 --- a/drivers/tty/serial/Makefile
 +++ b/drivers/tty/serial/Makefile
 @@ -6,7 +6,7 @@
@@ -22,7 +22,7 @@ index d58d9f7..cb7e332 100644
  
 diff --git a/drivers/tty/serial/earlycon-ramcon.c b/drivers/tty/serial/earlycon-ramcon.c
 new file mode 100644
-index 0000000..f99c063
+index 000000000000..f99c0637546d
 --- /dev/null
 +++ b/drivers/tty/serial/earlycon-ramcon.c
 @@ -0,0 +1,56 @@
