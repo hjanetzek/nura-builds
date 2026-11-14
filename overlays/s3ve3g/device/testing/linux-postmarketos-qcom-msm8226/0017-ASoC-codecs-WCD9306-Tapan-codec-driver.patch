@@ -3136,7 +3136,7 @@ Xperia Z2 project's WCD9320 port.
 +#endif
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306.c
-@@ -0,0 +1,5519 @@
+@@ -0,0 +1,5549 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Qualcomm WCD9306 (Tapan) audio codec on SLIMbus.
@@ -3166,6 +3166,7 @@ Xperia Z2 project's WCD9320 port.
 +#include <linux/slab.h>
 +#include <linux/slimbus.h>
 +#include <linux/workqueue.h>
++#include <sound/jack.h>
 +#include <sound/pcm.h>
 +#include <sound/pcm_params.h>
 +#include <sound/soc.h>
@@ -3440,6 +3441,11 @@ Xperia Z2 project's WCD9320 port.
 +
 +	/* pointers to regulators required for chargepump */
 +	struct regulator *cp_regulators[CP_REG_MAX];
++
++	/* headphone jack detection by a GPIO (Samsung's sec_jack, not the codec's MBHC) */
++	struct snd_soc_jack hp_jack;
++	struct snd_soc_jack_gpio hp_jack_gpio;
++	bool hp_jack_on;
 +};
 +
 +/* ---- the downstream resource manager (wcd9xxx-resmgr.c), reduced ---- */
@@ -8278,6 +8284,25 @@ Xperia Z2 project's WCD9320 port.
 +	snd_soc_dapm_new_controls(dapm, tapan_mclk_widgets, ARRAY_SIZE(tapan_mclk_widgets));
 +	snd_soc_dapm_add_routes(dapm, tapan_mclk_routes, ARRAY_SIZE(tapan_mclk_routes));
 +
++	/*
++	 * The headphone jack's detect switch on a GPIO (downstream sec_jack,
++	 * qcom,earjack-detect-gpio): the ALSA control "Headphone Jack" and an input switch event
++	 */
++	if (of_property_present(codec->dev->of_node, "hp-det-gpios")) {
++		ret = snd_soc_card_jack_new(codec->card, "Headphone Jack", SND_JACK_HEADPHONE,
++					    &tapan->hp_jack);
++		if (ret)
++			return ret;
++		tapan->hp_jack_gpio.name = "hp-det";
++		tapan->hp_jack_gpio.report = SND_JACK_HEADPHONE;
++		tapan->hp_jack_gpio.debounce_time = 200;
++		tapan->hp_jack_gpio.wake = true;
++		ret = snd_soc_jack_add_gpiods(codec->dev, &tapan->hp_jack, 1, &tapan->hp_jack_gpio);
++		if (ret)
++			return dev_err_probe(codec->dev, ret, "Failed to set up jack detection\n");
++		tapan->hp_jack_on = true;
++	}
++
 +	/* the SLIMbus port interrupts, unused (no interrupt handler), enabled as downstream */
 +	tapan_slim_interface_init_reg(codec);
 +
@@ -8291,6 +8316,11 @@ Xperia Z2 project's WCD9320 port.
 +
 +	for (i = 0; i < NUM_DECIMATORS; i++)
 +		cancel_delayed_work_sync(&tx_hpf_work[i].dwork);
++
++	if (tapan->hp_jack_on) {
++		snd_soc_jack_free_gpios(&tapan->hp_jack, 1, &tapan->hp_jack_gpio);
++		tapan->hp_jack_on = false;
++	}
 +
 +	WCD9XXX_BG_CLK_LOCK(&tapan->resmgr);
 +	if (spkr_drv_wrnd > 0)

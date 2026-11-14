@@ -18,7 +18,7 @@ downstream msm8226.dtsi.
  #include "qcom-msm8226.dtsi"
  #include "pm8226.dtsi"
  
-@@ -758,3 +762,235 @@ &usb_hs_phy {
+@@ -758,3 +762,246 @@ &usb_hs_phy {
  	v1p8-supply = <&pm8226_l10>;
  	v3p3-supply = <&pm8226_l20>;
  };
@@ -129,12 +129,15 @@ downstream msm8226.dtsi.
 +				compatible = "slim217,e0";
 +				reg = <1 0>;
 +
-+				pinctrl-0 = <&cdc_reset_default &cdc_int_default &cdc_mclk_default>;
++				pinctrl-0 = <&cdc_reset_default &cdc_int_default &cdc_mclk_default &hp_det_default>;
 +				pinctrl-names = "default";
 +
 +				/* 9.6 MHz: the PMIC's divided crystal clock, on PM8226 GPIO1 */
 +				clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
 +				clock-names = "mclk";
++
++				/* the jack's detect switch (downstream earjack, qcom,earjack-detect-gpio) */
++				hp-det-gpios = <&tlmm 69 GPIO_ACTIVE_LOW>;
 +
 +				/* downstream qcom,cdc-micbias1-ext-cap (s3ve3g) */
 +				qcom,micbias1-ext-cap;
@@ -162,6 +165,14 @@ downstream msm8226.dtsi.
 +		function = "gpio";
 +		drive-strength = <16>;
 +		bias-disable;
++	};
++
++	/* low with a plug in: measured with the pull-up (high without a plug) */
++	hp_det_default: hp-det-default-state {
++		pins = "gpio69";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-pull-up;
 +	};
 +
 +	cdc_int_default: cdc-int-default-state {

@@ -1,15 +1,15 @@
 #!/sbin/openrc-run
-# Samsung Galaxy S III Neo: the audio output chosen last (speaker or headphones), see s3ve3g-audio
+# Samsung Galaxy S III Neo: the audio output follows the headphone jack (headphones while a plug
+# is in, the speaker otherwise), see s3ve3g-audio
 
-description="Audio output (speaker or headphones)"
+description="Audio output following the headphone jack"
+
+supervisor=supervise-daemon
+command=/usr/bin/s3ve3g-audio
+command_args="follow"
+respawn_delay=5
+respawn_max=10
 
 depend() {
 	after modules
-}
-
-start() {
-	ebegin "Restoring the audio output"
-	# in the background: the sound card comes up a few seconds after the ADSP has booted
-	( /usr/bin/s3ve3g-audio restore >/dev/null 2>&1 & )
-	eend 0
 }
