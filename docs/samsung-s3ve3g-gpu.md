@@ -272,7 +272,16 @@ DRM master as the device's only client:
   otherwise two instances compete for DRM master (`/sys/kernel/debug/dri/1/clients`; the one
   without master gets "Could not queue DRM page flip ... Permission denied").
 - No compositor, so no `grim`: check the screen by eye or with the camera.
-- The flicker workaround `FD_MESA_DEBUG=inorder` is in the script until the fixed Mesa is installed.
+- Audio: the script starts jackd on the card "Neo" (48 kHz, 512 frames, 2 periods, 16 bit, RT
+  priority 70) unless one runs, the dummy backend without the card. Alpine's jackd 1.9.22 on armv7
+  only reads attached option values (`-r48000 -p512`; with a space they come out as 0) and needs
+  `JACK_NO_AUDIO_RESERVATION=1` (no D-Bus session). 256 frames gave xruns even with jackd alone,
+  512 none with zynthian and Aeolus.
+- Restarting: the script stops the running zynthian (its launcher first) and waits until
+  `/dev/dri/card1` is closed: only the first client of a DRM device without a master becomes
+  master.
+- With Mesa 26.2.6-r1 (armv7 repository) the flicker is fixed; with Alpine's r0 set
+  `FD_MESA_DEBUG=inorder`.
 
 Touching or dragging sliders made the UI flicker; button backgrounds turned black until the next
 touch. The same under cage and on eglfs, gone with `QT_QUICK_BACKEND=software`; not helped by
@@ -288,6 +297,23 @@ view targets for buffer blits", MR 45580, "Fixing Flickering on A3xx", 2026-10-2
 samples the buffer through a 1D texture view, which a3xx encoded wrongly, corrupting Qt Quick's
 vertex data. `FD_MESA_DEBUG=inorder` (no staging for busy buffers) makes the flicker go away:
 the workaround until the fixed Mesa (the armv7 CI's `aports/mesa`, 26.2.6-r1) is installed.
+
+## Power key: screen off and on (2026-11-13)
+
+elogind (installed with the cage UI) powered the phone off on a short press of the power key:
+`HandlePowerKey=ignore` is in `/usr/lib/elogind/logind.conf`, which this elogind doesn't read
+(log: "Power key pressed short." -> "System is powering down."). A drop-in
+`/etc/elogind/logind.conf.d/50-s3ve3g-powerkey.conf` sets `HandlePowerKey`,
+`HandlePowerKeyLongPress`, `HandleLidSwitch` and `HandleLidSwitchExternalPower` to ignore (the Hall
+sensor is a lid switch for elogind: a flip cover would suspend).
+
+`tools/s3ve3g-debug/s3ve3g-powerkey.sh` (root, BusyBox sh) switches the screen with the key: the
+panel through its backlight device, `bl_power` 4/0 (patch 0008: display off and sleep in while the
+video stream goes on, sleep out, display on and the gamma table back; works without DRM master,
+so also under a Qt eglfs application), the touchscreen inhibited meanwhile
+(`/sys/class/input/inputN/inhibited`). Tested on the console and with zynthian on eglfs. Not yet in
+the device package (OpenRC service, the elogind drop-in). Suspend (s2idle, the only sleep state
+offered) untested; the power key is a wakeup source.
 
 ## Effort and blockers (estimates)
 

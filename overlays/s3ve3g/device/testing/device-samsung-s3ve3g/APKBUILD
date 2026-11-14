@@ -42,6 +42,10 @@ source="
 	s3ve3g-audio.sh
 	s3ve3g-audio.initd
 	s3ve3g-audio-rt.conf
+	s3ve3g-powerkey.sh
+	s3ve3g-powerkey.initd
+	s3ve3g-powerkey.service
+	s3ve3g-powerkey-logind.conf
 "
 
 build() {
@@ -104,6 +108,18 @@ package() {
 	install -Dm755 "$srcdir"/s3ve3g-audio.sh "$pkgdir"/usr/bin/s3ve3g-audio
 	# realtime scheduling and locked memory for the audio group (JACK, zynthian)
 	install -Dm644 "$srcdir"/s3ve3g-audio-rt.conf "$pkgdir"/etc/security/limits.d/95-s3ve3g-audio-rt.conf
+	# nura-builds: the power key switches the screen off and on (panel and touchscreen; works
+	# under a Qt eglfs application too), instead of logind powering the phone off (elogind
+	# doesn't read pmOS's /usr/lib/elogind/logind.conf with HandlePowerKey=ignore)
+	install -Dm755 "$srcdir"/s3ve3g-powerkey.sh "$pkgdir"/usr/bin/s3ve3g-powerkey
+	install -Dm644 "$srcdir"/s3ve3g-powerkey-logind.conf \
+		"$pkgdir"/etc/elogind/logind.conf.d/50-s3ve3g-powerkey.conf
+	install -Dm644 "$srcdir"/s3ve3g-powerkey-logind.conf \
+		"$pkgdir"/etc/systemd/logind.conf.d/50-s3ve3g-powerkey.conf
+	install -Dm644 "$srcdir"/s3ve3g-powerkey.service \
+		"$pkgdir"/usr/lib/systemd/system/s3ve3g-powerkey.service
+	ln -s ../s3ve3g-powerkey.service \
+		"$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/s3ve3g-powerkey.service
 
 	# bring-up: restart on an oops (alpine's 00-alpine.conf has kernel.panic = 120, no panic_on_oops)
 	install -Dm644 "$srcdir"/s3ve3g-panic.sysctl "$pkgdir"/etc/sysctl.d/90-s3ve3g-panic.conf
@@ -130,6 +146,7 @@ _openrc() {
 	install -Dm755 "$srcdir"/s3ve3g-firmware.initd "$subpkgdir"/etc/init.d/s3ve3g-firmware
 	install -Dm755 "$srcdir"/s3ve3g-screen-off.initd "$subpkgdir"/etc/init.d/s3ve3g-screen-off
 	install -Dm755 "$srcdir"/s3ve3g-audio.initd "$subpkgdir"/etc/init.d/s3ve3g-audio
+	install -Dm755 "$srcdir"/s3ve3g-powerkey.initd "$subpkgdir"/etc/init.d/s3ve3g-powerkey
 	# bring-up: a telnet login on the USB network before udev (busybox-extras' telnetd)
 	install -Dm755 "$srcdir"/s3ve3g-debug-telnet.initd "$subpkgdir"/etc/init.d/s3ve3g-debug-telnet
 }
@@ -150,4 +167,8 @@ c2dd96b3629995c6b54fc348a64f0c0fba87b18a11aa418e43e80f0d8ea6197a5cc373208279ace4
 bccab917b63ed8868d655c1d7141505dad917539c8a28bf774c0483a199b8fb43954c423a61f414904834808b8269fb110ff4bc883641ac7f257d740168e9995  s3ve3g-audio.sh
 5daf096a00e62a8a513373139f80d1705f594b483be2f5e5241a3f149d47d530afaefc714c49229d11dd23657033156760bc35bc2c5d80505d708dd717c631fb  s3ve3g-audio.initd
 0be37e5e590659526a81589d96645833a42cad13b7cd08331a11e4143e09229dddbc82cc681bff9d1891fd2cca95ecb22c99f2c0641a6aa796d11357ffcd080f  s3ve3g-audio-rt.conf
+11374cf54aff7dbe9f9142b623686cc9eb38be5d80d62a0f7f9c1f8be12cc1247fb0378e886241b3c0d210a19a44bdd59074039446635fd2d5d6211c5798d103  s3ve3g-powerkey.sh
+bd34eb0dd4383596ee930b23114ce976c47a357c7d216db7ea7cf1420d9c6a92ce49c40949258ddcf8d48b95847e6047bdbbc64c5ede3620831923b1216d2abb  s3ve3g-powerkey.initd
+b8ad7c9037238c6b740ffeb8d34c677d1cc413f43a419e798089d17af493ebe9bffef7912c2e6669bc48ceb3decb5a2f955e05ac4dfd19948156f72a59a98f91  s3ve3g-powerkey.service
+0b5a8e1a3c3b70de174f759879bf3c23e8b753359a6887954ee3bce6418db7e3f87b9def27bc26b4d89a28b0b989806cbf8593d734d0e62c71381c096d5fecd5  s3ve3g-powerkey-logind.conf
 "
