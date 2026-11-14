@@ -1,13 +1,109 @@
 # Samsung Galaxy S III Neo (s3ve3g): audio on mainline
 
-Research notes (2026-11-12), nothing implemented yet. Status: **no audio**. The codec, a WCD9306
-("Tapan") on SLIMbus, has no driver in mainline, in the msm8226-mainline fork or in pmaports; the
-rest of the chain (ADSP, QDSP6/APR, SLIMbus controller) is mainline and has been made to work on
-MSM8974, the sister SoC. Main cost: porting the codec driver.
+Status (2026-11-14): **speaker, headphones and the main microphone work**, with jack detection,
+an ALSA UCM profile and JACK. Branch `s3ve3g-audio` of nura-builds (worktree
+`../nura-builds-audio`), kernel patches 0016-0018, device package files `ucm-*.conf`,
+`s3ve3g-audio*`. Not done: the second microphone, the headset microphone and its buttons
+(3/4-pole detection), the earpiece, calls.
 
-Sources: the downstream LineageOS kernel `android_kernel_samsung_msm8226` (commit 011bada1b7d0),
-LineageOS `android_device_samsung_s3ve3g-common` (lineage-18.1), mainline v6.16, and the MSM8974
-work referenced below. "Unverified" marks what was inferred, not read or tested.
+| Part | State | Notes |
+|---|---|---|
+| ADSP (LPASS Q6) | works | firmware from the **modem** partition (`modem:/image/adsp.*`, not apnhlos), loaded at 0x0d900000 (relocatable) |
+| APR, q6core/afe/asm/adm | work | mainline QDSP6 on the old APR v2 firmware |
+| SLIMbus (NGD, BAM) | works | `qcom,slim-ngd-v1.5.0`, the ADSP is the bus manager |
+| WCD9306 codec | works | enumerates as `slim217,e0`, chip id `01 00 03 01`, version 1 (Tapan 2.0), QFUSE: WCD9306 |
+| Speaker (class D, RX4) | works | by ear |
+| Headphones (HPHL/HPHR, class H) | works | 440 Hz at -15 to -20 dBFS on a Scarlett, >50 dB channel separation |
+| Main microphone (AMIC1) | works | the speaker recorded at -15 dBFS, repeated captures identical |
+| Jack detection | works | TLMM 69, ALSA control "Headphone Jack"; the output follows it |
+| Second microphone (AMIC3/AMIC4) | open | powered and biased, picks up almost nothing from the speaker |
+| Headset mic, buttons | open | needs MIC BIAS2 while detecting and the PM8226 VADC (MPP8) |
+| Earpiece (EAR PA) | untested | in the driver (DAC1, EAR PA) |
+| 24 bit streams | 16 bit only | the firmware rejects 24 bit back ends and plays 24 bit front ends distorted |
+
+## Using it
+
+- Output: `sudo s3ve3g-audio speaker|headphones`, `s3ve3g-audio` shows the current one. The
+  OpenRC service `s3ve3g-audio` (`s3ve3g-audio follow`, supervised) switches to the headphones
+  when a plug goes in and to the speaker when it comes out.
+- Without an audio server: play on `plughw:CARD=Neo` (any rate and format) or
+  `hw:CARD=Neo,0` (48 kHz stereo, 16 bit). The ALSA `default` device points to PipeWire
+  (`99-pipewire-default.conf`), which doesn't run on the headless image.
+- Capture: `hw:CARD=Neo,1` (MultiMedia2; MultiMedia1 can't play and record at once), UCM device
+  `Mic`; the ADSP gives the mono mic on both channels.
+- UCM: `/usr/share/alsa/ucm2/conf.d/apq8096/Samsung Galaxy S III Neo.conf`, verb `HiFi`, devices
+  `Speaker`, `Headphones` (JackControl "Headphone Jack" for PipeWire), `Mic`. `alsaucm` forgets
+  its state between runs: `s3ve3g-audio` enables and disables the other device first.
+- JACK: `JACK_NO_AUDIO_RESERVATION=1 jackd -R -P 70 -d alsa -d hw:CARD=Neo,0 -r48000 -p256 -n2`
+  runs realtime as a user in the audio group (`/etc/security/limits.d/95-s3ve3g-audio-rt.conf`:
+  rtprio 95, memlock unlimited). jackd's driver options take optional arguments: `-r 48000` (with a
+  space) arrives as 0, write `-r48000` or `--rate=48000`. `alsa-plugins-jack` for `aplay -D jack`.
+
+## The kernel side (patches 0016-0018)
+
+- **0016, device tree:** `&adsp` with the APR services (q6asm DAIs 0-2), the SLIMbus BAM
+  (0xfe104000) and NGD (0xfe12f000), under `ngd@1` the interface device and the codec
+  (`slim217,e0`, `<0 0>` and `<1 0>`): reset TLMM 72 (active low), supplies S4/L25 (charge pump,
+  switched by the driver) and L6/L6/L4 (on from probe), MCLK, `hp-det-gpios` (TLMM 69, pull-up),
+  `qcom,micbias1-ext-cap`. The sound card (`qcom,msm8226-sndcard`): MultiMedia1/2 front ends,
+  SLIMbus playback (codec DAI 0) and capture (DAI 1), mic bias routing as downstream.
+- **MCLK:** 9.6 MHz from the RPM's `div_clk1` (`RPM_SMD_DIV_CLK1`, downstream "osr_clk") on PM8226
+  GPIO1 function 1 (pinctrl `cdc-mclk-default-state`). Unlike MSM8974 (where the Xperia Z2
+  project needed the PMIC's own divider), this works on MSM8226: the headphones play.
+- **0017, the WCD9306 driver** (`sound/soc/codecs/wcd9306*.{c,h}`): downstream `wcd9306.c` as
+  Samsung built it (`CONFIG_SAMSUNG_JACK`: no MBHC), unifdef'd, converted to the component API
+  with its function and register names kept (`TAPAN_A_*`, `WCD9XXX_A_*`; the regmap adds the
+  SLIMbus offset 0x800 through `reg_base`). The downstream resource manager is reduced to
+  bandgap, clock block (MCLK/RCO), RX bias and micbias filters (no MBHC notifiers);
+  `wcd9306-clsh.c` is downstream's class H state machine. SLIMbus streams (hw_params, trigger,
+  channel maps) follow mainline's wcd9335 and the Z2 project's WCD9320 port, with its fixes
+  (per-port mux state, unchanged writes ignored, stream torn down on stop). An `MCLK` supply
+  widget switches the clock (reference counted). Left out: MBHC/impedance, ANC, I2S, WCD9302
+  tables, SSR, the IIR coefficient controls.
+- **0018, machine driver:** mainline's APQ8096 driver (DT links, SLIMbus channels 144+ for RX
+  and 128+ for TX, as downstream `msm8226.c`), the back end fixed at 16 bit (as sdm845.c), and
+  with `qcom,msm8226-sndcard` 16 bit front ends.
+
+### Bugs found on the way
+
+- **`devm_regmap_init_slimbus()` is broken in mainline:** `__devm_regmap_init_slimbus()` passes
+  `&slimbus` (the address of its local pointer) as the bus context. Every access then goes through
+  a stale stack address: -EINVAL at boot, an oops in `slim_do_transfer()` in other timing.
+  wcd9335 uses the non-devm variant; so does this driver. Worth a patch upstream.
+- **A rebind needs new SLIMbus logical addresses:** the probe resets the codec, but the core keeps
+  `is_laddr_valid` and its status "up" (no status callback, messages to the old address time
+  out). The driver reports the codec and the interface device absent before the reset
+  (`slim_report_absent()`, exported but only declared in the core's private header).
+- **24 bit:** the ADSP refuses a 24 bit SLIMbus AFE port (`AFE_PORT_CMD_DEVICE_START` error 1)
+  and plays 24 bit front end streams distorted and ~20 dB down.
+- **A card rebind** re-probes the component: its mux state has to be reset with the channel lists.
+
+### Microphones
+
+ADC-to-decimator pairing matters (each ADC only through certain decimators, silently otherwise):
+ADC1 (main mic) works through DEC1. ADC3 and ADC4 (with MIC BIAS1/MIC BIAS2 External, the
+downstream routing) power up but record the speaker only at -50 to -60 dBFS, mostly its second
+harmonic. ADC2 is the headset mic (a TRS cable grounds its contact). To try with someone talking
+into the top of the phone.
+
+## Testing without ears
+
+The headphone out on a Focusrite Scarlett (inputs 1 and 2; the phone's left channel arrives on
+input 2): `pw-record` both inputs while the phone plays, RMS and dominant frequency per channel
+(the scripts were `rec-test.sh` and `wavstat.py` in the session's scratch directory). The main
+mic by acoustic loopback: a tone on the speaker, recorded through `hw:CARD=Neo,1`. DAPM state:
+`/sys/kernel/debug/asoc/Samsung Galaxy S III Neo/217:e0:1:0/dapm/`; registers:
+`/sys/kernel/debug/regmap/217:e0:1:0/registers` (cache for non-volatile ones; DAPM keeps a path
+up for 5 s after a stream, so wait before taking an idle snapshot).
+
+A codec module built on the host loads on the phone when the local build matches the phone's
+config exactly (BTF on, `LOCALVERSION=` empty, the same patches): `module_layout` otherwise.
+Host libbpf needs `HOSTCFLAGS=-Wno-error=incompatible-pointer-types-discards-qualifiers` with
+clang 23. Build modules through the normal targets, not `M=` (that writes into the source tree).
+
+# Research notes (2026-11-12)
+
+The notes below are from before the bring-up; where they differ from the above, the above holds.
 
 ## Hardware (downstream device tree and drivers)
 

@@ -98,3 +98,27 @@ agent (e.g. for the WCD9306 audio codec) can work offline for a long time (drive
 in its own builder directory and port if needed) and should ask before using the phone. Kernel
 patches of both go into the same overlay: number them in order and regenerate checksums; rebase
 on each other's patches before deploying.
+
+## What the audio bring-up added (2026-11-13/14)
+
+- **Look where the firmware really is:** the ADSP image is in the modem partition on this phone,
+  not apnhlos. Mount every firmware partition and `ls` before concluding a blob is missing.
+- **Port a downstream driver whole, then cut:** for the WCD9306 the downstream file was run
+  through the kernel's own `scripts/unifdef` with the board's config (`-DCONFIG_SAMSUNG_JACK`
+  and so on), split into top-level chunks by a small script, the unneeded ones (MBHC, ANC, I2S,
+  SSR) dropped, the API converted by regular expressions (`snd_soc_codec` -> component), and the
+  downstream internals it still called provided by a small compatibility layer under the same
+  names. The hardware sequences stay exactly as downstream wrote them, and the code can be
+  compared line by line. A mainline-style template (here the Xperia Z2 project's WCD9320) is
+  for the parts that are mainline-specific (SLIMbus streams, regmap, probe).
+- **Fast module iteration:** a full local build with the phone's exact config (BTF on,
+  `LOCALVERSION=`) makes modules that load on the phone; a codec change is then a copy and a
+  reload instead of a 15-minute VM build. Unbind the card's machine driver first. Build through
+  normal targets, never `M=` with `O=` (it writes into the source tree).
+- **Mainline helpers can be broken:** `devm_regmap_init_slimbus()` passes a stale stack address
+  as the bus context. When a well-trodden path fails with a strange errno, read the helper.
+- **Measure audio instead of asking:** the headphone out into an audio interface on the host
+  (`pw-record`, numpy for RMS and frequency) answers "does it play, which channel, distorted?"
+  without anyone listening; the microphone by acoustic loopback from the speaker.
+- **The screen:** something can switch it on while you work (a key press, a service restart).
+  Check `bl_power` after every step that touches the system, not only after boot.
