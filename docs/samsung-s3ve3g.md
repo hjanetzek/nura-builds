@@ -117,6 +117,20 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
     most boots: a blue screen (the mixer's border colour) until `s3ve3g-screen on`. Not getty,
     seatd or console writes; detaching fbcon before the DPMS blank made it worse.
   - The GPU's GDSC (oxili_cx) stayed on after kmscube quit (GPU and SMMU runtime-active).
+- **Slow UI (zynthian view switches ~560 ms by touch, fixed by patch 0022).** Not the IOMMU:
+  every runtime suspend of the GPU spun for 1 s and failed (-EBUSY) because "drm/msm/a3xx: Drain
+  VBIF before GPU suspend" (7.2) waits for six VBIF XIN acks and the A305B has three (HALT_CTRL1
+  0x70007); a frame submitted meanwhile waited for that suspend: 1 in 3 GPU jobs took
+  100-900 ms instead of ~20 ms. Measured with ftrace (drm_sched_job_run -> GPU irq, rpm events):
+  after 0022 jobs 20 ms median, 24 ms max; runtime suspend under 1 ms. Over OSC (no touch) a view
+  switch took ~160 ms CPU (Python/Qt) + ~20 ms GPU on 6.16 and 7.3.4 alike; the touch path itself
+  (MMS144 interrupts) was fine. zynthian-ui's spike (`spike.py --bench`) switches in 2-25 ms.
+- **TODO: GPU/kernel test suites** to run on 7.3.4 (and 6.16.12 for comparison): igt-gpu-tools
+  msm tests (msm_submit, msm_mapping, msm_recovery, msm_shrink, ...) for the IOMMU, submit and
+  recovery paths; dEQP-GLES2/GLES3 (VK-GL-CTS) via deqp-runner, compared with Mesa's expected
+  results for the Adreno 306 in src/freedreno/ci/ (deqp-freedreno-a306*.toml,
+  freedreno-a306-fails/flakes.txt); glmark2 (glmark2-es2-drm on KMS) as a benchmark on both
+  kernels; optionally piglit; fdperf (src/freedreno/perfcntrs) for GPU counters.
 
 ## A minimal base, locally
 

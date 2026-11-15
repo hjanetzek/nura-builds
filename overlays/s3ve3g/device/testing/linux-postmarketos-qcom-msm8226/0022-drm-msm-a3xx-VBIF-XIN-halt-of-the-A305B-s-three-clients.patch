@@ -1,0 +1,42 @@
+From: nura-builds
+Subject: [PATCH] drm/msm/a3xx: VBIF XIN halt of the A305B's three clients
+
+Since "drm/msm/a3xx: Drain VBIF before GPU suspend" (be0e82b8e0c9, 7.2) the runtime suspend
+halts the VBIF's XIN clients and waits for all six acks. The A305B of MSM8226 has three: it
+acks bits 0-2 (VBIF_XIN_HALT_CTRL1 reads 0x70007), so every runtime suspend spun for the 1 s
+idle timeout and then failed with -EBUSY. A submit arriving meanwhile waited for the suspend
+to give up: zynthian's frames took 100-1000 ms instead of 15-20 ms (view switches by touch
+about 560 ms instead of instant on 6.16). Halt and wait for the three clients on A305B.
+
+Measured on the phone (zynthian on eglfs, view switches over OSC at 0.3-3 s intervals):
+GPU job run -> completion IRQ median 20 ms, max 24 ms (before: up to 900 ms, 1 in 3 jobs over
+100 ms); runtime suspend 1.4-2.2 ms (before: 1.0 s, then -EBUSY).
+---
+diff --git a/drivers/gpu/drm/msm/adreno/a3xx_gpu.c b/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
+index 0259e60b8011..b602ae1e768d 100644
+--- a/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
++++ b/drivers/gpu/drm/msm/adreno/a3xx_gpu.c
+@@ -500,14 +500,18 @@ static u64 a3xx_gpu_busy(struct msm_gpu *gpu, unsigned long *out_sample_rate)
+ 
+ static int a3xx_vbif_halt(struct msm_gpu *gpu)
+ {
++	/*
++	 * A305B (MSM8226) has three XIN clients: it acks bits 0-2 only (HALT_CTRL1 0x70007), and
++	 * waiting for six made every runtime suspend time out after 1 s and fail with -EBUSY,
++	 * while a new submit waited for it (100-1000 ms stalls of the UI).
++	 */
++	u32 mask = adreno_is_a305b(to_adreno_gpu(gpu)) ? GENMASK(2, 0) :
++						      A3XX_VBIF_XIN_HALT_CTRL0_MASK;
+ 	u32 ack;
+ 	int ret;
+ 
+-	gpu_write(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL0,
+-		  A3XX_VBIF_XIN_HALT_CTRL0_MASK);
+-	ret = spin_until(((ack = gpu_read(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL1)) &
+-			  A3XX_VBIF_XIN_HALT_CTRL0_MASK) ==
+-			 A3XX_VBIF_XIN_HALT_CTRL0_MASK);
++	gpu_write(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL0, mask);
++	ret = spin_until(((ack = gpu_read(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL1)) & mask) == mask);
+ 	gpu_write(gpu, REG_A3XX_VBIF_XIN_HALT_CTRL0, 0);
+ 
+ 	if (ret)
