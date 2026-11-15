@@ -99,8 +99,11 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
   Tested: console on msm from 11.7 s (10 s earlier than with 6.16's carveout), no IOMMU
   faults, DPMS off/on with the GDSC collapsing (mdss off-0) and back, brightness 0-24,
   bl_power 4/0, sound alongside. The GPU stays off (msm doesn't bind with a GPU it can't set
-  up): its IOMMU (kgsl_iommu, 0xfdb10000, no TZ secure id: downstream programs its global
-  registers itself) needs arm-smmu or more qcom_iommu work.
+  up). Its IOMMU (kgsl_iommu, 0xfdb10000, no TZ secure id: downstream programs its global
+  registers itself) probes with arm-smmu as a generic SMMU v1 (patch 0021, not applied: context
+  banks forced to +0x8000, the ID registers say +0x4000), and the GPU binds through it next to
+  the display, but its first submission never completes (hangcheck, no SMMU fault reported).
+  Details and next steps in 0021.
   Seen twice in five boots: after the screen-off service, the panel came back on showing only
   the mixer's blue border colour (something re-enabled the CRTC without the plane; `s3ve3g-screen
   on` gives the console back); not found yet which boot step does that.

@@ -1,0 +1,106 @@
+From: nura-builds
+Subject: [PATCH] WIP (not applied): MSM8226 GPU IOMMU on arm-smmu; s3ve3g: GPU through it
+
+NOT IN source=: the GPU binds, but hangs on its first submission. Needs CONFIG_ARM_SMMU=y.
+
+The GPU's IOMMU (downstream kgsl_iommu at 0xfdb10000, no TZ secure id: the kernel owns the
+global registers) as a generic SMMU v1 ("arm,smmu-v1"): clocks OXILICX AHB/AXI and GFX3D,
+power domain OXILICX_GDSC, global irq 38, context irqs 241; the GPU on stream 0 (gfx3d_user).
+arm-smmu probes it (SMMUv1, stage 1+2, 4 stream match groups, 3 context banks, page sizes
+0x41311000, 32-bit VA/PA) but its ID registers say 4 pages per half (context banks at +0x4000)
+while downstream's context banks are at +0x8000: numpage forced to 8.
+
+Result (2026-11-15): with msm loaded after the SMMU, the GPU binds through it ("bound
+fdb00000.gpu", card1 and renderD128, a330 PM4/PFP firmware loaded) next to the display, kmscube
+gets freedreno FD305 / GLES 3.0, but the first submission never completes (hangcheck, completed
+fence stays at the initial value, rptr/wptr 0/20 when draining) and no SMMU fault is reported
+(context irq 241, global 38). Reading the SMMU's global registers from /dev/mem past 0x400
+oopses (the phone restarts). Next: check the context bank's FSR/FAR while the GPU is on (a3xx
+CP fetching the ringbuffer through the IOMMU), the stream ID the GPU really uses, downstream's
+bfb registers (qcom,iommu-bfb-regs of &kgsl_iommu), whether a3xx needs a non-zero
+CP pagetable setup with an IOMMU (APQ8064's a320 works with msm_iommu).
+---
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index 97a7a9768d48..34fd1ca011ba 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -413,7 +413,12 @@ &blsp1_uart3 {
+  * set up: the GPU stays off.
+  */
+ &gpu {
+-	status = "disabled";
++	iommus = <&gpu_iommu 0>;
++	status = "okay";
++};
++
++&gpu_iommu {
++	status = "okay";
+ };
+ 
+ &mdp_iommu {
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+index 0ef18ddc1011..9000e3bdb1d9 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+@@ -1431,6 +1431,28 @@ cci_i2c0: i2c-bus@0 {
+ 			};
+ 		};
+ 
++		/*
++		 * The GPU's IOMMU (kgsl_iommu downstream): an SMMU v1 whose global registers the
++		 * kernel programs (no TrustZone secure id). Context banks at +0x8000: gfx3d_user
++		 * (stream 0), gfx3d_priv (1), gfx3d_spare (2).
++		 */
++		gpu_iommu: iommu@fdb10000 {
++			compatible = "qcom,msm8226-smmu-v1", "arm,smmu-v1";
++			reg = <0xfdb10000 0x10000>;
++			#global-interrupts = <1>;
++			interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
++			#iommu-cells = <1>;
++			clocks = <&mmcc OXILICX_AHB_CLK>,
++				 <&mmcc OXILICX_AXI_CLK>,
++				 <&mmcc OXILI_GFX3D_CLK>;
++			clock-names = "iface", "bus", "core";
++			power-domains = <&mmcc OXILICX_GDSC>;
++			status = "disabled";
++		};
++
+ 		gpu: gpu@fdb00000 {
+ 			compatible = "qcom,adreno-305.18", "qcom,adreno";
+ 			reg = <0xfdb00000 0x10000>;
+diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu.c b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+index 889a0966d36c..46ac876ecf73 100644
+--- a/drivers/iommu/arm/arm-smmu/arm-smmu.c
++++ b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+@@ -1854,6 +1854,12 @@ static int arm_smmu_device_cfg_probe(struct arm_smmu_device *smmu)
+ 			2 * size << smmu->pgshift, smmu->numpage);
+ 	/* Now properly encode NUMPAGE to subsequently derive SMMU_CB_BASE */
+ 	smmu->numpage = size;
++	/*
++	 * MSM8226's GPU SMMU (Qualcomm SMMU v1) reports 4 pages per half, but its context banks
++	 * are at +0x8000 (downstream's kgsl_iommu: gfx3d_user at 0xfdb18000).
++	 */
++	if (of_device_is_compatible(smmu->dev->of_node, "qcom,msm8226-smmu-v1"))
++		smmu->numpage = 8;
+ 
+ 	smmu->num_s2_context_banks = FIELD_GET(ARM_SMMU_ID1_NUMS2CB, id);
+ 	smmu->num_context_banks = FIELD_GET(ARM_SMMU_ID1_NUMCB, id);
+@@ -1953,6 +1959,7 @@ ARM_SMMU_MATCH_DATA(qcom_smmuv2, ARM_SMMU_V2, QCOM_SMMUV2);
+ 
+ static const struct of_device_id arm_smmu_of_match[] = {
+ 	{ .compatible = "arm,smmu-v1", .data = &smmu_generic_v1 },
++	{ .compatible = "qcom,msm8226-smmu-v1", .data = &smmu_generic_v1 },
+ 	{ .compatible = "arm,smmu-v2", .data = &smmu_generic_v2 },
+ 	{ .compatible = "arm,mmu-400", .data = &smmu_generic_v1 },
+ 	{ .compatible = "arm,mmu-401", .data = &arm_mmu401 },
+@@ -2124,6 +2131,7 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
+ 	u32 global_irqs, pmu_irqs;
+ 	irqreturn_t (*global_fault)(int irq, void *dev);
+ 
++
+ 	smmu = devm_kzalloc(dev, sizeof(*smmu), GFP_KERNEL);
+ 	if (!smmu) {
+ 		dev_err(dev, "failed to allocate arm_smmu_device\n");
