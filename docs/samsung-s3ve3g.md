@@ -77,7 +77,7 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
   1593.6 MHz (as on 6.16), sound: speaker, headphones, main mic, JACK, the display (below).
 - **JACK:** q6asm takes period sizes in steps of 480 frames (10 ms) since 6.18 (81c53b52de21):
   `-p480` or `-p960`, not `-p512` ("cannot set period size").
-- **Display through the MDP IOMMU (patches 0019, 0020), GPU off.** Since 6.17 msm refuses to
+- **Display through the MDP IOMMU (patches 0019, 0020).** Since 6.17 msm refuses to
   run without an IOMMU (drm_gpuvm: "Remove vram carveout support", "stop supporting no-IOMMU
   configuration"). MSM8226's MDP IOMMU (SMMU v1 at 0xfd928000, global registers owned by
   TrustZone, secure id 1, context banks from 0xfd930000) now runs on qcom_iommu. What it took:
@@ -98,15 +98,25 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
     physical framebuffer faulted and left TLB syncs timing out and the DSI DMA dead.
   Tested: console on msm from 11.7 s (10 s earlier than with 6.16's carveout), no IOMMU
   faults, DPMS off/on with the GDSC collapsing (mdss off-0) and back, brightness 0-24,
-  bl_power 4/0, sound alongside. The GPU stays off (msm doesn't bind with a GPU it can't set
-  up). Its IOMMU (kgsl_iommu, 0xfdb10000, no TZ secure id: downstream programs its global
-  registers itself) probes with arm-smmu as a generic SMMU v1 (patch 0021, not applied: context
-  banks forced to +0x8000, the ID registers say +0x4000), and the GPU binds through it next to
-  the display, but its first submission never completes (hangcheck, no SMMU fault reported).
-  Details and next steps in 0021.
-  Seen twice in five boots: after the screen-off service, the panel came back on showing only
-  the mixer's blue border colour (something re-enabled the CRTC without the plane; `s3ve3g-screen
-  on` gives the console back); not found yet which boot step does that.
+  bl_power 4/0, sound alongside.
+- **GPU through its own IOMMU (patch 0021).** The GPU's SMMU (kgsl_iommu, 0xfdb10000, no TZ
+  secure id) runs on arm-smmu as a generic SMMU v1 ("qcom,msm8226-smmu-v1"): context banks at
+  +0x8000 (its ID registers say +0x4000), no access flag (every access faulted with it: the
+  first submission never completed), TLBIVA instead of the missing TLBIVAL; streams 0 and 1
+  (gfx3d_user/priv). kmscube (FD305, GLES 3.0) renders at 60 fps on the panel, also after a DPMS
+  cycle, with sound alongside. The MDP IOMMU likewise has no TLBIVAL: it invalidates the whole
+  context (TLBIASID) on unmap, else stale pages stayed on screen.
+- Testing kmscube: run it as the OpenRC service (`rc-service kmscube start`), not from an SSH
+  one-liner with `sudo timeout ...`: that way it never takes over the display (on 6.16 too).
+- **Open issues:**
+  - Intermittent (2 of 4 boots with the GPU SMMU, none in 3 without it): the MDP IOMMU's TLB
+    syncs time out during msm's init (2x 5 s) and the first panel enable fails (DSI -110): the
+    screen stays black until the next DPMS cycle (`s3ve3g-screen off`/`on` works). Keeping the
+    GPU SMMU powered made one boot clean, the next not; cause unknown.
+  - After the screen-off service (~20 s), something re-enables the CRTC without its plane in
+    most boots: a blue screen (the mixer's border colour) until `s3ve3g-screen on`. Not getty,
+    seatd or console writes; detaching fbcon before the DPMS blank made it worse.
+  - The GPU's GDSC (oxili_cx) stayed on after kmscube quit (GPU and SMMU runtime-active).
 
 ## A minimal base, locally
 

@@ -13,6 +13,9 @@ before that it stays in bypass.
   short-descriptor page tables (ARM_V7S, TTBCR 0, PRRR/NMRR, the ASID in CONTEXTIDR), and
   SCTLR without the access flag (with AFE every access gave an access flag fault) and without
   stall on fault (a stall wedged the MDP and the DSI command DMA).
+- qcom_iommu: invalidate the whole context (TLBIASID) on unmap, as downstream: this SMMU v1
+  has no TLBIVAL (leaf invalidations were ignored: stale pages on screen after an unmap), and
+  TLB syncs after TLBIVA timed out.
 - qcom_iommu: program the context banks again on runtime resume; they lose their state when
   the power domain (MDSS GDSC) collapses with the display off.
 - msm_mdss (MSM8226 with an MDP IOMMU): stop the bootloader's splash scanout (INTF1 timing
@@ -154,7 +157,7 @@ index 586fe56028b1..5fd49dd754a4 100644
  	if (ret)
  		return ERR_PTR(ret);
 diff --git a/drivers/iommu/arm/arm-smmu/qcom_iommu.c b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
-index 21d18ce67b98..cac94fe4d15e 100644
+index 21d18ce67b98..a2285046334a 100644
 --- a/drivers/iommu/arm/arm-smmu/qcom_iommu.c
 +++ b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
 @@ -51,6 +51,7 @@ struct qcom_iommu_dev {
@@ -173,7 +176,27 @@ index 21d18ce67b98..cac94fe4d15e 100644
  };
  
  static struct qcom_iommu_domain *to_qcom_iommu_domain(struct iommu_domain *dom)
-@@ -213,6 +215,68 @@ static irqreturn_t qcom_iommu_fault(int irq, void *dev)
+@@ -151,6 +153,19 @@ static void qcom_iommu_tlb_inv_range_nosync(unsigned long iova, size_t size,
+ 	struct iommu_fwspec *fwspec = qcom_domain->fwspec;
+ 	unsigned i, reg;
+ 
++	/*
++	 * The SMMU v1 of MSM8226 has no TLBIVAL (ignored: stale TLB entries after an unmap), and
++	 * its TLB syncs after TLBIVA time out: invalidate the whole context, as downstream does.
++	 */
++	if (qcom_domain->iommu->v7s) {
++		for (i = 0; i < fwspec->num_ids; i++) {
++			struct qcom_iommu_ctx *ctx = to_ctx(qcom_domain, fwspec->ids[i]);
++
++			iommu_writel(ctx, ARM_SMMU_CB_S1_TLBIASID, ctx->asid);
++		}
++		return;
++	}
++
+ 	reg = leaf ? ARM_SMMU_CB_S1_TLBIVAL : ARM_SMMU_CB_S1_TLBIVA;
+ 
+ 	for (i = 0; i < fwspec->num_ids; i++) {
+@@ -213,6 +228,68 @@ static irqreturn_t qcom_iommu_fault(int irq, void *dev)
  	return IRQ_HANDLED;
  }
  
@@ -242,7 +265,7 @@ index 21d18ce67b98..cac94fe4d15e 100644
  static int qcom_iommu_init_domain(struct iommu_domain *domain,
  				  struct qcom_iommu_dev *qcom_iommu,
  				  struct device *dev)
-@@ -222,7 +286,6 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -222,7 +299,6 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  	struct io_pgtable_ops *pgtbl_ops;
  	struct io_pgtable_cfg pgtbl_cfg;
  	int i, ret = 0;
@@ -250,7 +273,7 @@ index 21d18ce67b98..cac94fe4d15e 100644
  
  	mutex_lock(&qcom_domain->init_mutex);
  	if (qcom_domain->iommu)
-@@ -231,7 +294,7 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -231,7 +307,7 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  	pgtbl_cfg = (struct io_pgtable_cfg) {
  		.pgsize_bitmap	= domain->pgsize_bitmap,
  		.ias		= 32,
@@ -259,7 +282,7 @@ index 21d18ce67b98..cac94fe4d15e 100644
  		.tlb		= &qcom_flush_ops,
  		.iommu_dev	= qcom_iommu->dev,
  	};
-@@ -239,7 +302,8 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -239,7 +315,8 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  	qcom_domain->iommu = qcom_iommu;
  	qcom_domain->fwspec = fwspec;
  
@@ -269,7 +292,7 @@ index 21d18ce67b98..cac94fe4d15e 100644
  	if (!pgtbl_ops) {
  		dev_err(qcom_iommu->dev, "failed to allocate pagetable ops\n");
  		ret = -ENOMEM;
-@@ -267,45 +331,13 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -267,45 +344,13 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  			continue;
  		}
  
@@ -318,7 +341,7 @@ index 21d18ce67b98..cac94fe4d15e 100644
  	/* Publish page table ops for map/unmap */
  	qcom_domain->pgtbl_ops = pgtbl_ops;
  
-@@ -794,6 +826,8 @@ static int qcom_iommu_device_probe(struct platform_device *pdev)
+@@ -794,6 +839,8 @@ static int qcom_iommu_device_probe(struct platform_device *pdev)
  		return -ENOMEM;
  	qcom_iommu->max_asid = max_asid;
  	qcom_iommu->dev = dev;
@@ -327,7 +350,7 @@ index 21d18ce67b98..cac94fe4d15e 100644
  
  	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
  	if (res) {
-@@ -899,8 +933,26 @@ static int __maybe_unused qcom_iommu_resume(struct device *dev)
+@@ -899,8 +946,26 @@ static int __maybe_unused qcom_iommu_resume(struct device *dev)
  	if (ret < 0)
  		return ret;
  

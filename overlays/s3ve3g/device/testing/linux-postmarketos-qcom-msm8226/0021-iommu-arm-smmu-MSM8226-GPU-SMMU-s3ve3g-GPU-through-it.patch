@@ -1,0 +1,128 @@
+From: nura-builds
+Subject: [PATCH] iommu/arm-smmu: MSM8226 GPU SMMU; s3ve3g: GPU through it
+
+The GPU's IOMMU (downstream kgsl_iommu at 0xfdb10000, no TrustZone secure id: the kernel owns
+the global registers) as a generic SMMU v1 on arm-smmu ("qcom,msm8226-smmu-v1"): clocks
+OXILICX AHB/AXI and GFX3D, power domain OXILICX_GDSC, global irq 38, context irqs 241. Quirks
+of this Qualcomm SMMU v1, as downstream's msm_iommu-v1 programs it:
+- the context banks are at +0x8000 (gfx3d_user at 0xfdb18000), though its ID registers say
+  4 pages per half (+0x4000);
+- no access flag in SCTLR (with AFE every access gave an access flag fault: the GPU's first
+  submission never completed);
+- invalidate by VA with TLBIVA (SMMU v1 has no TLBIVAL; for any SMMU v1).
+The GPU uses streams 0 (gfx3d_user) and 1 (gfx3d_priv), both to its domain.
+
+Tested: kmscube on /dev/dri/card1 renders (freedreno FD305, GLES 3.0) at 60 fps through the
+IOMMU, no faults, next to the display through the MDP IOMMU, also after a DPMS cycle with the
+MDSS GDSC collapsing; sound alongside. Not seen: the GPU's own GDSC collapsing (oxili_cx stayed
+on after kmscube quit).
+---
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index 97a7a9768d48..166a580873f3 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -408,12 +408,17 @@ &blsp1_uart3 {
+ 
+ /*
+  * msm (since 6.17) needs an IOMMU for the display (no phys contiguous scanout without one) and
+- * for the GPU (the VRAM carveout is gone): the MDP's is enabled here. The GPU's (kgsl_iommu,
+- * 0xfdb10000, no TrustZone secure id) has no driver, and msm doesn't bind with a GPU it can't
+- * set up: the GPU stays off.
++ * for the GPU (the VRAM carveout is gone): the MDP's on qcom_iommu (TrustZone owns its global
++ * registers), the GPU's (kgsl_iommu, no TrustZone secure id) on arm-smmu.
+  */
+ &gpu {
+-	status = "disabled";
++	/* gfx3d_user (stream 0) and gfx3d_priv (1): the CP fetches privileged */
++	iommus = <&gpu_iommu 0>, <&gpu_iommu 1>;
++	status = "okay";
++};
++
++&gpu_iommu {
++	status = "okay";
+ };
+ 
+ &mdp_iommu {
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+index 0ef18ddc1011..9000e3bdb1d9 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+@@ -1431,6 +1431,28 @@ cci_i2c0: i2c-bus@0 {
+ 			};
+ 		};
+ 
++		/*
++		 * The GPU's IOMMU (kgsl_iommu downstream): an SMMU v1 whose global registers the
++		 * kernel programs (no TrustZone secure id). Context banks at +0x8000: gfx3d_user
++		 * (stream 0), gfx3d_priv (1), gfx3d_spare (2).
++		 */
++		gpu_iommu: iommu@fdb10000 {
++			compatible = "qcom,msm8226-smmu-v1", "arm,smmu-v1";
++			reg = <0xfdb10000 0x10000>;
++			#global-interrupts = <1>;
++			interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
++			#iommu-cells = <1>;
++			clocks = <&mmcc OXILICX_AHB_CLK>,
++				 <&mmcc OXILICX_AXI_CLK>,
++				 <&mmcc OXILI_GFX3D_CLK>;
++			clock-names = "iface", "bus", "core";
++			power-domains = <&mmcc OXILICX_GDSC>;
++			status = "disabled";
++		};
++
+ 		gpu: gpu@fdb00000 {
+ 			compatible = "qcom,adreno-305.18", "qcom,adreno";
+ 			reg = <0xfdb00000 0x10000>;
+diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu.c b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+index 889a0966d36c..e5c9bd20169d 100644
+--- a/drivers/iommu/arm/arm-smmu/arm-smmu.c
++++ b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+@@ -289,6 +289,10 @@ static void arm_smmu_tlb_inv_range_s1(unsigned long iova, size_t size,
+ 	if (smmu->features & ARM_SMMU_FEAT_COHERENT_WALK)
+ 		wmb();
+ 
++	/* SMMU v1 has no TLBIVAL (MSM8226's GPU SMMU ignores it: stale TLB entries) */
++	if (reg == ARM_SMMU_CB_S1_TLBIVAL && smmu->version == ARM_SMMU_V1)
++		reg = ARM_SMMU_CB_S1_TLBIVA;
++
+ 	if (cfg->fmt != ARM_SMMU_CTX_FMT_AARCH64) {
+ 		iova = (iova >> 12) << 12;
+ 		iova |= cfg->asid;
+@@ -656,6 +660,13 @@ void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
+ 	if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+ 		reg |= ARM_SMMU_SCTLR_E;
+ 
++	/*
++	 * MSM8226's GPU SMMU (Qualcomm SMMU v1): no access flag, as downstream programs it; with
++	 * AFE every access to a mapped page gives an access flag fault.
++	 */
++	if (of_device_is_compatible(smmu->dev->of_node, "qcom,msm8226-smmu-v1"))
++		reg &= ~ARM_SMMU_SCTLR_AFE;
++
+ 	if (smmu->impl && smmu->impl->write_sctlr)
+ 		smmu->impl->write_sctlr(smmu, idx, reg);
+ 	else
+@@ -1854,6 +1865,12 @@ static int arm_smmu_device_cfg_probe(struct arm_smmu_device *smmu)
+ 			2 * size << smmu->pgshift, smmu->numpage);
+ 	/* Now properly encode NUMPAGE to subsequently derive SMMU_CB_BASE */
+ 	smmu->numpage = size;
++	/*
++	 * MSM8226's GPU SMMU (Qualcomm SMMU v1) reports 4 pages per half, but its context banks
++	 * are at +0x8000 (downstream's kgsl_iommu: gfx3d_user at 0xfdb18000).
++	 */
++	if (of_device_is_compatible(smmu->dev->of_node, "qcom,msm8226-smmu-v1"))
++		smmu->numpage = 8;
+ 
+ 	smmu->num_s2_context_banks = FIELD_GET(ARM_SMMU_ID1_NUMS2CB, id);
+ 	smmu->num_context_banks = FIELD_GET(ARM_SMMU_ID1_NUMCB, id);
+@@ -1953,6 +1970,7 @@ ARM_SMMU_MATCH_DATA(qcom_smmuv2, ARM_SMMU_V2, QCOM_SMMUV2);
+ 
+ static const struct of_device_id arm_smmu_of_match[] = {
+ 	{ .compatible = "arm,smmu-v1", .data = &smmu_generic_v1 },
++	{ .compatible = "qcom,msm8226-smmu-v1", .data = &smmu_generic_v1 },
+ 	{ .compatible = "arm,smmu-v2", .data = &smmu_generic_v2 },
+ 	{ .compatible = "arm,mmu-400", .data = &smmu_generic_v1 },
+ 	{ .compatible = "arm,mmu-401", .data = &arm_mmu401 },
