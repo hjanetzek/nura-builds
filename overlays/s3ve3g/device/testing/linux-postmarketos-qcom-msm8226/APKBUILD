@@ -67,6 +67,9 @@ source="
 	0013-drm-msm-commit-planes-after-the-modeset-enables.patch
 	0014-drm-msm-mdss-an-optional-misc_ahb-clock-for-MDP5.patch
 	0015-drm-msm-mdss-MSM8226-restore-the-MDP-IOMMU-and-VBIF-after-a-power-collapse.patch
+	0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
+	0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
+	0018-ASoC-qcom-apq8096-16-bit-SLIMbus-back-end.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -132,5 +135,8 @@ d2213d1ef2ed95fa38e9bb5971eb6f9605b2913eb1e272d0f801b4c7e3068d06b675c96eee1b9e69
 3a3776170178c80de577132cf2651a63ed686edb2d1c630b7cdd9dcaa001319412f5d75125d38ac8e03c3535de44d515cdaca289a06963efde9895e0909e538c  0013-drm-msm-commit-planes-after-the-modeset-enables.patch
 8657c75b676a56a0ae1317b402939e2702fe866b6cc4cd40852c813e1ca99710b5b2357ff5c6017a1134bc611db10179fa9f96a0b6f9a9aa0ba8d42e5e668864  0014-drm-msm-mdss-an-optional-misc_ahb-clock-for-MDP5.patch
 fcfd19bf06b061c5530a9abbda29e7d84001212c444dc55b81e6a289e9cb0524e73c17a186ab1907970f190802e67de6b9ebdc0b4eed0e94a4c58f884acfc663  0015-drm-msm-mdss-MSM8226-restore-the-MDP-IOMMU-and-VBIF-after-a-power-collapse.patch
+137985e4dda200dff648612394e6947464415a01f01396e1cfd9845fbdac5665249be50104be952ce849722263870ead6daeb3ead0711095c935a247750f4443  0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
+f2a7a76d93c8e138161a12cc401c91d7e2ee1f534a35b4c99e1ed19901b866e4855b22d0f5751df5cbcc7d6b27e17661a755904c828c040981e2944b273ac61d  0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
+a34f6bc890a7f5f2009954cd7a15706569f8f07d4ca9466ee73327e76d0c033ae9bfbec31d8acad708778e0419af7cbe9b2d73b09276d15a9e290bd09127c3f1  0018-ASoC-qcom-apq8096-16-bit-SLIMbus-back-end.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "

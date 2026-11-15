@@ -5,10 +5,12 @@ Ported from the downstream msm-3.4 wcd9306.c (as Samsung built it, without MBHC)
 wcd9xxx-common.c (class H) and wcd9xxx-core.c; SLIMbus streams in the style of wcd9335.c and the
 Xperia Z2 project's WCD9320 port.
 ---
+diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
+index 8e251e1d84b4..2a23a6e967d5 100644
 --- a/sound/soc/codecs/Kconfig
 +++ b/sound/soc/codecs/Kconfig
-@@ -2227,6 +2227,15 @@ config SND_SOC_UDA1380
- config SND_SOC_WCD_CLASSH
+@@ -2436,6 +2436,15 @@ config SND_SOC_WCD_CLASSH
+ config SND_SOC_WCD_COMMON
  	tristate
  
 +config SND_SOC_WCD9306
@@ -23,24 +25,29 @@ Xperia Z2 project's WCD9320 port.
  config SND_SOC_WCD9335
  	tristate "WCD9335 Codec"
  	depends on SLIMBUS
+diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
+index 3d122ace75ad..421a64a7927b 100644
 --- a/sound/soc/codecs/Makefile
 +++ b/sound/soc/codecs/Makefile
-@@ -339,6 +339,7 @@ snd-soc-uda1342-y := uda1342.o
- snd-soc-uda1380-y := uda1380.o
+@@ -358,6 +358,7 @@ snd-soc-uda1380-y := uda1380.o
  snd-soc-wcd-classh-y := wcd-clsh-v2.o
+ snd-soc-wcd-common-y := wcd-common.o
  snd-soc-wcd-mbhc-y := wcd-mbhc-v2.o
 +snd-soc-wcd9306-y := wcd9306.o wcd9306-clsh.o
  snd-soc-wcd9335-y := wcd9335.o
  snd-soc-wcd934x-y := wcd934x.o
  snd-soc-wcd937x-y := wcd937x.o
-@@ -760,6 +761,7 @@ obj-$(CONFIG_SND_SOC_UDA1342)	+= snd-soc-uda1342.o
- obj-$(CONFIG_SND_SOC_UDA1380)	+= snd-soc-uda1380.o
+@@ -802,6 +803,7 @@ obj-$(CONFIG_SND_SOC_UDA1380)	+= snd-soc-uda1380.o
  obj-$(CONFIG_SND_SOC_WCD_CLASSH)	+= snd-soc-wcd-classh.o
+ obj-$(CONFIG_SND_SOC_WCD_COMMON)	+= snd-soc-wcd-common.o
  obj-$(CONFIG_SND_SOC_WCD_MBHC)	+= snd-soc-wcd-mbhc.o
 +obj-$(CONFIG_SND_SOC_WCD9306)	+= snd-soc-wcd9306.o
  obj-$(CONFIG_SND_SOC_WCD9335)	+= snd-soc-wcd9335.o
  obj-$(CONFIG_SND_SOC_WCD934X)	+= snd-soc-wcd934x.o
  obj-$(CONFIG_SND_SOC_WCD937X)	+= snd-soc-wcd937x.o
+diff --git a/sound/soc/codecs/wcd9306-clsh.c b/sound/soc/codecs/wcd9306-clsh.c
+new file mode 100644
+index 000000000000..fe504246eca0
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306-clsh.c
 @@ -0,0 +1,703 @@
@@ -747,6 +754,9 @@ Xperia Z2 project's WCD9320 port.
 +	clsh->ncp_users[NCP_FCLK_LEVEL_5] = 0;
 +}
 +EXPORT_SYMBOL_GPL(wcd9306_clsh_init);
+diff --git a/sound/soc/codecs/wcd9306-clsh.h b/sound/soc/codecs/wcd9306-clsh.h
+new file mode 100644
+index 000000000000..9b3425ae8eed
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306-clsh.h
 @@ -0,0 +1,73 @@
@@ -823,6 +833,9 @@ Xperia Z2 project's WCD9320 port.
 +		      u8 req_state, bool req_type, u8 clsh_event);
 +
 +#endif
+diff --git a/sound/soc/codecs/wcd9306-regs.h b/sound/soc/codecs/wcd9306-regs.h
+new file mode 100644
+index 000000000000..d999b8d8b98a
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306-regs.h
 @@ -0,0 +1,1295 @@
@@ -2121,6 +2134,9 @@ Xperia Z2 project's WCD9320 port.
 +#define TAPAN_A_CDC_MBHC_SPARE__POR               0x00
 +
 +#endif
+diff --git a/sound/soc/codecs/wcd9306-tables.h b/sound/soc/codecs/wcd9306-tables.h
+new file mode 100644
+index 000000000000..ec52e4296e97
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306-tables.h
 @@ -0,0 +1,1010 @@
@@ -3134,6 +3150,9 @@ Xperia Z2 project's WCD9320 port.
 +};
 +
 +#endif
+diff --git a/sound/soc/codecs/wcd9306.c b/sound/soc/codecs/wcd9306.c
+new file mode 100644
+index 000000000000..973971aeaf43
 --- /dev/null
 +++ b/sound/soc/codecs/wcd9306.c
 @@ -0,0 +1,5549 @@
@@ -3995,7 +4014,7 @@ Xperia Z2 project's WCD9320 port.
 +{
 +	u8 ear_pa_gain;
 +	int rc = 0;
-+	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct snd_soc_component *codec = snd_kcontrol_chip(kcontrol);
 +
 +	ear_pa_gain = snd_soc_component_read(codec, TAPAN_A_RX_EAR_GAIN);
 +	ear_pa_gain = ear_pa_gain >> 5;
@@ -4029,7 +4048,7 @@ Xperia Z2 project's WCD9320 port.
 +{
 +	u8 ear_pa_gain;
 +	int rc = 0;
-+	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct snd_soc_component *codec = snd_kcontrol_chip(kcontrol);
 +
 +	dev_dbg(codec->dev, "%s: ucontrol->value.integer.value[0]  = %ld\n",
 +			 __func__, ucontrol->value.integer.value[0]);
@@ -4060,7 +4079,7 @@ Xperia Z2 project's WCD9320 port.
 +					struct snd_kcontrol *kcontrol,
 +					struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct snd_soc_component *codec = snd_kcontrol_chip(kcontrol);
 +	int iir_idx = ((struct soc_mixer_control *)
 +					kcontrol->private_value)->reg;
 +	int band_idx = ((struct soc_mixer_control *)
@@ -4080,7 +4099,7 @@ Xperia Z2 project's WCD9320 port.
 +					struct snd_kcontrol *kcontrol,
 +					struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct snd_soc_component *codec = snd_kcontrol_chip(kcontrol);
 +	int iir_idx = ((struct soc_mixer_control *)
 +					kcontrol->private_value)->reg;
 +	int band_idx = ((struct soc_mixer_control *)
@@ -4105,7 +4124,7 @@ Xperia Z2 project's WCD9320 port.
 +			       struct snd_ctl_elem_value *ucontrol)
 +{
 +
-+	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct snd_soc_component *codec = snd_kcontrol_chip(kcontrol);
 +	int comp = ((struct soc_mixer_control *)
 +		    kcontrol->private_value)->shift;
 +	struct tapan_priv *tapan = snd_soc_component_get_drvdata(codec);
@@ -4117,7 +4136,7 @@ Xperia Z2 project's WCD9320 port.
 +static int tapan_set_compander(struct snd_kcontrol *kcontrol,
 +			       struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_component *codec = snd_soc_kcontrol_component(kcontrol);
++	struct snd_soc_component *codec = snd_kcontrol_chip(kcontrol);
 +	struct tapan_priv *tapan = snd_soc_component_get_drvdata(codec);
 +	int comp = ((struct soc_mixer_control *)
 +		    kcontrol->private_value)->shift;
@@ -4774,7 +4793,7 @@ Xperia Z2 project's WCD9320 port.
 +static int wcd9306_put_dec_enum(struct snd_kcontrol *kcontrol,
 +			      struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_widget(kcontrol);
++	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_to_widget(kcontrol);
 +	struct snd_soc_component *codec = snd_soc_dapm_to_component(w->dapm);
 +	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 +	unsigned int dec_mux, decimator;
@@ -4816,7 +4835,7 @@ Xperia Z2 project's WCD9320 port.
 +		goto out;
 +	}
 +
-+	dev_dbg(w->dapm->dev, "%s(): widget = %s decimator = %u dec_mux = %u\n"
++	dev_dbg(snd_soc_dapm_to_dev(w->dapm), "%s(): widget = %s decimator = %u dec_mux = %u\n"
 +		, __func__, w->name, decimator, dec_mux);
 +
 +	switch (decimator) {
@@ -7771,8 +7790,8 @@ Xperia Z2 project's WCD9320 port.
 +
 +static int slim_rx_mux_get(struct snd_kcontrol *kc, struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_widget(kc);
-+	struct tapan_priv *tapan = dev_get_drvdata(w->dapm->dev);
++	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_to_widget(kc);
++	struct tapan_priv *tapan = dev_get_drvdata(snd_soc_dapm_to_dev(w->dapm));
 +
 +	ucontrol->value.enumerated.item[0] = tapan->rx_port_value[w->shift];
 +
@@ -7781,8 +7800,8 @@ Xperia Z2 project's WCD9320 port.
 +
 +static int slim_rx_mux_put(struct snd_kcontrol *kc, struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_widget(kc);
-+	struct tapan_priv *tapan = dev_get_drvdata(w->dapm->dev);
++	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_to_widget(kc);
++	struct tapan_priv *tapan = dev_get_drvdata(snd_soc_dapm_to_dev(w->dapm));
 +	struct soc_enum *e = (struct soc_enum *)kc->private_value;
 +	u32 port_id = w->shift;
 +	unsigned int val = ucontrol->value.enumerated.item[0];
@@ -7822,8 +7841,8 @@ Xperia Z2 project's WCD9320 port.
 +
 +static int slim_tx_mixer_get(struct snd_kcontrol *kc, struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_widget(kc);
-+	struct tapan_priv *tapan = dev_get_drvdata(w->dapm->dev);
++	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_to_widget(kc);
++	struct tapan_priv *tapan = dev_get_drvdata(snd_soc_dapm_to_dev(w->dapm));
 +	struct soc_mixer_control *mixer = (struct soc_mixer_control *)kc->private_value;
 +	int dai_id = w->shift;
 +	int port_id = mixer->shift;
@@ -7841,8 +7860,8 @@ Xperia Z2 project's WCD9320 port.
 +
 +static int slim_tx_mixer_put(struct snd_kcontrol *kc, struct snd_ctl_elem_value *ucontrol)
 +{
-+	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_widget(kc);
-+	struct tapan_priv *tapan = dev_get_drvdata(w->dapm->dev);
++	struct snd_soc_dapm_widget *w = snd_soc_dapm_kcontrol_to_widget(kc);
++	struct tapan_priv *tapan = dev_get_drvdata(snd_soc_dapm_to_dev(w->dapm));
 +	struct soc_mixer_control *mixer = (struct soc_mixer_control *)kc->private_value;
 +	int enable = ucontrol->value.integer.value[0];
 +	int dai_id = w->shift;
@@ -8212,7 +8231,7 @@ Xperia Z2 project's WCD9320 port.
 +static int tapan_codec_probe(struct snd_soc_component *codec)
 +{
 +	struct tapan_priv *tapan = snd_soc_component_get_drvdata(codec);
-+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(codec);
++	struct snd_soc_dapm_context *dapm = snd_soc_component_to_dapm(codec);
 +	int ret, i;
 +
 +	snd_soc_component_init_regmap(codec, tapan->regmap);

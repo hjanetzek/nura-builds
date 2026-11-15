@@ -6,7 +6,7 @@
 # - stops a running zynthian first (zynthian_desktop.sh restarts zynthian when it exits, so the
 #   launcher before its zynthian; two instances compete for DRM master and JACK)
 # - JACK: an already running jackd is kept; otherwise jackd on the card "Neo" (WCD9306), 48 kHz,
-#   JACK_PERIOD frames (default 512: 256 gives xruns even with jackd alone), 2 periods, 16 bit,
+#   JACK_PERIOD frames (default 480: q6asm takes multiples of 480 (10 ms) since 6.18; 256 gave xruns on 6.16), 2 periods, 16 bit,
 #   real-time priority 70; the dummy backend without the card. Alpine's jackd 1.9.22 on armv7 reads
 #   option values only when attached (-r48000; "-r 48000" gives 0 Hz), and needs
 #   JACK_NO_AUDIO_RESERVATION=1 without a D-Bus session. The output (speaker or headphones):
@@ -20,7 +20,7 @@
 # - Mesa 26.2.6-r1 (nura-builds armv7 repository) fixes the freedreno a3xx flicker; with Alpine's
 #   26.2.6-r0 set FD_MESA_DEBUG=inorder
 # Logs: /tmp/zyn-eglfs.log, /tmp/jackd.log
-period=${JACK_PERIOD:-512}
+period=${JACK_PERIOD:-480}
 
 # A running zynthian: the launchers first (process name zynthian_deskto), then zynthian itself
 for p in $(pgrep -x zynthian_deskto); do kill "$p"; done

@@ -5,11 +5,13 @@ As sdm845.c, the back end at 16 bit: the MSM8226 ADSP firmware refuses to start 
 SLIMbus AFE port (AFE_PORT_CMD_DEVICE_START error 1). For qcom,msm8226-sndcard also the front
 ends at 16 bit: that firmware plays 24 bit streams distorted and attenuated (as if packed).
 ---
+diff --git a/sound/soc/qcom/apq8096.c b/sound/soc/qcom/apq8096.c
+index cfd6438dbcb3..17ebac4e9654 100644
 --- a/sound/soc/qcom/apq8096.c
 +++ b/sound/soc/qcom/apq8096.c
-@@ -3,10 +3,12 @@
+@@ -2,10 +2,12 @@
+ // Copyright (c) 2018, Linaro Limited
  
- #include <linux/mod_devicetable.h>
  #include <linux/module.h>
 +#include <linux/of.h>
  #include <linux/platform_device.h>
@@ -20,7 +22,7 @@ ends at 16 bit: that firmware plays 24 bit streams distorted and attenuated (as 
  #include "common.h"
  
  #define SLIM_MAX_TX_PORTS 16
-@@ -21,8 +23,16 @@ static int apq8096_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+@@ -20,8 +22,16 @@ static int apq8096_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
  	struct snd_interval *channels = hw_param_interval(params,
  					SNDRV_PCM_HW_PARAM_CHANNELS);
  
@@ -37,7 +39,7 @@ ends at 16 bit: that firmware plays 24 bit streams distorted and attenuated (as 
  
  	return 0;
  }
-@@ -89,7 +99,21 @@ static int apq8096_init(struct snd_soc_pcm_runtime *rtd)
+@@ -88,7 +98,21 @@ static int apq8096_init(struct snd_soc_pcm_runtime *rtd)
  	return 0;
  }
  
@@ -60,7 +62,7 @@ ends at 16 bit: that firmware plays 24 bit streams distorted and attenuated (as 
  {
  	struct snd_soc_dai_link *link;
  	int i;
-@@ -99,6 +123,8 @@ static void apq8096_add_be_ops(struct snd_soc_card *card)
+@@ -98,6 +122,8 @@ static void apq8096_add_be_ops(struct snd_soc_card *card)
  			link->be_hw_params_fixup = apq8096_be_hw_params_fixup;
  			link->init = apq8096_init;
  			link->ops = &apq8096_ops;
@@ -69,7 +71,7 @@ ends at 16 bit: that firmware plays 24 bit streams distorted and attenuated (as 
  		}
  	}
  }
-@@ -121,12 +147,13 @@ static int apq8096_platform_probe(struct platform_device *pdev)
+@@ -120,12 +146,13 @@ static int apq8096_platform_probe(struct platform_device *pdev)
  	if (ret)
  		return ret;
  
