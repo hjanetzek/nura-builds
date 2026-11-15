@@ -24,6 +24,22 @@ TZ calls return 0 (90112 bytes), then the SoC hangs and resets within ~1.5 s, wi
 in CMA and in a no-map reserved region alike. Brian Masney saw the same corrupted picture on
 MSM8974 in 2020 (RFC "ARM: dts: qcom: msm8974: add mdp5 iommu support", not merged).
 
+
+Second round (2026-11-15, after comparing with downstream's msm_iommu_sec.c and the MDSS
+splash handoff), each with the IOMMU bound by hand after boot and the secure context bank in
+the DT; all hang and reset the SoC 1.5-3 s after IOMMU_SECURE_PTBL_INIT returns 0:
+- IOMMU_SET_CP_POOL_SIZE (300 MB) first, as downstream does for MP >= 1.1.1: this TZ answers
+  -EOPNOTSUPP (-95), so downstream skips it here too;
+- the splash scanout stopped first (INTF1 timing engine off, 0xfd921300 := 0; the bootloader's
+  RGB0 pipe fetches 0x03200000), so the MDP fetches nothing when TZ maps its stream;
+- the secure context's interrupt as 47 (shared) instead of 46;
+- the table in CMA (0x58060000), in a no-map reserved region (no kernel mapping) and kmalloc'ed
+  like downstream (0x07dc0000), with the top 13 MB (0x5f300000, downstream's qsecom region,
+  never RAM for the downstream kernel) reserved no-map.
+Not tried: the secure table init at boot, before anything else runs (downstream's order; a hang
+there means a boot loop that needs download mode), downstream's bfb settings and halt around
+the context programming (only after the init, so not the cause of this hang). The cause of the
+reset is unknown; without PTBL_INIT TZ keeps the MDP's streams in bypass.
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 index be34e53c42f8..97a7a9768d48 100644

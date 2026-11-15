@@ -85,8 +85,10 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
   msm binds and DPMS with the GDSC collapsing works, but TrustZone keeps the MDSS traffic in
   bypass (the scanout reads the physical address equal to the IOVA: noise on the panel; DSI
   commands from an IOVA buffer reach nothing, from a physical one they do), and asking TZ for
-  the secure page tables (as downstream does at boot) resets the SoC ~1 s later. Details in the
-  patch. The GPU depends on this: msm binds the GPU as part of the display. Ways on: find what
+  the secure page tables (as downstream does at boot) resets the SoC 1.5-3 s later, also with
+  the splash scanout stopped first, the table kmalloc'ed like downstream or in no-map memory, and
+  downstream's qsecom region (top 13 MB) kept from Linux; SET_CP_POOL_SIZE isn't supported by
+  this TZ. Details in the patch; the experiment branches are `gfx*` in the kernel tree. The GPU depends on this: msm binds the GPU as part of the display. Ways on: find what
   makes TZ route the MDP streams to context bank 0 (downstream's order: secure ptbl init at
   boot, before the display probes; its bfb register settings), or bring a physically contiguous
   scanout path back into msm (what the carveout was).
