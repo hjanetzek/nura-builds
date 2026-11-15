@@ -10,8 +10,8 @@
 # bootloader adds ~840 characters and refuses more than 1024 in total. Only for the S III Neo:
 # earlycon=ramcon writes to RAM at 0x1FB00000. The USB switch (extcon-sm5502 on i2c-gpio) is built in:
 # as modules it probed after the initramfs's USB gadget setup, which found no UDC and gave up.
-# MODULE_ALLOW_BTF_MISMATCH: rebuilt kernels (pmbootstrap build --force, same version) load the
-# modules installed with an earlier build. simpledrm built in: it holds the splash framebuffer's
+# No DEBUG_INFO_BTF since 7.3.4 (the image has to stay small, see build()); with it went
+# MODULE_ALLOW_BTF_MISMATCH. simpledrm built in: it holds the splash framebuffer's
 # clocks and power domain from early on, and the console is on the screen before the initramfs.
 # Co-Maintainer: Luca Weiss <luca@lucaweiss.eu>
 maintainer="Stefan Hansson <newbyte@postmarketos.org>"

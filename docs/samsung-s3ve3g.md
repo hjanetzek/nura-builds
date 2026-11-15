@@ -53,6 +53,44 @@ off the "unused" MDSS clocks and power domain under the splash framebuffer). A d
 `qcom,msm-id` values are the downstream ones and lk2nd's), the memory layout (from the Tab 4 3G),
 the framebuffer format, touch with mms114.
 
+## Kernel 7.3.4 (branch s3ve3g-kernel-next, 2026-11-15)
+
+msm8226-mainline has nothing newer than `v6.16.12-msm8226-u2` (no 6.17+ branch; MSM8974's fork
+stops at 6.16 too), so the recipe now takes kernel.org's `linux-7.3.4.tar.xz` (latest stable;
+7.4 is at rc2) and applies the fork's stack as patch 0000 (`git format-patch` of its 56 commits
+on v6.16.12, ported: the QRTR bus needed `include/linux/device-id/qrtr.h` for the split
+`mod_devicetable.h`; dropped: the revert of "Limit command submission when no IOMMU" (that check
+is gone), "increase default vram carveout" (no carveout any more), and what went upstream since:
+the Moto G2 binding, the Xperia M2 DT and binding). pmaports' recipe itself applies no patches.
+Our patches: 0001, 0002, 0004-0008, 0010, 0011, 0013, 0014, 0016 as they were; 0012 (DSI bridge
+callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went upstream.
+
+- **Boot image layout:** the zImage is loaded at 0x8000, where the kernel is decompressed to;
+  the decompressor first copies itself past the end of the decompressed kernel, and that copy
+  must stay below the device tree, which the bootloader puts at 0x01e00000
+  (`deviceinfo_flash_offset_tags`). 6.16.12 had 0.7 MB to spare; 7.3.4 with
+  `CONFIG_DEBUG_INFO_BTF` (4.3 MB of `.BTF` in the image) overwrote the DTB and hung at the
+  Samsung logo. BTF is off now (pmOS' kconfig check wants it; nothing here uses it;
+  `MODULE_ALLOW_BTF_MISMATCH` goes with it), and the recipe's build() fails when the margin is
+  gone (7.3.4: ends at 0x1b1xxxx, 3 MB left).
+- Works (tested): boot, USB network, SSH, Wi-Fi, CPU scaling with the S2 voltages up to
+  1593.6 MHz (as on 6.16), sound: speaker, headphones, main mic, JACK.
+- **JACK:** q6asm takes period sizes in steps of 480 frames (10 ms) since 6.18 (81c53b52de21):
+  `-p480` or `-p960`, not `-p512` ("cannot set period size").
+- **Display and GPU: not on 7.x yet.** Since 6.17 msm refuses to run without an IOMMU (drm_gpuvm:
+  "Remove vram carveout support", "stop supporting no-IOMMU configuration": "no IOMMU, bailing
+  out"), for the display as well as the GPU. 0009 (display and GPU device tree) is left out, so
+  the screen is the bootloader's framebuffer (simpledrm console, no DPMS, no brightness, no GPU).
+  0019 (not applied) puts the MDP IOMMU (SMMU v1 at 0xfd928000, TZ secure id 1) on qcom_iommu:
+  msm binds and DPMS with the GDSC collapsing works, but TrustZone keeps the MDSS traffic in
+  bypass (the scanout reads the physical address equal to the IOVA: noise on the panel; DSI
+  commands from an IOVA buffer reach nothing, from a physical one they do), and asking TZ for
+  the secure page tables (as downstream does at boot) resets the SoC ~1 s later. Details in the
+  patch. The GPU depends on this: msm binds the GPU as part of the display. Ways on: find what
+  makes TZ route the MDP streams to context bank 0 (downstream's order: secure ptbl init at
+  boot, before the display probes; its bfb register settings), or bring a physically contiguous
+  scanout path back into msm (what the carveout was).
+
 ## A minimal base, locally
 
 As for the ODROID N2: pmbootstrap with a config of its own, UI `console` (a login on the screen:

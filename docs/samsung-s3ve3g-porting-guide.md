@@ -9,7 +9,7 @@ battery, Wi-Fi stability, upstreaming). Device facts: `samsung-s3ve3g.md`; displ
 
 - Branch `galaxy-s3-neo` of nura-builds, **local commits only, no push** during bring-up.
 - Kernel changes are patches in `overlays/s3ve3g/device/testing/linux-postmarketos-qcom-msm8226/`
-  (applied on msm8226-mainline's tag `v6.16.12-msm8226-u2`). Each patch goes into `source=` and
+  (on branch s3ve3g-kernel-next: applied on kernel.org 7.3.4 plus msm8226-mainline's stack as patch 0000; before: msm8226-mainline's tag `v6.16.12-msm8226-u2`). Each patch goes into `source=` and
   `sha512sums=` of its APKBUILD. No pkgrel bumps while iterating: the builder rebuilds with
   `--force`, the deploy compares files and the BOOT partition, not versions.
 - Device package (`device-samsung-s3ve3g`): services, udev rules, sysctl, install scripts. A file
