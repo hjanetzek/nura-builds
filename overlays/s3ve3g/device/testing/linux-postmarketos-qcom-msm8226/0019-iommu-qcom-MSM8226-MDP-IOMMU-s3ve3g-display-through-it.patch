@@ -1,0 +1,291 @@
+From: nura-builds
+Subject: [PATCH] WIP (not applied): iommu/qcom: MSM8226 MDP IOMMU; s3ve3g: display through it
+
+NOT IN source=: it doesn't work yet, kept as the starting point.
+
+msm needs an IOMMU since 6.17 (drm_gpuvm: "stop supporting no-IOMMU configuration",
+"Remove vram carveout support"); MSM8226 has none in its device tree. Its MDP IOMMU is an
+SMMU v1 (global registers at 0xfd928000, owned by TrustZone, secure id 1; context banks from
+0xfd930000), which qcom_iommu can drive: this adds the node (context bank 0, non-secure),
+iommus on the MDP, short-descriptor page tables for "qcom,msm8226-iommu" (downstream's
+msm_iommu-v1 uses them, TTBCR.EAE = 0), and programs the context banks again on runtime
+resume (they lose their state when the MDSS GDSC collapses). s3ve3g: MDP IOMMU on, GPU off
+(its IOMMU has no driver; msm doesn't bind with a GPU it can't set up).
+
+Result on the phone (2026-11-15): msm binds, the context bank is programmed (SCTLR.M = 1,
+FSR stays 0, LPAE and short descriptors alike), DPMS with the GDSC collapsing and coming back
+works, but the MDSS's traffic doesn't go through context bank 0: the scanout reads the
+physical address equal to the IOVA (noise on the panel) and DSI command DMA from an IOVA
+reaches nothing (the panel doesn't answer; with a physical TX buffer, a test hack, it does:
+power mode 0x9c). So TrustZone leaves the MDP's streams in bypass after
+qcom_scm_restore_sec_cfg(1, 0). Adding the secure context bank (qcom,msm-iommu-v1-sec,
+which makes qcom_iommu call IOMMU_SECURE_PTBL_SIZE/INIT, as downstream does at boot): both
+TZ calls return 0 (90112 bytes), then the SoC hangs and resets within ~1.5 s, with the table
+in CMA and in a no-map reserved region alike. Brian Masney saw the same corrupted picture on
+MSM8974 in 2020 (RFC "ARM: dts: qcom: msm8974: add mdp5 iommu support", not merged).
+
+---
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index be34e53c42f8..97a7a9768d48 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -406,7 +406,17 @@ &blsp1_uart3 {
+ 	status = "okay";
+ };
+ 
++/*
++ * msm (since 6.17) needs an IOMMU for the display (no phys contiguous scanout without one) and
++ * for the GPU (the VRAM carveout is gone): the MDP's is enabled here. The GPU's (kgsl_iommu,
++ * 0xfdb10000, no TrustZone secure id) has no driver, and msm doesn't bind with a GPU it can't
++ * set up: the GPU stays off.
++ */
+ &gpu {
++	status = "disabled";
++};
++
++&mdp_iommu {
+ 	status = "okay";
+ };
+ 
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+index 1d07195fa88d..0ef18ddc1011 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+@@ -1246,6 +1246,35 @@ mmcc: clock-controller@fd8c0000 {
+ 				      "dsi0pllbyte";
+ 		};
+ 
++		/*
++		 * The MDP's IOMMU (an SMMU v1; global registers at 0xfd928000 owned by TrustZone,
++		 * secure id 1), context bank 0 for the MDP (stream 0). Downstream: mdp_iommu in
++		 * msm-iommu-v1.dtsi. The secure context bank 1 (content protection) is left out.
++		 */
++		mdp_iommu: iommu@fd930000 {
++			compatible = "qcom,msm8226-iommu", "qcom,msm-iommu-v1";
++			ranges = <0 0xfd930000 0x2000>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			#iommu-cells = <1>;
++
++			clocks = <&mmcc MDSS_AHB_CLK>,
++				 <&mmcc MDSS_AXI_CLK>;
++			clock-names = "iface",
++				      "bus";
++			power-domains = <&mmcc MDSS_GDSC>;
++
++			qcom,iommu-secure-id = <1>;
++
++			status = "disabled";
++
++			iommu-ctx@0 {
++				compatible = "qcom,msm-iommu-v1-ns";
++				reg = <0x0 0x1000>;
++				interrupts = <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>;
++			};
++		};
++
+ 		mdss: display-subsystem@fd900000 {
+ 			compatible = "qcom,mdss";
+ 			reg = <0xfd900000 0x100>, <0xfd924000 0x1000>;
+@@ -1276,6 +1305,8 @@ mdss_mdp: display-controller@fd900000 {
+ 				reg = <0xfd900100 0x22000>;
+ 				reg-names = "mdp_phys";
+ 
++				iommus = <&mdp_iommu 0>;
++
+ 				interrupt-parent = <&mdss>;
+ 				interrupts = <0>;
+ 
+diff --git a/drivers/iommu/arm/arm-smmu/qcom_iommu.c b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
+index 21d18ce67b98..01c15e86a0c3 100644
+--- a/drivers/iommu/arm/arm-smmu/qcom_iommu.c
++++ b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
+@@ -51,6 +51,7 @@ struct qcom_iommu_dev {
+ 	void __iomem		*local_base;
+ 	u32			 sec_id;
+ 	u8			 max_asid;
++	bool			 v7s;	/* short-descriptor page tables (MSM8226/MSM8974 SMMU v1) */
+ 	struct qcom_iommu_ctx	*ctxs[];   /* indexed by asid */
+ };
+ 
+@@ -70,6 +71,7 @@ struct qcom_iommu_domain {
+ 	struct iommu_domain	 domain;
+ 	struct qcom_iommu_dev	*iommu;
+ 	struct iommu_fwspec	*fwspec;
++	struct io_pgtable_cfg	 pgtbl_cfg;	/* to program the contexts again after a power collapse */
+ };
+ 
+ static struct qcom_iommu_domain *to_qcom_iommu_domain(struct iommu_domain *dom)
+@@ -213,6 +215,58 @@ static irqreturn_t qcom_iommu_fault(int irq, void *dev)
+ 	return IRQ_HANDLED;
+ }
+ 
++static void qcom_iommu_ctx_program(struct qcom_iommu_ctx *ctx, bool v7s,
++				   const struct io_pgtable_cfg *cfg)
++{
++	u32 reg;
++
++	/* Disable context bank before programming */
++	iommu_writel(ctx, ARM_SMMU_CB_SCTLR, 0);
++
++	/* Clear context bank fault address fault status registers */
++	iommu_writel(ctx, ARM_SMMU_CB_FAR, 0);
++	iommu_writel(ctx, ARM_SMMU_CB_FSR, ARM_SMMU_CB_FSR_FAULT);
++
++	if (v7s) {
++		/* AArch32 short descriptor: TTBCR.EAE = 0, the ASID in CONTEXTIDR, PRRR/NMRR */
++		iommu_writel(ctx, ARM_SMMU_CB_TCR, cfg->arm_v7s_cfg.tcr);
++		iommu_writel(ctx, ARM_SMMU_CB_CONTEXTIDR, ctx->asid);
++		iommu_writel(ctx, ARM_SMMU_CB_TTBR0, cfg->arm_v7s_cfg.ttbr);
++		iommu_writel(ctx, ARM_SMMU_CB_TTBR1, 0);
++		iommu_writel(ctx, ARM_SMMU_CB_S1_MAIR0, cfg->arm_v7s_cfg.prrr);
++		iommu_writel(ctx, ARM_SMMU_CB_S1_MAIR1, cfg->arm_v7s_cfg.nmrr);
++	} else {
++		/* TTBRs */
++		iommu_writeq(ctx, ARM_SMMU_CB_TTBR0,
++				cfg->arm_lpae_s1_cfg.ttbr |
++				FIELD_PREP(ARM_SMMU_TTBRn_ASID, ctx->asid));
++		iommu_writeq(ctx, ARM_SMMU_CB_TTBR1, 0);
++
++		/* TCR */
++		iommu_writel(ctx, ARM_SMMU_CB_TCR2,
++				arm_smmu_lpae_tcr2(cfg));
++		iommu_writel(ctx, ARM_SMMU_CB_TCR,
++			     arm_smmu_lpae_tcr(cfg) | ARM_SMMU_TCR_EAE);
++
++		/* MAIRs (stage-1 only) */
++		iommu_writel(ctx, ARM_SMMU_CB_S1_MAIR0,
++				cfg->arm_lpae_s1_cfg.mair);
++		iommu_writel(ctx, ARM_SMMU_CB_S1_MAIR1,
++				cfg->arm_lpae_s1_cfg.mair >> 32);
++	}
++
++	/* SCTLR */
++	reg = ARM_SMMU_SCTLR_CFIE | ARM_SMMU_SCTLR_CFRE |
++	      ARM_SMMU_SCTLR_AFE | ARM_SMMU_SCTLR_TRE |
++	      ARM_SMMU_SCTLR_M | ARM_SMMU_SCTLR_S1_ASIDPNE |
++	      ARM_SMMU_SCTLR_CFCFG;
++
++	if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
++		reg |= ARM_SMMU_SCTLR_E;
++
++	iommu_writel(ctx, ARM_SMMU_CB_SCTLR, reg);
++}
++
+ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+ 				  struct qcom_iommu_dev *qcom_iommu,
+ 				  struct device *dev)
+@@ -222,7 +276,6 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+ 	struct io_pgtable_ops *pgtbl_ops;
+ 	struct io_pgtable_cfg pgtbl_cfg;
+ 	int i, ret = 0;
+-	u32 reg;
+ 
+ 	mutex_lock(&qcom_domain->init_mutex);
+ 	if (qcom_domain->iommu)
+@@ -231,7 +284,7 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+ 	pgtbl_cfg = (struct io_pgtable_cfg) {
+ 		.pgsize_bitmap	= domain->pgsize_bitmap,
+ 		.ias		= 32,
+-		.oas		= 40,
++		.oas		= qcom_iommu->v7s ? 32 : 40,
+ 		.tlb		= &qcom_flush_ops,
+ 		.iommu_dev	= qcom_iommu->dev,
+ 	};
+@@ -239,7 +292,8 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+ 	qcom_domain->iommu = qcom_iommu;
+ 	qcom_domain->fwspec = fwspec;
+ 
+-	pgtbl_ops = alloc_io_pgtable_ops(ARM_32_LPAE_S1, &pgtbl_cfg, qcom_domain);
++	pgtbl_ops = alloc_io_pgtable_ops(qcom_iommu->v7s ? ARM_V7S : ARM_32_LPAE_S1,
++					 &pgtbl_cfg, qcom_domain);
+ 	if (!pgtbl_ops) {
+ 		dev_err(qcom_iommu->dev, "failed to allocate pagetable ops\n");
+ 		ret = -ENOMEM;
+@@ -267,45 +321,13 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+ 			continue;
+ 		}
+ 
+-		/* Disable context bank before programming */
+-		iommu_writel(ctx, ARM_SMMU_CB_SCTLR, 0);
+-
+-		/* Clear context bank fault address fault status registers */
+-		iommu_writel(ctx, ARM_SMMU_CB_FAR, 0);
+-		iommu_writel(ctx, ARM_SMMU_CB_FSR, ARM_SMMU_CB_FSR_FAULT);
+-
+-		/* TTBRs */
+-		iommu_writeq(ctx, ARM_SMMU_CB_TTBR0,
+-				pgtbl_cfg.arm_lpae_s1_cfg.ttbr |
+-				FIELD_PREP(ARM_SMMU_TTBRn_ASID, ctx->asid));
+-		iommu_writeq(ctx, ARM_SMMU_CB_TTBR1, 0);
+-
+-		/* TCR */
+-		iommu_writel(ctx, ARM_SMMU_CB_TCR2,
+-				arm_smmu_lpae_tcr2(&pgtbl_cfg));
+-		iommu_writel(ctx, ARM_SMMU_CB_TCR,
+-			     arm_smmu_lpae_tcr(&pgtbl_cfg) | ARM_SMMU_TCR_EAE);
+-
+-		/* MAIRs (stage-1 only) */
+-		iommu_writel(ctx, ARM_SMMU_CB_S1_MAIR0,
+-				pgtbl_cfg.arm_lpae_s1_cfg.mair);
+-		iommu_writel(ctx, ARM_SMMU_CB_S1_MAIR1,
+-				pgtbl_cfg.arm_lpae_s1_cfg.mair >> 32);
+-
+-		/* SCTLR */
+-		reg = ARM_SMMU_SCTLR_CFIE | ARM_SMMU_SCTLR_CFRE |
+-		      ARM_SMMU_SCTLR_AFE | ARM_SMMU_SCTLR_TRE |
+-		      ARM_SMMU_SCTLR_M | ARM_SMMU_SCTLR_S1_ASIDPNE |
+-		      ARM_SMMU_SCTLR_CFCFG;
+-
+-		if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+-			reg |= ARM_SMMU_SCTLR_E;
+-
+-		iommu_writel(ctx, ARM_SMMU_CB_SCTLR, reg);
++		qcom_iommu_ctx_program(ctx, qcom_iommu->v7s, &pgtbl_cfg);
+ 
+ 		ctx->domain = domain;
+ 	}
+ 
++	qcom_domain->pgtbl_cfg = pgtbl_cfg;
++
+ 	/* Publish page table ops for map/unmap */
+ 	qcom_domain->pgtbl_ops = pgtbl_ops;
+ 
+@@ -794,6 +816,8 @@ static int qcom_iommu_device_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 	qcom_iommu->max_asid = max_asid;
+ 	qcom_iommu->dev = dev;
++	/* the SMMU v1 of MSM8226 (as downstream's msm_iommu-v1 uses it) takes short descriptors */
++	qcom_iommu->v7s = of_device_is_compatible(dev->of_node, "qcom,msm8226-iommu");
+ 
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+ 	if (res) {
+@@ -899,8 +923,26 @@ static int __maybe_unused qcom_iommu_resume(struct device *dev)
+ 	if (ret < 0)
+ 		return ret;
+ 
+-	if (dev->pm_domain)
+-		return qcom_scm_restore_sec_cfg(qcom_iommu->sec_id, 0);
++	if (dev->pm_domain) {
++		unsigned int i;
++
++		ret = qcom_scm_restore_sec_cfg(qcom_iommu->sec_id, 0);
++		if (ret)
++			return ret;
++
++		/*
++		 * The context banks lose their programming with the power domain (MSM8226's MDP
++		 * IOMMU is in the MDSS GDSC): program those in use again.
++		 */
++		for (i = 0; i <= qcom_iommu->max_asid; i++) {
++			struct qcom_iommu_ctx *ctx = qcom_iommu->ctxs[i];
++
++			if (!ctx || !ctx->domain || ctx->secured_ctx)
++				continue;
++			qcom_iommu_ctx_program(ctx, qcom_iommu->v7s,
++					       &to_qcom_iommu_domain(ctx->domain)->pgtbl_cfg);
++		}
++	}
+ 
+ 	return ret;
+ }

@@ -12,10 +12,23 @@ the clock to HS afterwards. Do the same: clear the HS force in
 dsi_ctrl_enable(), set it for a continuous clock in a new bridge enable,
 which runs after the panel's prepare and before its enable.
 ---
+diff --git a/drivers/gpu/drm/msm/dsi/dsi.h b/drivers/gpu/drm/msm/dsi/dsi.h
+index 93c028a122f3..50b10f37e8a9 100644
+--- a/drivers/gpu/drm/msm/dsi/dsi.h
++++ b/drivers/gpu/drm/msm/dsi/dsi.h
+@@ -70,6 +70,7 @@ void msm_dsi_host_cmd_xfer_commit(struct mipi_dsi_host *host,
+ 					u32 dma_base, u32 len);
+ int msm_dsi_host_enable(struct mipi_dsi_host *host);
+ int msm_dsi_host_disable(struct mipi_dsi_host *host);
++void msm_dsi_host_clock_hs(struct mipi_dsi_host *host, struct msm_dsi_phy *phy);
+ void msm_dsi_host_enable_irq(struct mipi_dsi_host *host);
+ void msm_dsi_host_disable_irq(struct mipi_dsi_host *host);
+ int msm_dsi_host_power_on(struct mipi_dsi_host *host,
 diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_host.c
+index df348060af71..6d0b0e06c319 100644
 --- a/drivers/gpu/drm/msm/dsi/dsi_host.c
 +++ b/drivers/gpu/drm/msm/dsi/dsi_host.c
-@@ -820,15 +820,16 @@
+@@ -924,15 +924,16 @@ static void dsi_ctrl_enable(struct msm_dsi_host *msm_host,
  	dsi_write(msm_host, REG_DSI_LANE_SWAP_CTRL,
  		  DSI_LANE_SWAP_CTRL_DLN_SWAP_SEL(msm_host->dlane_swap));
  
@@ -41,7 +54,7 @@ diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_ho
  
  	data |= DSI_CTRL_ENABLE;
  
-@@ -2332,6 +2333,22 @@
+@@ -2460,6 +2461,22 @@ int msm_dsi_host_enable(struct mipi_dsi_host *host)
  	return 0;
  }
  
@@ -64,26 +77,17 @@ diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_ho
  int msm_dsi_host_disable(struct mipi_dsi_host *host)
  {
  	struct msm_dsi_host *msm_host = to_msm_dsi_host(host);
-diff --git a/drivers/gpu/drm/msm/dsi/dsi.h b/drivers/gpu/drm/msm/dsi/dsi.h
---- a/drivers/gpu/drm/msm/dsi/dsi.h
-+++ b/drivers/gpu/drm/msm/dsi/dsi.h
-@@ -70,6 +70,7 @@
- 					u32 dma_base, u32 len);
- int msm_dsi_host_enable(struct mipi_dsi_host *host);
- int msm_dsi_host_disable(struct mipi_dsi_host *host);
-+void msm_dsi_host_clock_hs(struct mipi_dsi_host *host, struct msm_dsi_phy *phy);
- void msm_dsi_host_enable_irq(struct mipi_dsi_host *host);
- void msm_dsi_host_disable_irq(struct mipi_dsi_host *host);
- int msm_dsi_host_power_on(struct mipi_dsi_host *host,
 diff --git a/drivers/gpu/drm/msm/dsi/dsi_manager.c b/drivers/gpu/drm/msm/dsi/dsi_manager.c
+index 959daa88b1d0..58903356c655 100644
 --- a/drivers/gpu/drm/msm/dsi/dsi_manager.c
 +++ b/drivers/gpu/drm/msm/dsi/dsi_manager.c
-@@ -444,9 +444,23 @@
+@@ -446,12 +446,27 @@ static int dsi_mgr_bridge_attach(struct drm_bridge *bridge,
  				 bridge, flags);
  }
  
 +/* after the panel's prepare, with the video stream running, before the panel's enable */
-+static void dsi_mgr_bridge_enable(struct drm_bridge *bridge)
++static void dsi_mgr_bridge_enable(struct drm_bridge *bridge,
++				  struct drm_atomic_commit *commit)
 +{
 +	int id = dsi_mgr_bridge_get_id(bridge);
 +	struct msm_dsi *msm_dsi = dsi_mgr_get_dsi(id);
@@ -96,9 +100,12 @@ diff --git a/drivers/gpu/drm/msm/dsi/dsi_manager.c b/drivers/gpu/drm/msm/dsi/dsi
 +}
 +
  static const struct drm_bridge_funcs dsi_mgr_bridge_funcs = {
+ 	.atomic_create_state = drm_atomic_helper_bridge_create_state,
+ 	.atomic_destroy_state = drm_atomic_helper_bridge_destroy_state,
+ 	.atomic_duplicate_state = drm_atomic_helper_bridge_duplicate_state,
  	.attach = dsi_mgr_bridge_attach,
- 	.pre_enable = dsi_mgr_bridge_pre_enable,
-+	.enable = dsi_mgr_bridge_enable,
- 	.post_disable = dsi_mgr_bridge_post_disable,
+ 	.atomic_pre_enable = dsi_mgr_bridge_pre_enable,
++	.atomic_enable = dsi_mgr_bridge_enable,
+ 	.atomic_post_disable = dsi_mgr_bridge_post_disable,
  	.mode_set = dsi_mgr_bridge_mode_set,
  	.mode_valid = dsi_mgr_bridge_mode_valid,

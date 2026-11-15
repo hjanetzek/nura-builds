@@ -5,6 +5,8 @@ After a power collapse of the MDSS GDSC the MDP hung the bus at the first modese
 TrustZone sets up the MDP IOMMU at boot and the bootloader the VBIF; downstream restores both
 after each power-on (msm_iommu_sec_program_iommu(), qcom,vbif-settings).
 ---
+diff --git a/drivers/gpu/drm/msm/msm_mdss.c b/drivers/gpu/drm/msm/msm_mdss.c
+index 03bf0be3d765..586fe56028b1 100644
 --- a/drivers/gpu/drm/msm/msm_mdss.c
 +++ b/drivers/gpu/drm/msm/msm_mdss.c
 @@ -6,6 +6,7 @@
@@ -15,7 +17,7 @@ after each power-on (msm_iommu_sec_program_iommu(), qcom,vbif-settings).
  #include <linux/interconnect.h>
  #include <linux/irq.h>
  #include <linux/irqchip.h>
-@@ -29,6 +30,7 @@
+@@ -32,6 +33,7 @@ struct msm_mdss {
  	struct device *dev;
  
  	void __iomem *mmio;
@@ -23,10 +25,11 @@ after each power-on (msm_iommu_sec_program_iommu(), qcom,vbif-settings).
  	struct clk_bulk_data *clocks;
  	size_t num_clocks;
  	bool is_mdp5;
-@@ -311,6 +313,30 @@
+@@ -258,6 +260,30 @@ static int msm_mdss_enable(struct msm_mdss *msm_mdss)
+ 		return ret;
  	}
  
- 	/*
++	/*
 +	 * MSM8226: the MDP's IOMMU (SMMU at 0xfd928000, secure id 1) is set up by TrustZone at boot,
 +	 * which lets the MDP's traffic through; a power collapse of the MDSS GDSC resets it, and then
 +	 * the MDP hangs the bus. The downstream kernel has TZ restore it after each power-on
@@ -50,13 +53,12 @@ after each power-on (msm_iommu_sec_program_iommu(), qcom,vbif-settings).
 +		wmb();
 +	}
 +
-+	/*
+ 	/*
  	 * Register access requires MDSS_MDP_CLK, which is not enabled by the
  	 * mdss on mdp5 hardware. Skip it for now.
- 	 */
-@@ -463,6 +489,12 @@
+@@ -398,6 +424,12 @@ static struct msm_mdss *msm_mdss_init(struct platform_device *pdev, bool is_mdp5
  
- 	dev_dbg(&pdev->dev, "mapped mdss address space @%pK\n", msm_mdss->mmio);
+ 	dev_dbg(&pdev->dev, "mapped mdss address space @%p\n", msm_mdss->mmio);
  
 +	if (is_mdp5 && of_machine_is_compatible("qcom,msm8226")) {
 +		msm_mdss->vbif = devm_platform_ioremap_resource_byname(pdev, "vbif_phys");
