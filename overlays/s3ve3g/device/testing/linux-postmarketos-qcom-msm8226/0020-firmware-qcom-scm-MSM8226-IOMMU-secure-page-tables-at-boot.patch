@@ -1,0 +1,81 @@
+From: nura-builds
+Subject: [PATCH] firmware: qcom: scm: MSM8226: IOMMU secure page tables at boot
+
+TrustZone routes the MDP's stream to its IOMMU context bank only once the IOMMU secure page
+tables are set up (IOMMU_SECURE_PTBL_SIZE/INIT); until then it stays in bypass as the
+bootloader left it. The downstream kernel does this once at boot (msm_iommu_sec_ptbl_init()).
+Done from qcom_iommu's probe much later (with its secure context bank), the SoC reset 1.5-3 s
+after the call, whatever memory the table was in; done here, at the end of the SCM probe, it
+works. IOMMU_SET_CP_POOL_SIZE, which downstream calls first on newer TZ, returns -EOPNOTSUPP on
+this one (downstream skips it there too).
+---
+diff --git a/drivers/firmware/qcom/qcom_scm.c b/drivers/firmware/qcom/qcom_scm.c
+index 3eaa4c9ccf3c..d7f73715478b 100644
+--- a/drivers/firmware/qcom/qcom_scm.c
++++ b/drivers/firmware/qcom/qcom_scm.c
+@@ -4,6 +4,10 @@
+  */
+ 
+ #include <linux/arm-smccc.h>
++#ifdef CONFIG_ARM
++#include <asm/outercache.h>
++#include <asm/cacheflush.h>
++#endif
+ #include <linux/bitfield.h>
+ #include <linux/bits.h>
+ #include <linux/cleanup.h>
+@@ -2790,6 +2794,45 @@ static const struct kernel_param_ops minidump_dest_param_ops = {
+ module_param_cb(minidump_dest, &minidump_dest_param_ops, NULL, 0644);
+ MODULE_PARM_DESC(minidump_dest, "Minidump SRAM destination: usb (default) or storage");
+ 
++/*
++ * MSM8226: TrustZone routes the MDP's (and other multimedia masters') streams to the context
++ * banks of their IOMMUs only after the IOMMU secure page tables are set up; until then they
++ * stay in bypass, as the bootloader left them. The downstream kernel sets them up once at
++ * boot (msm_iommu_sec_ptbl_init(), module init). Done later (from qcom_iommu, ~1 min after
++ * boot) the SoC reset 1.5-3 s after the call; this early it doesn't. The table stays TZ's.
++ */
++static void qcom_scm_msm8226_iommu_sec_ptbl_init(struct device *dev)
++{
++	size_t psize = 0;
++	void *buf;
++	int ret;
++
++	if (!of_machine_is_compatible("qcom,msm8226"))
++		return;
++
++	ret = qcom_scm_iommu_secure_ptbl_size(0, &psize);
++	if (ret || !psize) {
++		dev_warn(dev, "IOMMU secure page table size: %d\n", ret);
++		return;
++	}
++
++	buf = kzalloc(psize, GFP_KERNEL);
++	if (!buf)
++		return;
++#ifdef CONFIG_ARM
++	dmac_flush_range(buf, buf + psize);
++	outer_flush_range(virt_to_phys(buf), virt_to_phys(buf) + psize);
++#endif
++
++	ret = qcom_scm_iommu_secure_ptbl_init(virt_to_phys(buf), psize, 0);
++	if (ret) {
++		dev_warn(dev, "IOMMU secure page table init: %d\n", ret);
++		kfree(buf);
++		return;
++	}
++	dev_info(dev, "IOMMU secure page tables: %zu bytes\n", psize);
++}
++
+ static int qcom_scm_probe(struct platform_device *pdev)
+ {
+ 	struct qcom_tzmem_pool_config pool_config;
+@@ -2941,6 +2984,8 @@ static int qcom_scm_probe(struct platform_device *pdev)
+ 	/* Initialize the Gunyah watchdog platform device. */
+ 	qcom_scm_gunyah_wdt_init(scm);
+ 
++	qcom_scm_msm8226_iommu_sec_ptbl_init(&pdev->dev);
++
+ 	return 0;
+ 
+ err_rmem:

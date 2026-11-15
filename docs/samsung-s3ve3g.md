@@ -62,7 +62,7 @@ on v6.16.12, ported: the QRTR bus needed `include/linux/device-id/qrtr.h` for th
 `mod_devicetable.h`; dropped: the revert of "Limit command submission when no IOMMU" (that check
 is gone), "increase default vram carveout" (no carveout any more), and what went upstream since:
 the Moto G2 binding, the Xperia M2 DT and binding). pmaports' recipe itself applies no patches.
-Our patches: 0001, 0002, 0004-0008, 0010, 0011, 0013, 0014, 0016 as they were; 0012 (DSI bridge
+Our patches: 0001, 0002, 0004-0011, 0013, 0014, 0016 as they were (0009 with the GPU off by 0019); 0012 (DSI bridge
 callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went upstream.
 
 - **Boot image layout:** the zImage is loaded at 0x8000, where the kernel is decompressed to;
@@ -74,24 +74,36 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
   `MODULE_ALLOW_BTF_MISMATCH` goes with it), and the recipe's build() fails when the margin is
   gone (7.3.4: ends at 0x1b1xxxx, 3 MB left).
 - Works (tested): boot, USB network, SSH, Wi-Fi, CPU scaling with the S2 voltages up to
-  1593.6 MHz (as on 6.16), sound: speaker, headphones, main mic, JACK.
+  1593.6 MHz (as on 6.16), sound: speaker, headphones, main mic, JACK, the display (below).
 - **JACK:** q6asm takes period sizes in steps of 480 frames (10 ms) since 6.18 (81c53b52de21):
   `-p480` or `-p960`, not `-p512` ("cannot set period size").
-- **Display and GPU: not on 7.x yet.** Since 6.17 msm refuses to run without an IOMMU (drm_gpuvm:
-  "Remove vram carveout support", "stop supporting no-IOMMU configuration": "no IOMMU, bailing
-  out"), for the display as well as the GPU. 0009 (display and GPU device tree) is left out, so
-  the screen is the bootloader's framebuffer (simpledrm console, no DPMS, no brightness, no GPU).
-  0019 (not applied) puts the MDP IOMMU (SMMU v1 at 0xfd928000, TZ secure id 1) on qcom_iommu:
-  msm binds and DPMS with the GDSC collapsing works, but TrustZone keeps the MDSS traffic in
-  bypass (the scanout reads the physical address equal to the IOVA: noise on the panel; DSI
-  commands from an IOVA buffer reach nothing, from a physical one they do), and asking TZ for
-  the secure page tables (as downstream does at boot) resets the SoC 1.5-3 s later, also with
-  the splash scanout stopped first, the table kmalloc'ed like downstream or in no-map memory, and
-  downstream's qsecom region (top 13 MB) kept from Linux; SET_CP_POOL_SIZE isn't supported by
-  this TZ. Details in the patch; the experiment branches are `gfx*` in the kernel tree. The GPU depends on this: msm binds the GPU as part of the display. Ways on: find what
-  makes TZ route the MDP streams to context bank 0 (downstream's order: secure ptbl init at
-  boot, before the display probes; its bfb register settings), or bring a physically contiguous
-  scanout path back into msm (what the carveout was).
+- **Display through the MDP IOMMU (patches 0019, 0020), GPU off.** Since 6.17 msm refuses to
+  run without an IOMMU (drm_gpuvm: "Remove vram carveout support", "stop supporting no-IOMMU
+  configuration"). MSM8226's MDP IOMMU (SMMU v1 at 0xfd928000, global registers owned by
+  TrustZone, secure id 1, context banks from 0xfd930000) now runs on qcom_iommu. What it took:
+  - TZ routes the MDP's stream to context bank 0 only after the IOMMU secure page tables are
+    set up (IOMMU_SECURE_PTBL_SIZE/INIT, 90112 bytes); before, the traffic bypasses the SMMU
+    (the scanout read the physical address equal to the IOVA, DSI commands from an IOVA
+    buffer reached nothing). The downstream kernel does it at boot; done ~1 min after boot
+    (qcom_iommu's secure context) the SoC reset 1.5-3 s later, whatever memory the table was
+    in; done at the end of the SCM probe (0020, 0.11 s) it works. SET_CP_POOL_SIZE: not
+    supported by this TZ (-95).
+  - qcom_iommu as downstream's msm_iommu-v1 programs the context bank: short-descriptor page
+    tables (TTBCR 0, PRRR/NMRR, ASID in CONTEXTIDR), no access flag (with AFE every access
+    gave an access flag fault), terminate instead of stall on faults (a stall wedged the MDP
+    and the DSI command DMA); the context banks programmed again after each power collapse
+    of the MDSS GDSC.
+  - The bootloader's splash scanout is stopped (INTF1 timing engine off, pipe unstaged) before
+    the MDP gets its IOMMU domain, as downstream's splash handoff does: its fetches of the
+    physical framebuffer faulted and left TLB syncs timing out and the DSI DMA dead.
+  Tested: console on msm from 11.7 s (10 s earlier than with 6.16's carveout), no IOMMU
+  faults, DPMS off/on with the GDSC collapsing (mdss off-0) and back, brightness 0-24,
+  bl_power 4/0, sound alongside. The GPU stays off (msm doesn't bind with a GPU it can't set
+  up): its IOMMU (kgsl_iommu, 0xfdb10000, no TZ secure id: downstream programs its global
+  registers itself) needs arm-smmu or more qcom_iommu work.
+  Seen twice in five boots: after the screen-off service, the panel came back on showing only
+  the mixer's blue border colour (something re-enabled the CRTC without the plane; `s3ve3g-screen
+  on` gives the console back); not found yet which boot step does that.
 
 ## A minimal base, locally
 

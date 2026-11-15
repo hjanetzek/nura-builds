@@ -1,45 +1,31 @@
 From: nura-builds
-Subject: [PATCH] WIP (not applied): iommu/qcom: MSM8226 MDP IOMMU; s3ve3g: display through it
-
-NOT IN source=: it doesn't work yet, kept as the starting point.
+Subject: [PATCH] iommu/qcom: MSM8226 MDP IOMMU; s3ve3g: display through it, GPU off
 
 msm needs an IOMMU since 6.17 (drm_gpuvm: "stop supporting no-IOMMU configuration",
-"Remove vram carveout support"); MSM8226 has none in its device tree. Its MDP IOMMU is an
-SMMU v1 (global registers at 0xfd928000, owned by TrustZone, secure id 1; context banks from
-0xfd930000), which qcom_iommu can drive: this adds the node (context bank 0, non-secure),
-iommus on the MDP, short-descriptor page tables for "qcom,msm8226-iommu" (downstream's
-msm_iommu-v1 uses them, TTBCR.EAE = 0), and programs the context banks again on runtime
-resume (they lose their state when the MDSS GDSC collapses). s3ve3g: MDP IOMMU on, GPU off
-(its IOMMU has no driver; msm doesn't bind with a GPU it can't set up).
+"Remove vram carveout support"); MSM8226 had none in its device tree. Its MDP IOMMU is an
+SMMU v1: global registers at 0xfd928000, owned by TrustZone (secure id 1), context banks from
+0xfd930000; qcom_iommu drives it (context bank 0, non-secure, for the MDP's stream 0). With
+patch 0020 (the secure page tables at boot) TZ routes the MDP's traffic to that context bank;
+before that it stays in bypass.
 
-Result on the phone (2026-11-15): msm binds, the context bank is programmed (SCTLR.M = 1,
-FSR stays 0, LPAE and short descriptors alike), DPMS with the GDSC collapsing and coming back
-works, but the MDSS's traffic doesn't go through context bank 0: the scanout reads the
-physical address equal to the IOVA (noise on the panel) and DSI command DMA from an IOVA
-reaches nothing (the panel doesn't answer; with a physical TX buffer, a test hack, it does:
-power mode 0x9c). So TrustZone leaves the MDP's streams in bypass after
-qcom_scm_restore_sec_cfg(1, 0). Adding the secure context bank (qcom,msm-iommu-v1-sec,
-which makes qcom_iommu call IOMMU_SECURE_PTBL_SIZE/INIT, as downstream does at boot): both
-TZ calls return 0 (90112 bytes), then the SoC hangs and resets within ~1.5 s, with the table
-in CMA and in a no-map reserved region alike. Brian Masney saw the same corrupted picture on
-MSM8974 in 2020 (RFC "ARM: dts: qcom: msm8974: add mdp5 iommu support", not merged).
+- dtsi: the mdp_iommu node (disabled) and iommus on the MDP.
+- qcom_iommu, for "qcom,msm8226-iommu", as downstream's msm_iommu-v1 programs it:
+  short-descriptor page tables (ARM_V7S, TTBCR 0, PRRR/NMRR, the ASID in CONTEXTIDR), and
+  SCTLR without the access flag (with AFE every access gave an access flag fault) and without
+  stall on fault (a stall wedged the MDP and the DSI command DMA).
+- qcom_iommu: program the context banks again on runtime resume; they lose their state when
+  the power domain (MDSS GDSC) collapses with the display off.
+- msm_mdss (MSM8226 with an MDP IOMMU): stop the bootloader's splash scanout (INTF1 timing
+  engine off, its pipe unstaged from both CTLs) before the MDP probes and gets its IOMMU
+  domain; its fetches of the physical splash framebuffer faulted in the new domain and left
+  TLB syncs timing out (2x 5 s) and the DSI command DMA dead until the next power collapse.
+  Downstream does the same handoff (border fill, then the IOMMU attach).
+- s3ve3g: MDP IOMMU on; the GPU off: its IOMMU (kgsl_iommu, 0xfdb10000, no TZ secure id)
+  has no driver yet, and msm doesn't bind with a GPU it can't set up.
 
-
-Second round (2026-11-15, after comparing with downstream's msm_iommu_sec.c and the MDSS
-splash handoff), each with the IOMMU bound by hand after boot and the secure context bank in
-the DT; all hang and reset the SoC 1.5-3 s after IOMMU_SECURE_PTBL_INIT returns 0:
-- IOMMU_SET_CP_POOL_SIZE (300 MB) first, as downstream does for MP >= 1.1.1: this TZ answers
-  -EOPNOTSUPP (-95), so downstream skips it here too;
-- the splash scanout stopped first (INTF1 timing engine off, 0xfd921300 := 0; the bootloader's
-  RGB0 pipe fetches 0x03200000), so the MDP fetches nothing when TZ maps its stream;
-- the secure context's interrupt as 47 (shared) instead of 46;
-- the table in CMA (0x58060000), in a no-map reserved region (no kernel mapping) and kmalloc'ed
-  like downstream (0x07dc0000), with the top 13 MB (0x5f300000, downstream's qsecom region,
-  never RAM for the downstream kernel) reserved no-map.
-Not tried: the secure table init at boot, before anything else runs (downstream's order; a hang
-there means a boot loop that needs download mode), downstream's bfb settings and halt around
-the context programming (only after the init, so not the cause of this hang). The cause of the
-reset is unknown; without PTBL_INIT TZ keeps the MDP's streams in bypass.
+Tested: console on msm from 11.7 s, the panel answers DSI commands (power mode 0x98/0x9c),
+no IOMMU faults, DPMS off/on with the GDSC collapsing (mdss off-0) and coming back,
+brightness 0-24, bl_power 4/0.
 ---
 diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
 index be34e53c42f8..97a7a9768d48 100644
@@ -112,8 +98,63 @@ index 1d07195fa88d..0ef18ddc1011 100644
  				interrupt-parent = <&mdss>;
  				interrupts = <0>;
  
+diff --git a/drivers/gpu/drm/msm/msm_mdss.c b/drivers/gpu/drm/msm/msm_mdss.c
+index 586fe56028b1..5fd49dd754a4 100644
+--- a/drivers/gpu/drm/msm/msm_mdss.c
++++ b/drivers/gpu/drm/msm/msm_mdss.c
+@@ -10,6 +10,7 @@
+ #include <linux/interconnect.h>
+ #include <linux/irq.h>
+ #include <linux/irqchip.h>
++#include <linux/of.h>
+ #include <linux/irqdesc.h>
+ #include <linux/irqchip/chained_irq.h>
+ #include <linux/of_platform.h>
+@@ -430,6 +431,42 @@ static struct msm_mdss *msm_mdss_init(struct platform_device *pdev, bool is_mdp5
+ 			msm_mdss->vbif = NULL;
+ 	}
+ 
++	/*
++	 * MSM8226: the bootloader's splash screen is still scanned out (RGB0 from its physical
++	 * framebuffer). Once the MDP's IOMMU is attached (when the MDP probes, before
++	 * mdp5_kms_init()), those fetches fault, and the faults leave the MDP and the DSI
++	 * command DMA unusable until the next power collapse. Stop the timing engine of INTF1
++	 * now and wait for the frame to end, as downstream's splash handoff does (border fill,
++	 * then the IOMMU attach).
++	 */
++	if (is_mdp5 && of_machine_is_compatible("qcom,msm8226")) {
++		struct device_node *mdp = of_get_compatible_child(pdev->dev.of_node, "qcom,mdp5");
++		bool iommu = mdp && of_property_present(mdp, "iommus");
++		void __iomem *intf1 = iommu ? ioremap(0xfd921300, 4) : NULL;
++
++		of_node_put(mdp);
++		if (intf1) {
++			if (readl(intf1)) {
++				void __iomem *ctl = ioremap(0xfd900600, 0x200);
++
++				writel(0, intf1);
++				msleep(40);
++				/* unstage the splash pipe from both CTLs' mixers too (border fill) */
++				if (ctl) {
++					writel(0, ctl + 0x000);
++					writel(0, ctl + 0x004);
++					writel(0x3ffff, ctl + 0x018);
++					writel(0, ctl + 0x100);
++					writel(0, ctl + 0x104);
++					writel(0x3ffff, ctl + 0x118);
++					iounmap(ctl);
++				}
++				dev_info(&pdev->dev, "splash scanout stopped for the IOMMU\n");
++			}
++			iounmap(intf1);
++		}
++	}
++
+ 	ret = msm_mdss_parse_data_bus_icc_path(&pdev->dev, msm_mdss);
+ 	if (ret)
+ 		return ERR_PTR(ret);
 diff --git a/drivers/iommu/arm/arm-smmu/qcom_iommu.c b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
-index 21d18ce67b98..01c15e86a0c3 100644
+index 21d18ce67b98..cac94fe4d15e 100644
 --- a/drivers/iommu/arm/arm-smmu/qcom_iommu.c
 +++ b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
 @@ -51,6 +51,7 @@ struct qcom_iommu_dev {
@@ -132,7 +173,7 @@ index 21d18ce67b98..01c15e86a0c3 100644
  };
  
  static struct qcom_iommu_domain *to_qcom_iommu_domain(struct iommu_domain *dom)
-@@ -213,6 +215,58 @@ static irqreturn_t qcom_iommu_fault(int irq, void *dev)
+@@ -213,6 +215,68 @@ static irqreturn_t qcom_iommu_fault(int irq, void *dev)
  	return IRQ_HANDLED;
  }
  
@@ -177,10 +218,20 @@ index 21d18ce67b98..01c15e86a0c3 100644
 +	}
 +
 +	/* SCTLR */
-+	reg = ARM_SMMU_SCTLR_CFIE | ARM_SMMU_SCTLR_CFRE |
-+	      ARM_SMMU_SCTLR_AFE | ARM_SMMU_SCTLR_TRE |
-+	      ARM_SMMU_SCTLR_M | ARM_SMMU_SCTLR_S1_ASIDPNE |
-+	      ARM_SMMU_SCTLR_CFCFG;
++	if (v7s)
++		/*
++		 * As downstream's msm_iommu-v1: no access flag (AP[0] is a permission bit; with
++		 * AFE every access gave an access flag fault) and faulting transactions
++		 * terminated, not stalled (a stall wedged the MDP and the DSI command DMA).
++		 */
++		reg = ARM_SMMU_SCTLR_CFIE | ARM_SMMU_SCTLR_CFRE |
++		      ARM_SMMU_SCTLR_TRE | ARM_SMMU_SCTLR_M |
++		      ARM_SMMU_SCTLR_S1_ASIDPNE;
++	else
++		reg = ARM_SMMU_SCTLR_CFIE | ARM_SMMU_SCTLR_CFRE |
++		      ARM_SMMU_SCTLR_AFE | ARM_SMMU_SCTLR_TRE |
++		      ARM_SMMU_SCTLR_M | ARM_SMMU_SCTLR_S1_ASIDPNE |
++		      ARM_SMMU_SCTLR_CFCFG;
 +
 +	if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 +		reg |= ARM_SMMU_SCTLR_E;
@@ -191,7 +242,7 @@ index 21d18ce67b98..01c15e86a0c3 100644
  static int qcom_iommu_init_domain(struct iommu_domain *domain,
  				  struct qcom_iommu_dev *qcom_iommu,
  				  struct device *dev)
-@@ -222,7 +276,6 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -222,7 +286,6 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  	struct io_pgtable_ops *pgtbl_ops;
  	struct io_pgtable_cfg pgtbl_cfg;
  	int i, ret = 0;
@@ -199,7 +250,7 @@ index 21d18ce67b98..01c15e86a0c3 100644
  
  	mutex_lock(&qcom_domain->init_mutex);
  	if (qcom_domain->iommu)
-@@ -231,7 +284,7 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -231,7 +294,7 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  	pgtbl_cfg = (struct io_pgtable_cfg) {
  		.pgsize_bitmap	= domain->pgsize_bitmap,
  		.ias		= 32,
@@ -208,7 +259,7 @@ index 21d18ce67b98..01c15e86a0c3 100644
  		.tlb		= &qcom_flush_ops,
  		.iommu_dev	= qcom_iommu->dev,
  	};
-@@ -239,7 +292,8 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -239,7 +302,8 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  	qcom_domain->iommu = qcom_iommu;
  	qcom_domain->fwspec = fwspec;
  
@@ -218,7 +269,7 @@ index 21d18ce67b98..01c15e86a0c3 100644
  	if (!pgtbl_ops) {
  		dev_err(qcom_iommu->dev, "failed to allocate pagetable ops\n");
  		ret = -ENOMEM;
-@@ -267,45 +321,13 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
+@@ -267,45 +331,13 @@ static int qcom_iommu_init_domain(struct iommu_domain *domain,
  			continue;
  		}
  
@@ -267,7 +318,7 @@ index 21d18ce67b98..01c15e86a0c3 100644
  	/* Publish page table ops for map/unmap */
  	qcom_domain->pgtbl_ops = pgtbl_ops;
  
-@@ -794,6 +816,8 @@ static int qcom_iommu_device_probe(struct platform_device *pdev)
+@@ -794,6 +826,8 @@ static int qcom_iommu_device_probe(struct platform_device *pdev)
  		return -ENOMEM;
  	qcom_iommu->max_asid = max_asid;
  	qcom_iommu->dev = dev;
@@ -276,7 +327,7 @@ index 21d18ce67b98..01c15e86a0c3 100644
  
  	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
  	if (res) {
-@@ -899,8 +923,26 @@ static int __maybe_unused qcom_iommu_resume(struct device *dev)
+@@ -899,8 +933,26 @@ static int __maybe_unused qcom_iommu_resume(struct device *dev)
  	if (ret < 0)
  		return ret;
  

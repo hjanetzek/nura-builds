@@ -61,6 +61,7 @@ source="
 	0006-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-voltages.patch
 	0007-ARM-dts-qcom-msm8226-samsung-s3ve3g-level-wcnss-wifi-IRQs.patch
 	0008-drm-panel-msm8226-generated-Samsung-S6E8AA0A-s3ve3g.patch
+	0009-ARM-dts-qcom-msm8226-samsung-s3ve3g-display-and-GPU.patch
 	0010-drm-msm-trace-DSI-and-MDP5-register-writes-bring-up.patch
 	0011-drm-msm-dsi-phy-28nm-8226-write-the-byte-clock-mux-after-the-PLL-reset.patch
 	0012-drm-msm-dsi-clock-lane-in-LP-11-until-the-panel-is-initialized.patch
@@ -70,6 +71,8 @@ source="
 	0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
 	0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
 	0018-ASoC-qcom-apq8096-16-bit-SLIMbus-back-end.patch
+	0019-iommu-qcom-MSM8226-MDP-IOMMU-s3ve3g-display-through-it.patch
+	0020-firmware-qcom-scm-MSM8226-IOMMU-secure-page-tables-at-boot.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -120,7 +123,7 @@ package() {
 
 sha512sums="
 db5508c3cf8b613b4680022eb785c036bcf8a5c952f8d0b2f3c2c7dc16779cf8bd954e0bca0b0b52451bac61430a687ae73205574f002f3b60de886640ebb9b0  linux-7.3.4.tar.xz
-6dbe39dc49122eaa1cc95242cc438f16f6317d2673f77d459ae8e8dae13db14e6ce9344de8a1a3a5f839b22feea7478b9b37a2dd9f331e8ebc775cef3ea4b6ed  config-postmarketos-qcom-msm8226.armv7
+08de9748b72881834a0a5ce7038ae82c04f49e0e933542b6bf94120e34ad2882edec547e00ca859c24d0f35d44446e0e41c5a134d751ce8b8fec368e8ed85e93  config-postmarketos-qcom-msm8226.armv7
 685d26394e13c2b88ae18671c89fe6dcb1db3809fbd6734700dedc6d467e746784743c3b94ffdc67cd31c3a023e0f816e90ec748028dbea27baa378f2561feac  0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.4.patch
 6d332d7e93027c5aee62b6497bd15be1cd20e38dbae884dc28f81b1f1983f818bc07c8751c1a8d2e2acdbbc790179e9f48e02a9fe15db9c6a0480f4a54dda736  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 54a64cacb2e06014f207bc824ae9731e5416e3ad594179f09721219567066140fc3feee7fd5e56926964164b8b9fb6ce593e1198b8b40d97aba9f69272d499dc  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
@@ -129,6 +132,7 @@ db5508c3cf8b613b4680022eb785c036bcf8a5c952f8d0b2f3c2c7dc16779cf8bd954e0bca0b0b52
 ce3b8e2e5fdb7f7cfd7ad1f4635c77916076bf3b5a88b30285f95b2015bbf711676b4eb8dc7d642585037e8f9af853c94a1d790b30b57c57bc40e4f07c33b2be  0006-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-voltages.patch
 1a728fe7743e5d63b56e7541848b66e6fec0f0b5ec154097f9cde9337446a65a3bea72ec585aa85098d5b1cbb9a3486aeb9192f4ffa0c224aaf28a96aabf3ea3  0007-ARM-dts-qcom-msm8226-samsung-s3ve3g-level-wcnss-wifi-IRQs.patch
 28793990a3d96be4dc093b8a3da46794c775ebb8828d8a40cbb33c40ec37c7b8ecb2f44bdc773ae754c21e997eae7b4252298c427b190e683ab96ec24be1c8d5  0008-drm-panel-msm8226-generated-Samsung-S6E8AA0A-s3ve3g.patch
+977a762ebaf5949af4636b3e0c524270bce5dcbfbaafd8f3f0afbbd4ea0cb617f1ba4f9ad1faa8d0ade8ca9d813a1109322568f491bf433221c5d3a17273723f  0009-ARM-dts-qcom-msm8226-samsung-s3ve3g-display-and-GPU.patch
 b60184fc857cb023da3a8df5080dbc19e37455f6d43c22f7bd347311d2d141d81b6b2d4c8e4083bb1470d17bddf36e21f8eadc0387cab62a1950679b3d9bd712  0010-drm-msm-trace-DSI-and-MDP5-register-writes-bring-up.patch
 d2213d1ef2ed95fa38e9bb5971eb6f9605b2913eb1e272d0f801b4c7e3068d06b675c96eee1b9e697d649154e7a3678365e7e8eaed21e55de53625f31c7d73fb  0011-drm-msm-dsi-phy-28nm-8226-write-the-byte-clock-mux-after-the-PLL-reset.patch
 58efba54f57a83ba365f1de3d27c3e327f1de12481c05c284c571b440900e31e41f0130a8442b93d809c68765fe02371445fea8a0cb944e81fff6e0abcb76eab  0012-drm-msm-dsi-clock-lane-in-LP-11-until-the-panel-is-initialized.patch
@@ -138,5 +142,7 @@ fcfd19bf06b061c5530a9abbda29e7d84001212c444dc55b81e6a289e9cb0524e73c17a186ab1907
 137985e4dda200dff648612394e6947464415a01f01396e1cfd9845fbdac5665249be50104be952ce849722263870ead6daeb3ead0711095c935a247750f4443  0016-ARM-dts-qcom-msm8226-samsung-s3ve3g-ADSP-SLIMbus-WCD9306.patch
 f2a7a76d93c8e138161a12cc401c91d7e2ee1f534a35b4c99e1ed19901b866e4855b22d0f5751df5cbcc7d6b27e17661a755904c828c040981e2944b273ac61d  0017-ASoC-codecs-WCD9306-Tapan-codec-driver.patch
 a34f6bc890a7f5f2009954cd7a15706569f8f07d4ca9466ee73327e76d0c033ae9bfbec31d8acad708778e0419af7cbe9b2d73b09276d15a9e290bd09127c3f1  0018-ASoC-qcom-apq8096-16-bit-SLIMbus-back-end.patch
+edd65c346e24f34f9cd3b6069b3f7ead2409fc740f67504ea44e08ec6a79eccd5860d4ed2bb8ce34fbb9f9055570555b38bcfd4099e279db8521a814525b0ba0  0019-iommu-qcom-MSM8226-MDP-IOMMU-s3ve3g-display-through-it.patch
+ad9a9ca53e19a380f8336e13fdbfef6238ee62b7d65261c80f56122c7d0d286512971b9405db0918efd5e65f28815db1494550cd7ce4a9482e070b506c336a1e  0020-firmware-qcom-scm-MSM8226-IOMMU-secure-page-tables-at-boot.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
