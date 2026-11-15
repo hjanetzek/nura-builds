@@ -75,6 +75,7 @@ source="
 	0020-firmware-qcom-scm-MSM8226-IOMMU-secure-page-tables-at-boot.patch
 	0021-iommu-arm-smmu-MSM8226-GPU-SMMU-s3ve3g-GPU-through-it.patch
 	0022-drm-msm-a3xx-VBIF-XIN-halt-of-the-A305B-s-three-clients.patch
+	0023-iommu-arm-smmu-MSM8226-GPU-SMMU-downstream-s-bfb-settings.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -148,5 +149,6 @@ ec8ec88852aa39031e67c10f642db03d16638a5ad2742596b2141b6a37040b7da273b90b63811490
 ad9a9ca53e19a380f8336e13fdbfef6238ee62b7d65261c80f56122c7d0d286512971b9405db0918efd5e65f28815db1494550cd7ce4a9482e070b506c336a1e  0020-firmware-qcom-scm-MSM8226-IOMMU-secure-page-tables-at-boot.patch
 7c027f72e1003330216d78cdd304c787b1127dc50b42648b03b4795332255e415de0034261bc063ee610e9ee43146b316f016e204985c0c141de478bfcf72db3  0021-iommu-arm-smmu-MSM8226-GPU-SMMU-s3ve3g-GPU-through-it.patch
 1351333df88ab2dc2b90c22965a89098c37c0dee546e3f22b13938df2bc1b7a9b2be1435f36b8c27338a38a7bc6ad843e9b1c4eb10b5cf98bd907afa4f5bb560  0022-drm-msm-a3xx-VBIF-XIN-halt-of-the-A305B-s-three-clients.patch
+8996476564b5968c22a80f8a76a78068510b9033ad98855f2181edc49167c436205ced9d6cd835649fc6664c972a0d957e0ca11ccb00fb5a530fc3363d6aacff  0023-iommu-arm-smmu-MSM8226-GPU-SMMU-downstream-s-bfb-settings.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "

@@ -125,7 +125,36 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
   after 0022 jobs 20 ms median, 24 ms max; runtime suspend under 1 ms. Over OSC (no touch) a view
   switch took ~160 ms CPU (Python/Qt) + ~20 ms GPU on 6.16 and 7.3.4 alike; the touch path itself
   (MMS144 interrupts) was fine. zynthian-ui's spike (`spike.py --bench`) switches in 2-25 ms.
-- **TODO: GPU/kernel test suites** to run on 7.3.4 (and 6.16.12 for comparison): igt-gpu-tools
+- **GPU memory speed (patch 0023).** Through its IOMMU the GPU first ran memory-bound work far
+  slower than 6.16 did from the carveout (glmark2 texture 65 vs 104-109 fps, shadow 12 vs 27).
+  Downstream's "bfb" settings of the GPU SMMU (implementation-defined registers 0x2008-0x256c,
+  qcom,iommu-bfb-regs of &kgsl_iommu) written at SMMU reset bring every scene to 6.16's speed.
+- **Test suites (2026-11-15, 7.3.4 with 0000-0023; tools built on/for the phone):**
+  - igt-gpu-tools (git 5a61add, built on the phone, tests/msm): msm_bo 50 pass, 1 skip
+    (cached-coherent); msm_submit 8/8; msm_submitoverhead runs (1000 BOs: 1072 submits/2 s,
+    1389 without implicit sync); msm_mapping ring/memptrs fail, but the test writes a6xx
+    PM4 type-7 packets, which hang an a3xx (no fault-info devcoredump); msm_shrink,
+    msm_recovery, msm_perfcntrs skip (need gen >= 6 or perf counters).
+  - glmark2-es2-drm 2023.01 (720x1280, --swap-mode immediate, mailbox fallback): 7.3.4 score
+    89 (before 0023: 72); 6.16.12: same per-scene fps on all scenes it completes, but terrain
+    segfaults and refract fails to set up (64 MB carveout), so no total. Run it as root with
+    zynthian stopped (DRM master).
+  - dEQP (VK-GL-CTS main 5bb4c7e, deqp-gles2/-gles3 cross-built with clang against a sysroot
+    copied from the phone, surfaceless, EGL_PLATFORM=surfaceless, 256x256 pbuffer
+    rgba8888d24s8ms0 as Mesa's CI; own batch runner instead of deqp-runner), compared with
+    Mesa's expectations for the Adreno 306 (src/freedreno/ci/freedreno-a306-fails/flakes.txt):
+    GLES2 mustpass (17165): 17019 pass, 30 fail, 111 not supported, 5 quality warnings, no
+    crash; 23 of the fails are in the a306 list, the 7 others pass when run again (3x); 12 GPU
+    hangs were recovered during the run.
+    GLES3 mustpass, every second test (22402 of 44804): 21884 pass, 173 fail, 149 not
+    supported, 195 quality warnings, no crash; 43 fails in the a306 list, 86 in tests Mesa's CI
+    skips for the a306 (.*msaa.*, .*multisample.*), 12 pass when run again, 2 fail every time
+    (fbo.blit.conversion.rg8_to_rgb10_a2, fbo.invalidate.incomplete.depth_stencil: A305B vs
+    A306 or Mesa, not checked on 6.16); 15 GPU hangs were recovered (hangcheck), some of them
+    from the tests that later passed. Not run: glcts KHR, piglit, fdperf, the suites on 6.16.
+  - Tools: igt in ~/igt on the phone; dEQP built in /home/jeff/bastel/github/deqp-armv7
+    (toolchain.cmake, sysroot from the phone), on the phone in ~/deqp with deqprun.py.
+- **GPU/kernel test suites** (TODO list, the parts run are above) to run on 7.3.4 (and 6.16.12 for comparison): igt-gpu-tools
   msm tests (msm_submit, msm_mapping, msm_recovery, msm_shrink, ...) for the IOMMU, submit and
   recovery paths; dEQP-GLES2/GLES3 (VK-GL-CTS) via deqp-runner, compared with Mesa's expected
   results for the Adreno 306 in src/freedreno/ci/ (deqp-freedreno-a306*.toml,

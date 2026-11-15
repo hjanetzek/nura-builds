@@ -1,0 +1,38 @@
+From: nura-builds
+Subject: [PATCH] iommu/arm-smmu: MSM8226 GPU SMMU: downstream's bfb settings
+
+The downstream kernel writes implementation-defined registers of the GPU's SMMU on every
+attach (qcom,iommu-bfb-regs/-data of &kgsl_iommu in msm8226-iommu.dtsi; TLB and prefetch
+configuration, by the effect). Without them, GPU work that streams through memory ran far
+slower through the IOMMU than on 6.16 without one: glmark2 texture 65 fps (6.16: 104-109),
+bump height 68 (105), effect2d 48 (78), shadow 12 (27). With them, every glmark2 scene is as
+fast as on 6.16 (texture 107-112, bump 105-119, effect2d 78, shadow 27), glmark2 score 89
+(7.3.4 before: 72; 6.16 crashes in terrain/refract, out of carveout memory).
+---
+diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu.c b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+index e5c9bd20169d..562ea6c8de5e 100644
+--- a/drivers/iommu/arm/arm-smmu/arm-smmu.c
++++ b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+@@ -1723,6 +1723,22 @@ static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
+ 	if (smmu->impl && smmu->impl->reset)
+ 		smmu->impl->reset(smmu);
+ 
++	/*
++	 * MSM8226's GPU SMMU: downstream's "bfb" settings (qcom,iommu-bfb-regs/-data of
++	 * &kgsl_iommu in msm8226-iommu.dtsi), implementation-defined TLB/prefetch configuration
++	 * the downstream kernel writes on every attach.
++	 */
++	if (of_device_is_compatible(smmu->dev->of_node, "qcom,msm8226-smmu-v1")) {
++		static const u32 bfb[][2] = {
++			{ 0x204c, 0x3 }, { 0x2050, 0x0 }, { 0x2514, 0x4 }, { 0x2540, 0x10 },
++			{ 0x256c, 0x0 }, { 0x20ac, 0x0 }, { 0x215c, 0x1 }, { 0x220c, 0x11 },
++			{ 0x2314, 0x0 }, { 0x2394, 0x1 }, { 0x2414, 0x41 }, { 0x2008, 0x0 },
++		};
++
++		for (i = 0; i < ARRAY_SIZE(bfb); i++)
++			writel_relaxed(bfb[i][1], smmu->base + bfb[i][0]);
++	}
++
+ 	/* Push the button */
+ 	arm_smmu_tlb_sync_global(smmu);
+ 	arm_smmu_gr0_write(smmu, ARM_SMMU_GR0_sCR0, reg);
