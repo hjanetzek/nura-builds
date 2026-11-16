@@ -125,7 +125,7 @@ the target file:
 ### G. Zrythm as a target
 
 - `targets/zrythm.sh`: `REPOS="zrythm https://github.com/hjanetzek/zrythm nura tools/nura"`
-  (the fork on GitHub still to be checked: the local clone only has `github` → `zrythm/zrythm`)
+  (the fork's branch `nura`, rebased and force-pushed: see Zrythm's tools/nura/CI.md)
 - its 9 libraries (`tools/nura/deps`) as the project's library set: built from the checkout,
   published and update-checked like the other packages
 - zrythm and the kiosk package `postmarketos-ui-zrythm` from the checkout
