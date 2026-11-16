@@ -109,10 +109,15 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
 - Testing kmscube: run it as the OpenRC service (`rc-service kmscube start`), not from an SSH
   one-liner with `sudo timeout ...`: that way it never takes over the display (on 6.16 too).
 - **Open issues:**
-  - Intermittent (2 of 4 boots with the GPU SMMU, none in 3 without it): the MDP IOMMU's TLB
-    syncs time out during msm's init (2x 5 s) and the first panel enable fails (DSI -110): the
-    screen stays black until the next DPMS cycle (`s3ve3g-screen off`/`on` works). Keeping the
-    GPU SMMU powered made one boot clean, the next not; cause unknown.
+  - Fixed (patch 0027): the MDP IOMMU's TLB syncs timed out (5 s) during msm's first init on
+    some boots, and the first panel enable failed (blue, then black screen). msm maps and
+    unmaps buffers there while the MDP and so the SMMU are runtime-suspended: TLB maintenance
+    now only while the SMMU is active (invalidated on resume instead), and the MDP core clock
+    is the SMMU's "tbu" clock. 7 of 7 boots clean afterwards (before: about every second).
+  - Fixed (patch 0028): the layer mixer's border colour (shown without a staged plane) is set
+    to black; it was blue (flashes during the boot splash, the blue screen after screen-off).
+  - The GPU microcode (a330_pm4/pfp.fw) is in the initramfs now (device package's mkinitfs
+    files list): msm binds there and requested it before the rootfs was mounted.
   - After the screen-off service (~20 s), something re-enables the CRTC without its plane in
     most boots: a blue screen (the mixer's border colour) until `s3ve3g-screen on`. Not getty,
     seatd or console writes; detaching fbcon before the DPMS blank made it worse.

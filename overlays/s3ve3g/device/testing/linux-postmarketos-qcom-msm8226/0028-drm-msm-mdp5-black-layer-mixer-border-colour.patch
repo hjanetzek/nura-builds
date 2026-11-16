@@ -1,0 +1,36 @@
+From: nura-builds
+Subject: [PATCH] drm/msm/mdp5: black layer mixer border colour
+
+The layer mixer's border colour shows wherever no plane is staged: in the frames of a modeset
+before the first plane commit, and while the CRTC runs with its plane off. msm never set it, and
+on MSM8226 it was blue (reset or bootloader value): two blue flashes during the boot splash, and
+a blue screen after DPMS games. Set it to black at mode set.
+---
+diff --git a/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c b/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c
+index fa1285513d55..0d087aa340cc 100644
+--- a/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c
++++ b/drivers/gpu/drm/msm/disp/mdp5/mdp5_crtc.c
+@@ -386,6 +386,14 @@ static void mdp5_crtc_mode_set_nofb(struct drm_crtc *crtc)
+ 			MDP5_LM_OUT_SIZE_WIDTH(mixer_width) |
+ 			MDP5_LM_OUT_SIZE_HEIGHT(mode->vdisplay));
+ 
++	/*
++	 * A black border colour: shown where no plane is staged (a modeset before the first plane
++	 * commit, a CRTC enabled with its plane off); its reset/bootloader value was blue on
++	 * MSM8226.
++	 */
++	mdp5_write(mdp5_kms, REG_MDP5_LM_BORDER_COLOR_0(lm), 0);
++	mdp5_write(mdp5_kms, REG_MDP5_LM_BORDER_COLOR_1(lm), 0);
++
+ 	/* Assign mixer to LEFT side in source split mode */
+ 	val = mdp5_read(mdp5_kms, REG_MDP5_LM_BLEND_COLOR_OUT(lm));
+ 	val &= ~MDP5_LM_BLEND_COLOR_OUT_SPLIT_LEFT_RIGHT;
+@@ -397,6 +405,8 @@ static void mdp5_crtc_mode_set_nofb(struct drm_crtc *crtc)
+ 		mdp5_write(mdp5_kms, REG_MDP5_LM_OUT_SIZE(r_lm),
+ 			   MDP5_LM_OUT_SIZE_WIDTH(mixer_width) |
+ 			   MDP5_LM_OUT_SIZE_HEIGHT(mode->vdisplay));
++		mdp5_write(mdp5_kms, REG_MDP5_LM_BORDER_COLOR_0(r_lm), 0);
++		mdp5_write(mdp5_kms, REG_MDP5_LM_BORDER_COLOR_1(r_lm), 0);
+ 
+ 		/* Assign mixer to RIGHT side in source split mode */
+ 		val = mdp5_read(mdp5_kms, REG_MDP5_LM_BLEND_COLOR_OUT(r_lm));

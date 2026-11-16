@@ -1,0 +1,114 @@
+From: nura-builds
+Subject: [PATCH] iommu/qcom: MSM8226 MDP IOMMU: TLB maintenance only while powered, MDP core clock
+
+At msm's first init during boot a TLB sync of the MDP IOMMU sometimes timed out (5 s), and the
+first panel enable then failed (DSI command DMA -110; a blue, then black screen, the boot
+splash lost). msm maps and unmaps buffers there while the MDP (and the SMMU through its device
+link) is runtime-suspended; the sync then runs on an unclocked SMMU.
+
+- TLB invalidations and syncs only while the SMMU is runtime-active (as arm-smmu does with
+  pm_runtime_get_if_active()); unpowered, its TLB is empty, and on resume the context banks
+  are programmed again and now also invalidated (TLBIASID).
+- The MDP core clock as the SMMU's "tbu" clock, on whenever the SMMU is resumed.
+---
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+index 9000e3bdb1d9..572a0a4f212a 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226.dtsi
+@@ -1258,10 +1258,17 @@ mdp_iommu: iommu@fd930000 {
+ 			#size-cells = <1>;
+ 			#iommu-cells = <1>;
+ 
++			/*
++			 * The MDP core clock as "tbu": the SMMU's TLB syncs need it (the MDP holds
++			 * the TLB); without it a sync while the MDP is runtime-suspended timed out
++			 * (5 s, at msm's first init during boot).
++			 */
+ 			clocks = <&mmcc MDSS_AHB_CLK>,
+-				 <&mmcc MDSS_AXI_CLK>;
++				 <&mmcc MDSS_AXI_CLK>,
++				 <&mmcc MDSS_MDP_CLK>;
+ 			clock-names = "iface",
+-				      "bus";
++				      "bus",
++				      "tbu";
+ 			power-domains = <&mmcc MDSS_GDSC>;
+ 
+ 			qcom,iommu-secure-id = <1>;
+diff --git a/drivers/iommu/arm/arm-smmu/qcom_iommu.c b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
+index a2285046334a..1f4cadf9568a 100644
+--- a/drivers/iommu/arm/arm-smmu/qcom_iommu.c
++++ b/drivers/iommu/arm/arm-smmu/qcom_iommu.c
+@@ -113,6 +113,24 @@ iommu_readq(struct qcom_iommu_ctx *ctx, unsigned reg)
+ 	return readq_relaxed(ctx->base + reg);
+ }
+ 
++/*
++ * MSM8226 (v7s): TLB maintenance only while the SMMU is powered and clocked. Unpowered its TLB
++ * is empty anyway, and the context banks are programmed and invalidated again on resume; a
++ * sync issued meanwhile (msm maps buffers while the MDP is runtime-suspended) timed out (5 s).
++ */
++static bool qcom_iommu_tlb_get(struct qcom_iommu_domain *qcom_domain)
++{
++	if (!qcom_domain->iommu->v7s)
++		return true;
++	return pm_runtime_get_if_active(qcom_domain->iommu->dev) > 0;
++}
++
++static void qcom_iommu_tlb_put(struct qcom_iommu_domain *qcom_domain)
++{
++	if (qcom_domain->iommu->v7s)
++		pm_runtime_put(qcom_domain->iommu->dev);
++}
++
+ static void qcom_iommu_tlb_sync(void *cookie)
+ {
+ 	struct qcom_iommu_domain *qcom_domain = cookie;
+@@ -138,12 +156,16 @@ static void qcom_iommu_tlb_inv_context(void *cookie)
+ 	struct iommu_fwspec *fwspec = qcom_domain->fwspec;
+ 	unsigned i;
+ 
++	if (!qcom_iommu_tlb_get(qcom_domain))
++		return;
++
+ 	for (i = 0; i < fwspec->num_ids; i++) {
+ 		struct qcom_iommu_ctx *ctx = to_ctx(qcom_domain, fwspec->ids[i]);
+ 		iommu_writel(ctx, ARM_SMMU_CB_S1_TLBIASID, ctx->asid);
+ 	}
+ 
+ 	qcom_iommu_tlb_sync(cookie);
++	qcom_iommu_tlb_put(qcom_domain);
+ }
+ 
+ static void qcom_iommu_tlb_inv_range_nosync(unsigned long iova, size_t size,
+@@ -184,15 +206,21 @@ static void qcom_iommu_tlb_inv_range_nosync(unsigned long iova, size_t size,
+ static void qcom_iommu_tlb_flush_walk(unsigned long iova, size_t size,
+ 				      size_t granule, void *cookie)
+ {
++	if (!qcom_iommu_tlb_get(cookie))
++		return;
+ 	qcom_iommu_tlb_inv_range_nosync(iova, size, granule, false, cookie);
+ 	qcom_iommu_tlb_sync(cookie);
++	qcom_iommu_tlb_put(cookie);
+ }
+ 
+ static void qcom_iommu_tlb_add_page(struct iommu_iotlb_gather *gather,
+ 				    unsigned long iova, size_t granule,
+ 				    void *cookie)
+ {
++	if (!qcom_iommu_tlb_get(cookie))
++		return;
+ 	qcom_iommu_tlb_inv_range_nosync(iova, granule, granule, true, cookie);
++	qcom_iommu_tlb_put(cookie);
+ }
+ 
+ static const struct iommu_flush_ops qcom_flush_ops = {
+@@ -964,6 +992,8 @@ static int __maybe_unused qcom_iommu_resume(struct device *dev)
+ 				continue;
+ 			qcom_iommu_ctx_program(ctx, qcom_iommu->v7s,
+ 					       &to_qcom_iommu_domain(ctx->domain)->pgtbl_cfg);
++			if (qcom_iommu->v7s)
++				iommu_writel(ctx, ARM_SMMU_CB_S1_TLBIASID, ctx->asid);
+ 		}
+ 	}
+ 

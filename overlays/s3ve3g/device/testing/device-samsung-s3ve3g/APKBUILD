@@ -91,7 +91,10 @@ package() {
 	install -Dm755 /dev/stdin "$pkgdir"/usr/share/$pkgname/persistent-storage-noop <<-EOF
 	#!/bin/sh
 	EOF
-	echo "/usr/share/$pkgname/persistent-storage-noop:/lib/mdev/persistent-storage" |
+	# and the GPU's microcode (firmware-qcom-adreno-a330), which msm requests when it binds in the
+	# initramfs (without it: "failed to load a330_pm4.fw" and no GPU until a later open)
+	printf "%s\n" "/usr/share/$pkgname/persistent-storage-noop:/lib/mdev/persistent-storage" \
+		/lib/firmware/qcom/a330_pm4.fw /lib/firmware/qcom/a330_pfp.fw |
 		install -Dm644 /dev/stdin "$pkgdir"/usr/share/mkinitfs/files/90-$pkgname.files
 
 	# nura-builds: the screen black after boot (no panel driver, so no brightness control; an

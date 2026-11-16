@@ -79,6 +79,8 @@ source="
 	0024-ASoC-qcom-q6asm-dai-keep-the-playback-queue-in-step-with-the-stream.patch
 	0025-ASoC-codecs-wcd9306-keep-the-slave-ports-enabled-across-a-stream-restart.patch
 	0026-hwrng-qcom-rng-the-PRNG-as-hwrng-seeds-the-CRNG-at-boot.patch
+	0027-iommu-qcom-MSM8226-MDP-IOMMU-TLB-maintenance-only-while-powered.patch
+	0028-drm-msm-mdp5-black-layer-mixer-border-colour.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -156,5 +158,7 @@ ad9a9ca53e19a380f8336e13fdbfef6238ee62b7d65261c80f56122c7d0d286512971b9405db0918
 6736032b0f04edbddac2b1d0332457dc48e9a762c6e5a82a4d136b76bbecb6e7b8aea02173d3ad154242f9fa23ca5572a528524339ff7161979ec5fb01252c08  0024-ASoC-qcom-q6asm-dai-keep-the-playback-queue-in-step-with-the-stream.patch
 a1be72523650902dc70b3acb11c211ddb2400d1457d8a284d3ef72d5e34854bd1ba58744df0ea21f352bb603bbe3816d0aefe44422c3c64b8b6595e2743dd8a2  0025-ASoC-codecs-wcd9306-keep-the-slave-ports-enabled-across-a-stream-restart.patch
 c5ceb698625a83073c9e4b88bb09888e421ab2319cc12e31002180e6cf28a370d16797909aba70b15b2ea0b59f414b3f3dfe828f99695770147a53c02460f1d5  0026-hwrng-qcom-rng-the-PRNG-as-hwrng-seeds-the-CRNG-at-boot.patch
+415405bd4b027c302f854f7ccc9299b18fe1cb2f0d57e5f5078cab47f1729f60ef01f743598688284a2b78483bb566ae93838ea7bae31fdbc50fd5049164a1dd  0027-iommu-qcom-MSM8226-MDP-IOMMU-TLB-maintenance-only-while-powered.patch
+faaf49f78ccc8b3a4112f60272fad6a4e5a153020b3289efce1533e8ef3c89e7aa6d13354b14e4a3e88ddd12420f7abea5f96ddcfec85a95652821343911ceeb  0028-drm-msm-mdp5-black-layer-mixer-border-colour.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
