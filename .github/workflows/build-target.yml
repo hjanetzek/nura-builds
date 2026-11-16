@@ -70,6 +70,7 @@ jobs:
           if [ "${{ inputs.images }}" != true ]; then echo 'devices=[]' >> "$GITHUB_OUTPUT"; exit 0; fi
           d='${{ inputs.devices }}'
           if [ -z "$d" ]; then
+            # shellcheck disable=SC2046 # a list
             d=$(printf '%s\n' $(scripts/target-var.sh DEVICES) | jq -R . | jq -sc 'map(select(. != ""))')
           fi
           echo "devices=$d" >> "$GITHUB_OUTPUT"

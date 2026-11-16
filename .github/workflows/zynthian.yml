@@ -74,7 +74,9 @@ jobs:
         if: inputs.images
         with: { pattern: "zynthian-*", path: images, merge-multiple: true }
       - name: Publish
-        run: scripts/publish.sh zynthian new -- $(ls images/*.img.zst 2>/dev/null)
+        run: |
+          # shellcheck disable=SC2046 # the image files, if any
+          scripts/publish.sh zynthian new -- $(ls images/*.img.zst 2>/dev/null)
       - name: Dated release
         if: inputs.release && inputs.images
         env:

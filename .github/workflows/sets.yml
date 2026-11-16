@@ -46,6 +46,7 @@ jobs:
           PACKAGES: ${{ inputs.packages }}
           FORCE: ${{ inputs.force && '--force' || '' }}
         run: |
+          # shellcheck disable=SC2086 # lists ($ARCHES) and an optional flag ($FORCE)
           mkdir -p plans
           for a in $ARCHES; do
             mkdir -p "plans/$a"

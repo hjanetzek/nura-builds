@@ -28,8 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Newer upstream versions
-        # shellcheck disable=SC2086 # a list
-        run: python3 scripts/check-updates.py --json updates.json $PACKAGES | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          # shellcheck disable=SC2086 # a list
+          python3 scripts/check-updates.py --json updates.json $PACKAGES | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Issues
         if: env.ISSUES == 'true'
         run: |

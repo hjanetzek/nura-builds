@@ -121,7 +121,7 @@ echo "$REPOS" | while read -r name url branch recipes; do
 	case $recipes in
 	*,*)
 		[ -L "$aports/$name" ] && rm "$aports/$name"
-		rm -rf "$aports/$name" && mkdir -p "$aports/$name"
+		rm -rf "${aports:?}/$name" && mkdir -p "$aports/$name"
 		for r in $(echo "$recipes" | tr ',' ' '); do
 			ln -sfn "$NURA_SRC/$name/$r" "$aports/$name/$(basename "$r")"
 		done ;;

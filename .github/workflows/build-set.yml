@@ -59,7 +59,7 @@ jobs:
           sudo cp /home/runner/earlier/*.apk "$dir/"
           sudo chown -R 12345:12345 "$NURA_WORK/packages"
           (cd /home/runner/earlier && sha256sum -- *.apk) >> "$NURA_OUT/released/fetched.txt"
-          ls /home/runner/earlier/*.apk | sed 's|.*/||'
+          find /home/runner/earlier -name "*.apk" -printf "%f\n"
           pmbootstrap -c "$HOME/.config/pmbootstrap-nura-$TARGET.cfg" -y index
 
       - name: Build ${{ inputs.set }}
