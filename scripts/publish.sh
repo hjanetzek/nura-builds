@@ -17,7 +17,8 @@ tar=$2
 shift 2
 arch=${NURA_ARCH:-aarch64}
 repo_tag=$arch
-image_tag=$target-latest
+# NURA_IMAGE_TAG: another release for the images (zynthian-armv7.yml: zynthian-armv7-latest)
+image_tag=${NURA_IMAGE_TAG:-$target-latest}
 run_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-}"
 repository_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/releases/download"
 

@@ -1,0 +1,89 @@
+From 1f0763a96af11cca76f9d72b9ddee200b1405547 Mon Sep 17 00:00:00 2001
+From: alexandre minette <contact@alex-min.fr>
+Date: Sat, 24 Oct 2026 12:57:00 +0200
+Subject: [PATCH] freedreno/a3xx: honor sampler view targets for buffer blits
+
+The generic blitter samples PIPE_BUFFER resources through 1D texture
+views. A3xx selects descriptor fields using the resource target instead,
+reading u.buf from a view initialized as u.tex and forcing NOCONVERT for
+normalized copies. Address emission makes the same target assumption.
+This can corrupt staged buffer uploads and leave geometry or text missing.
+
+Use the sampler view target for descriptor and address emission, matching
+A4xx. Buffer-backed views only use level zero, so leave their mipmap
+pitch-alignment field zero instead of subtracting from the buffer layout's
+zero alignment field. Preserve ordinary texture encoding.
+
+Tested on A320 with Plasma's keypad and menu workload.
+
+Generated-by: LLM
+Part-of: <https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/45580>
+---
+ src/gallium/drivers/freedreno/a3xx/fd3_emit.c   |  2 +-
+ .../drivers/freedreno/a3xx/fd3_texture.c        | 17 +++++++++++------
+ 2 files changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/src/gallium/drivers/freedreno/a3xx/fd3_emit.c b/src/gallium/drivers/freedreno/a3xx/fd3_emit.c
+index 27b27160b909..777814a476df 100644
+--- a/src/gallium/drivers/freedreno/a3xx/fd3_emit.c
++++ b/src/gallium/drivers/freedreno/a3xx/fd3_emit.c
+@@ -218,7 +218,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
+             tex->textures[i] ? fd3_pipe_sampler_view(tex->textures[i])
+                              : &dummy_view;
+          struct fd_resource *rsc = fd_resource(view->base.texture);
+-         if (rsc && rsc->b.b.target == PIPE_BUFFER) {
++         if (rsc && view->base.target == PIPE_BUFFER) {
+             OUT_RELOC(ring, rsc->bo, view->base.u.buf.offset, 0, 0);
+             j = 1;
+          } else {
+diff --git a/src/gallium/drivers/freedreno/a3xx/fd3_texture.c b/src/gallium/drivers/freedreno/a3xx/fd3_texture.c
+index d110302f1130..5df23843cab1 100644
+--- a/src/gallium/drivers/freedreno/a3xx/fd3_texture.c
++++ b/src/gallium/drivers/freedreno/a3xx/fd3_texture.c
+@@ -145,17 +145,17 @@ fd3_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
+    so->base.context = pctx;
+ 
+    so->texconst0 = A3XX_TEX_CONST_0_TILE_MODE(rsc->layout.tile_mode) |
+-                   A3XX_TEX_CONST_0_TYPE(tex_type(prsc->target)) |
++                   A3XX_TEX_CONST_0_TYPE(tex_type(cso->target)) |
+                    A3XX_TEX_CONST_0_FMT(fd3_pipe2tex(cso->format)) |
+                    fd3_tex_swiz(cso->format, cso->swizzle_r, cso->swizzle_g,
+                                 cso->swizzle_b, cso->swizzle_a);
+ 
+-   if (prsc->target == PIPE_BUFFER || util_format_is_pure_integer(cso->format))
++   if (cso->target == PIPE_BUFFER || util_format_is_pure_integer(cso->format))
+       so->texconst0 |= A3XX_TEX_CONST_0_NOCONVERT;
+    if (util_format_is_srgb(cso->format))
+       so->texconst0 |= A3XX_TEX_CONST_0_SRGB;
+ 
+-   if (prsc->target == PIPE_BUFFER) {
++   if (cso->target == PIPE_BUFFER) {
+       lvl = 0;
+       so->texconst1 =
+          A3XX_TEX_CONST_1_WIDTH(cso->u.buf.size /
+@@ -168,14 +168,19 @@ fd3_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
+       miplevels = fd_sampler_last_level(cso) - lvl;
+ 
+       so->texconst0 |= A3XX_TEX_CONST_0_MIPLVLS(miplevels);
+-      so->texconst1 = A3XX_TEX_CONST_1_PITCHALIGN(rsc->layout.pitchalign - 4) |
+-                      A3XX_TEX_CONST_1_WIDTH(u_minify(prsc->width0, lvl)) |
++      so->texconst1 = A3XX_TEX_CONST_1_WIDTH(u_minify(prsc->width0, lvl)) |
+                       A3XX_TEX_CONST_1_HEIGHT(u_minify(prsc->height0, lvl));
++
++      /* Buffer-backed views only use level zero and have no mipmap pitch
++       * alignment. Their explicit pitch is emitted below.
++       */
++      if (prsc->target != PIPE_BUFFER)
++         so->texconst1 |= A3XX_TEX_CONST_1_PITCHALIGN(rsc->layout.pitchalign - 4);
+    }
+    /* when emitted, A3XX_TEX_CONST_2_INDX() must be OR'd in: */
+    struct fdl_slice *slice = fd_resource_slice(rsc, lvl);
+    so->texconst2 = A3XX_TEX_CONST_2_PITCH(fd_resource_pitch(rsc, lvl));
+-   switch (prsc->target) {
++   switch (cso->target) {
+    case PIPE_TEXTURE_1D_ARRAY:
+    case PIPE_TEXTURE_2D_ARRAY:
+       so->texconst3 = A3XX_TEX_CONST_3_DEPTH(prsc->array_size - 1) |
+-- 
+GitLab
+

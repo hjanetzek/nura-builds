@@ -22,12 +22,27 @@ echo "$REPOS" | while read -r name url branch recipes; do
 	eval "ref=\${$var:-$branch}"
 	# shellcheck disable=SC2154 # set by eval
 	if [ -d "$NURA_SRC/$name/.git" ]; then
+		# undo the arch additions of an earlier run (below), or the checkout could refuse
+		for p in $ADD_ARCH; do
+			case $p in "@$name/"*) git -C "$NURA_SRC/$name" checkout -q -- "${p#"@$name/"}/APKBUILD" 2>/dev/null || true ;; esac
+		done
 		git -C "$NURA_SRC/$name" fetch -q origin "$ref"
 		git -C "$NURA_SRC/$name" checkout -q FETCH_HEAD
 	else
 		git clone -q --depth 1 --branch "$ref" "$url" "$NURA_SRC/$name"
 	fi
 	echo "$name: $(git -C "$NURA_SRC/$name" log -1 --format='%h %s')"
+done
+
+# Recipes of other repositories that don't list the architecture yet (ADD_ARCH_<arch> in the
+# target file): add it to their arch= in the checkout
+for p in $ADD_ARCH; do
+	f=$(resolve "$p")/APKBUILD
+	[ -f "$f" ] || { echo "ADD_ARCH: no $f" >&2; exit 1; }
+	if ! grep -Eq "^arch=\"(.* )?($ARCH|all)( .*)?\"" "$f"; then
+		sed -i "s/^arch=\"\(.*\)\"/arch=\"\1 $ARCH\"/" "$f"
+		echo "$p: $(grep '^arch=' "$f") (added $ARCH)"
+	fi
 done
 
 # Config: as the local Duet builds (edge, systemd, PipeWire), device and UI of the target

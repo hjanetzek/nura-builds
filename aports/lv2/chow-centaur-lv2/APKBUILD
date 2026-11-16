@@ -76,6 +76,16 @@ prepare() {
 }
 
 build() {
+	# armv7 (added by the armv7 CI, ADD_ARCH_armv7): JUCE defines dsp::SIMDRegister, which
+	# chowdsp_utils needs, only with NEON, and Alpine builds armv7 without it (-mfpu=vfpv3-d16);
+	# the MSM8226 and other armv7 phones have NEON. Without JUCE's LTO: lto1 crashes (internal
+	# compiler error) linking the plugin for armv7.
+	case "$CARCH" in
+	armv7)
+		export CFLAGS="$CFLAGS -mfpu=neon-vfpv4" CXXFLAGS="$CXXFLAGS -mfpu=neon-vfpv4"
+		sed -i "/juce::juce_recommended_lto_flags/d" modules/CMakeLists.txt
+		;;
+	esac
 	# musl: the execinfo.h stub; stat64 and friends only with _LARGEFILE64_SOURCE; glibc's
 	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "");
 	# <utility> for std::exchange, which older JUCE gets indirectly from glibc's libstdc++ headers

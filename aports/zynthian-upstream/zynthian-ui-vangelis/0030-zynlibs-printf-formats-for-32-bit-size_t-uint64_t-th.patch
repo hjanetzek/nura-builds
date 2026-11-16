@@ -1,0 +1,74 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Wed, 11 Nov 2026 15:14:23 +0100
+Subject: [PATCH] zynlibs: printf formats for 32-bit (size_t, uint64_t): the
+ armv7 build failed with -Werror=format
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit f5ab0a29e18bd3ece055ee00f9fd3262f9e36bc1)
+---
+ zynlibs/zynaudioplayer/player.c | 4 ++--
+ zynlibs/zynseq/zynseq.cpp       | 6 +++---
+ zynlibs/zynsmf/zynsmf.cpp       | 2 +-
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/zynlibs/zynaudioplayer/player.c b/zynlibs/zynaudioplayer/player.c
+index f03bc969..4e90f0e2 100644
+--- a/zynlibs/zynaudioplayer/player.c
++++ b/zynlibs/zynaudioplayer/player.c
+@@ -417,9 +417,9 @@ void* file_thread_fn(void* param) {
+                             srcData.input_frames = nTotalValid;
+                             int rc = src_process(pSrcState, &srcData);
+                             if (rc) {
+-                                DPRINTF("SRC failed with error %d, %lu frames generated\n", nFramesRead, srcData.output_frames_gen);
++                                DPRINTF("SRC failed with error %d, %ld frames generated\n", nFramesRead, srcData.output_frames_gen);
+                             } else {
+-                                DPRINTF("SRC suceeded - %lu frames generated, %lu frames used, %lu frames unused\n", srcData.output_frames_gen,
++                                DPRINTF("SRC suceeded - %ld frames generated, %ld frames used, %zu frames unused\n", srcData.output_frames_gen,
+                                         srcData.input_frames_used, nUnusedFrames);
+                                 nUnusedFrames = nTotalValid - srcData.input_frames_used;
+                                 nFramesRead   = srcData.output_frames_gen;
+diff --git a/zynlibs/zynseq/zynseq.cpp b/zynlibs/zynseq/zynseq.cpp
+index 06522e76..4672b6a8 100644
+--- a/zynlibs/zynseq/zynseq.cpp
++++ b/zynlibs/zynseq/zynseq.cpp
+@@ -497,7 +497,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
+                 nNextBeatTime = nTickTime + PPQN_INTERNAL;
+                 nMetronomeFrame = nFrame;
+                 bBeat = true;
+-                DPRINTF("Beat at tick %d, frame %u (%lu)\n", nTickTime, nFrame, nNow + nFrame);
++                DPRINTF("Beat at tick %d, frame %u (%llu)\n", nTickTime, nFrame, (unsigned long long)(nNow + nFrame));
+                 if (++g_nBeat > nBeatsPerBar) {
+                     // Bar
+                     g_nBeat = 1;
+@@ -534,7 +534,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
+                 if (g_nPlayingSequences != nPlayingSequences) {
+                     g_nPlayingSequences = nPlayingSequences;
+                     if (!g_nPlayingSequences) {
+-                        DPRINTF("No sequences playing now: %lu clock: %u beat: %u tick: %u\n", nNow, nTickTime, g_nBeat, g_nTick);
++                        DPRINTF("No sequences playing now: %llu clock: %u beat: %u tick: %u\n", (unsigned long long)nNow, nTickTime, g_nBeat, g_nTick);
+                         transportStop(TRANSPORT_CLIENT_ZYNSEQ);
+                     }
+                 }
+@@ -636,7 +636,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
+                     pBuffer[1] = it->second.msg.value1;
+                 if (nSize > 2)
+                     pBuffer[2] = it->second.msg.value2;
+-                DPRINTF("Sending MIDI event %x,%x,%x at %lu\n", pBuffer[0], pBuffer[1], pBuffer[2], nNow + nFrame);
++                DPRINTF("Sending MIDI event %x,%x,%x at %llu\n", pBuffer[0], pBuffer[1], pBuffer[2], (unsigned long long)(nNow + nFrame));
+             }
+             ++it;
+         }
+diff --git a/zynlibs/zynsmf/zynsmf.cpp b/zynlibs/zynsmf/zynsmf.cpp
+index 2a1e004c..5f79e51e 100644
+--- a/zynlibs/zynsmf/zynsmf.cpp
++++ b/zynlibs/zynsmf/zynsmf.cpp
+@@ -614,7 +614,7 @@ double getTempo(Smf* pSmf, uint32_t nTime) {
+ }
+ 
+ void printEvents(Smf* pSmf, size_t nTrack) {
+-    printf("Print events for track %lu\n", nTrack);
++    printf("Print events for track %zu\n", nTrack);
+     if (!isSmfValid(pSmf))
+         return;
+     setPosition(pSmf, 0);

@@ -17,6 +17,9 @@ PMAPORTS=${NURA_PMAPORTS:-$HOME/.local/var/pmbootstrap/cache_git/pmaports}
 ARCH=${NURA_ARCH:-aarch64}
 # The devices of the architecture (DEVICES_<arch> in the target file; DEVICES: aarch64's)
 eval "DEVICES=\${DEVICES_$ARCH:-\${DEVICES:-}}"
+# Other settings of the architecture (<VAR>_<arch> in the target file, e.g. STAGES_armv7)
+eval "STAGES=\${STAGES_$ARCH:-\$STAGES} UI=\${UI_$ARCH:-\$UI}"
+eval "IMAGE_PACKAGES=\${IMAGE_PACKAGES_$ARCH:-\${IMAGE_PACKAGES:-}} ADD_ARCH=\${ADD_ARCH_$ARCH:-}"
 # Target name in cache keys: as before for aarch64, <target>_<arch> for the others (no "-":
 # prune-cache.sh splits keys at "-")
 KEY_TARGET=$TARGET
@@ -35,10 +38,16 @@ resolve() {
 	esac
 }
 
+# What a stage builds: STAGE_<stage>_<arch> if the target file has it, else STAGE_<stage>
+stage_builds() {
+	eval "printf '%s\n' \"\${STAGE_$1_$ARCH:-\${STAGE_$1:-}}\""
+}
+
 # Hash of a stage's inputs, for the package cache key: what it builds (STAGE_<stage>, so adding a
 # package to the list invalidates the cache) and its recipe directories (INPUTS_<stage>)
 stage_hash() {
-	eval "builds=\${STAGE_$1:-} inputs=\${INPUTS_$1:-}"
+	builds=$(stage_builds "$1")
+	eval "inputs=\${INPUTS_$1:-}"
 	# shellcheck disable=SC2154 # set by eval
 	{
 		echo "$builds"

@@ -13,8 +13,7 @@ if [ "${1:-}" = "--hash" ]; then
 	exit 0
 fi
 stage=$1
-eval "builds=\${STAGE_$stage:-}"
-# shellcheck disable=SC2154 # set by eval
+builds=$(stage_builds "$stage")
 [ -n "$builds" ] || { echo "no stage $stage in targets/$TARGET.sh" >&2; exit 1; }
 
 eval "seed=\${SEED_$stage:-}"
@@ -24,6 +23,8 @@ if [ -n "$seed" ]; then
 fi
 
 status=0
+eval "keepgoing=\${KEEPGOING_${stage}_$ARCH:-\${KEEPGOING_$stage:-}}"
+failed=$(mktemp)
 echo "$builds" | tr ';' '\n' | while read -r args; do
 	[ -n "$args" ] || continue
 	set --
@@ -34,9 +35,21 @@ echo "$builds" | tr ';' '\n' | while read -r args; do
 		esac
 	done
 	echo "::group::pmbootstrap build $*"
-	pmb build --arch "$ARCH" "$@" || exit 1
+	if ! pmb build --arch "$ARCH" "$@"; then
+		echo "::endgroup::"
+		# KEEPGOING_<stage>[_<arch>] (target file): go on with the next build, list the failures
+		[ -n "$keepgoing" ] || exit 1
+		echo "::warning::$stage: pmbootstrap build $* failed on $ARCH"
+		echo "$*" >> "$failed"
+		continue
+	fi
 	echo "::endgroup::"
 done || status=1
+if [ -s "$failed" ]; then
+	echo "$stage: failed on $ARCH (KEEPGOING):"; sed 's/^/  /' "$failed"
+	[ -n "${GITHUB_STEP_SUMMARY:-}" ] && { echo "### $stage: failed on $ARCH"; sed 's/^/- /' "$failed"; } >> "$GITHUB_STEP_SUMMARY"
+fi
+rm -f "$failed"
 
 save_packages
 # The build chroots and the HTTP cache, not the packages or distfiles
