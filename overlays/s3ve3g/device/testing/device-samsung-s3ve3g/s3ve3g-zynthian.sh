@@ -7,6 +7,10 @@
 #
 # - waits for the boot splash to end (plymouthd holds DRM master until OpenRC's plymouth plugin
 #   quits it at the end of the default runlevel)
+# - zynthian's engine list rescanned when LV2 plugins were added or removed since (or zynthian's
+#   defaults changed): zynthian enables new plugins only through that rescan ("zynthian_lv2.py
+#   engines", which merges zynthian-sys's default engine config; upstream's update script runs
+#   it), otherwise installed plugins stay disabled; ~10 s
 # - stops a running zynthian first (zynthian_desktop.sh restarts zynthian when it exits, so the
 #   launcher before its zynthian; two instances compete for DRM master and JACK)
 # - JACK: an already running jackd is kept; otherwise jackd on the card "Neo" (WCD9306), 48 kHz,
@@ -55,6 +59,22 @@ while [ $i -lt 30 ]; do
 	[ -z "$busy" ] && break
 	sleep 0.5; i=$((i + 1))
 done
+
+# The engine list: rescanned when a plugin directory or zynthian's defaults are newer than it
+zdir=${ZYNTHIAN_DIR:-/usr/share/zynthian}
+engines="${XDG_CONFIG_HOME:-$HOME/.config}/zynthian/engine_config.json"
+rescan=
+[ -f "$engines" ] || rescan=1
+for d in /usr/lib/lv2 "${XDG_DATA_HOME:-$HOME/.local/share}/zynthian/plugins/lv2" \
+		"$zdir/zynthian-sys/config/engine_config.json"; do
+	[ -e "$d" ] && [ "$d" -nt "$engines" ] && rescan=1
+done
+if [ -n "$rescan" ]; then
+	echo "rescanning zynthian's engines (LV2 plugins changed)" >&2
+	(cd "$zdir/zynthian-ui" && PYTHONPATH="$zdir/python${PYTHONPATH:+:$PYTHONPATH}" \
+		python3 zyngine/zynthian_lv2.py engines > /tmp/zyn-rescan.log 2>&1) ||
+		echo "rescan failed, see /tmp/zyn-rescan.log" >&2
+fi
 
 # A jackd whose driver failed (see above) is no use: stopped, and started again below
 jack_failed() {
