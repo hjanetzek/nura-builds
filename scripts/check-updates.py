@@ -68,7 +68,7 @@ def is_version(t):
 def recipe_info(path):
     script = ('. ./APKBUILD >/dev/null 2>&1; printf "%s\\0%s\\0%s\\0%s\\0%s" "$pkgname" "$pkgver" '
               '"$url" "$(printf "%s\\n" $source | grep "://" | sed "s/^[^:]*:://")" "${_branch:-}"')
-    out = subprocess.run(["sh", "-c", script], cwd=path, stdout=subprocess.PIPE,
+    out = subprocess.run(["bash", "-c", script], cwd=path, stdout=subprocess.PIPE,
                          stdin=subprocess.DEVNULL, check=True).stdout.decode().split("\0")
     return {"pkgname": out[0], "pkgver": out[1], "url": out[2], "sources": out[3].split(),
             "branch": out[4] or None}

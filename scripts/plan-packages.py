@@ -29,10 +29,11 @@ import apkindex  # noqa: E402
 
 
 def shell_vars(path, names):
-    """Variables of a shell file (set file, APKBUILD), evaluated by sh"""
+    """Variables of a shell file (set file, APKBUILD), evaluated by bash (dash, Ubuntu's sh, aborts on
+    some APKBUILDs: they are written for ash)"""
     script = '. "$1" >/dev/null 2>&1; ' + "; ".join(
         f'printf "%s\\0" "${{{n}:-}}"' for n in names)
-    out = subprocess.run(["sh", "-c", script, "sh", path], stdout=subprocess.PIPE,
+    out = subprocess.run(["bash", "-c", script, "bash", path], stdout=subprocess.PIPE,
                          check=True, cwd=os.path.dirname(path)).stdout.decode()
     return dict(zip(names, out.split("\0")))
 
