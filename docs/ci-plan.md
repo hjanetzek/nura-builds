@@ -1,6 +1,9 @@
 # CI restructuring: plan (2026-11-16)
 
-Status: plan, not implemented. Goal: individual packages can be updated without rebuilding
+Status (2026-11-16): phases 1–5 implemented on branch `ci-restructure` (not on main yet, not run on
+GitHub yet); phase 6 (device workflows) open. Decisions taken: the plan's recommendations (sets
+publish from main; project libraries stay in their repositories; targets by hand/weekly, no
+`repository_dispatch`; the update check opens issues). Goal: individual packages can be updated without rebuilding
 everything, the GitHub Actions cache stops being the package store, and zrythm is added as a
 second target.
 
@@ -128,6 +131,19 @@ the target file:
 - zrythm and the kiosk package `postmarketos-ui-zrythm` from the checkout
 - aarch64 and x86_64 first; Qt 6.12 from the release if zrythm needs it; images zrythm × devices
   optional
+
+## Deviations from the plan while implementing
+
+- Publishing merges the index at publishing time, not at the build's start, and is serialized per
+  architecture (concurrency group `publish-<arch>`), so two workflows can't drop each other's
+  packages. The merge works on the index text (`scripts/apkindex.py`, no apk-tools needed), so
+  publishing downloads no packages.
+- Packages published before the manifest existed are adopted (recorded with their current recipe
+  hash) instead of rebuilt.
+- Qt is split into sets as the old stages were (qt-base, qt-declarative, qt-wayland, plus
+  qt-tools for Zrythm), each a job under the 6 h limit, chained with `FORCE_AFTER`.
+- Target stages keep pmbootstrap's own rule: a package whose version is published isn't rebuilt
+  (Zrythm's libraries), `--src` packages always are.
 
 ## Order of implementation
 

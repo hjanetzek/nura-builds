@@ -8,6 +8,7 @@ Targets so far:
 | Target | What | Devices |
 |---|---|---|
 | `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss), zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
+| `zrythm` | Zrythm (the DAW) in a labwc kiosk session: its libraries, zrythm from the checkout of `hjanetzek/zrythm` (`nura-duet`), `postmarketos-ui-zrythm`; recipes in Zrythm's `tools/nura/` | Lenovo IdeaPad Duet (`google-kukui`), QEMU (`qemu-amd64`) |
 | (in `zynthian`) | zynthian-ui from upstream (`zynthian-ui-vangelis`, `zynthian-ui-tomita`): the Tk UI with the port patches, packages only, see [docs/zynthian-upstream.md](docs/zynthian-upstream.md) | as above |
 
 Next: the Google Pixel 3 (`google-blueline`), see [docs/google-blueline.md](docs/google-blueline.md):
@@ -24,7 +25,7 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   zynthian's jalv (`aports/zynthian-jalv`). These came from zynthian-ui's `nura/` with their
   history (2026-11-06). How to package more: [docs/packaging-guide.md](docs/packaging-guide.md);
   zynthian's plugins on Nura: [docs/lv2-plugins.md](docs/lv2-plugins.md); upstream updates:
-  `tools/check-updates.py`.
+  `scripts/check-updates.py` (weekly in `update-check.yml`).
 - `scripts/setup.sh` installs pmbootstrap, writes its config (edge, systemd, PipeWire), initialises
   the work dir, links the recipes, installs the signing key and restores built packages.
 - `scripts/pin-binary.sh` (run by setup.sh) pins the devices' packages (device package, kernel,
@@ -32,31 +33,36 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   already has a newer recipe than the published package, pmbootstrap would build it (the Duet's
   kernel: a full clang/Rust build); instead the recipe is checked out at the newest pmaports commit
   with the published version.
-- `scripts/build.sh STAGE` builds one stage and saves the local package repository
-  (`$NURA_OUT/packages.tar`); `scripts/image.sh DEVICE` writes an image
-  (`$NURA_OUT/<target>-<device>.img.zst`).
-- `.github/workflows/<target>.yml` runs the stages as jobs (`stage.yml`), each on a fresh runner:
-  stages stay under the 6 h job limit, and a stage whose recipes (and all earlier stages) are
-  unchanged takes its packages from the Actions cache. A stage whose recipes changed starts from
-  its last cached packages (same earlier stages) and builds only the packages whose
-  `pkgver-pkgrel` isn't there yet: bump `pkgrel` with a recipe change. A failed stage saves what
-  it built too (key `…-partial-<run>`, never an exact match), and the next run continues from
-  there. A plan job (`scripts/plan.sh`) computes all stage keys first: a stage cached under its
-  exact key doesn't start at all (the next stage takes its packages from the cache), so a run with
-  unchanged Qt takes about 8 minutes. Then one image job per device.
-- Weekly (Sunday 01:00 UTC aarch64, 05:00 UTC x86_64), and by hand with the `rebuild` input, the stages in `REBUILD_STAGES`
-  (Qt, PySide) are built from scratch and replace their cached packages: they replace Alpine's
-  versions and link against its libraries, so a soname change in Alpine would break them without
-  any change to their recipes.
-- `.github/workflows/packages.yml` builds single packages by name (see below).
+- **The package repository is the store** ([docs/ci-plan.md](docs/ci-plan.md)): the releases
+  `<arch>` (aarch64, x86_64, armv7). Every build starts from the published repository of its
+  architecture (`scripts/fetch-released.sh`), builds what is missing or changed, and publishes
+  merged (`scripts/publish.sh`: the published index plus the new packages, signed with the CI key;
+  serialized per architecture across workflows, concurrency group `publish-<arch>`). The Actions
+  cache holds no packages.
+- **Package sets** (`sets/`, workflow `sets.yml`): Qt (`qt-base`, `qt-declarative`, `qt-wayland`,
+  `qt-tools`), PySide6, the plugins (LV2, Pure Data, engines, zynthian's jalv) and Mesa (armv7),
+  with their architectures and per-architecture lists. `scripts/plan-packages.py` compares each
+  recipe with the published index and `manifest.json` (per package: recipe hash, version, set or
+  target, run): it builds what is new, has another version or a changed recipe (with `--force`),
+  and a set's dependents when `FORCE_AFTER` says so (Qt Quick after qtbase, ...). On pushes to
+  `main` that change `aports/` or `sets/` only the changed packages are built.
+- **Targets** (`targets/<target>.sh`, workflows `zynthian.yml`, `zrythm.yml` on
+  `build-target.yml`): the target's own packages from the checkouts of its repositories, on top of
+  the published repository, then optionally the images (`scripts/image.sh DEVICE` writes
+  `$NURA_OUT/<target>-<device>.img.zst`). By hand, weekly per architecture, and on pushes that
+  change the target.
+- **Checks** (`update-check.yml`, Mondays): newer upstream versions of the recipes
+  (`scripts/check-updates.py`, settings in `updates.conf`) as one issue per recipe (label
+  `update`, with the steps for an agent), and published packages whose shared libraries
+  Alpine/postmarketOS dropped (`scripts/check-abi.py`), rebuilt through `sets.yml`. Instead of a
+  blind weekly rebuild of Qt.
+- `.github/workflows/packages.yml` builds single packages by name on the published repository
+  (see below).
 
-zynthian's stages: `qt1` (qtbase, qtshadertools, qtsvg, qtlanguageserver), `qt2` (qtdeclarative),
-`qt3` (qtwayland), `pyside` (PySide6 6.12), `plugins`
-(zynthian's jalv, the LV2 plugins and Pure Data externals of `aports/lv2` and `aports/pd` through
-their meta packages, zynaddsubfx, setBfree, SooperLooper), `zynthian`
-(zyncoder, zynthian-ui, DrivenByMoss, zynthian-packages and zynthian-webconf from their checkouts, zynthian-data, postmarketos-ui-zynthian; always
-rebuilt), `upstream` (zynthian-ui from upstream's vangelis and tomita with the port patches). The Qt modules are separate stages because their recipes ask for the other modules
-without a version, which Alpine's 6.11 would satisfy.
+zynthian's stages: `zynthian` (zyncoder, zynthian-ui, DrivenByMoss, zynthian-packages and
+zynthian-webconf from their checkouts, zynthian-data, postmarketos-ui-zynthian; always rebuilt)
+and `upstream` (zynthian-ui from upstream's vangelis and tomita with the port patches). Zrythm's:
+`deps` (its libraries; built when their version isn't published yet) and `zrythm`.
 
 ## Downloads
 
@@ -83,49 +89,14 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
   `zynthian-qemu-amd64.img.zst` in `zynthian-latest`. On x86-64 runners; cache keys
   `packages-zynthian_x86_64-<stage>-...` (`NURA_ARCH`, `DEVICES_x86_64` in the target file).
 
-- **armv7** (branch `zynthian-arm7`, workflow `zynthian-armv7.yml`): zynthian for 32-bit ARM phones,
-  first the Samsung Galaxy S III Neo (`samsung-s3ve3g`, MSM8226). The stages of `zynthian.yml`
-  without `plugins`: a small `engines` stage builds only zynthian-ui's own dependencies (zynthian-jalv,
-  aeolus, sooperlooper), and the zynthian stage leaves out the kiosk package (it depends on the
-  plugins). The device is the generic mainline port `qcom-msm8226` (pmaports `device/testing`,
-  `linux-postmarketos-qcom-msm8226` with the s3ve3g's device tree, booted by lk2nd); the phone's own
-  `samsung-s3ve3g` package is archived, with the downstream 3.4 kernel, too old for systemd. Its
-  image (input `images`) has UI `none` with zynthian-ui installed, for bringing up the device. Recipes
-  of the other repositories that list only `aarch64 x86_64` get `armv7` added in the checkouts
-  (`ADD_ARCH_armv7`). Settings: the `*_armv7` variables in `targets/zynthian.sh`; cache keys
-  `packages-zynthian_armv7-<stage>-...`; on pushes to the branch, release
-  [`armv7`](../../releases/tag/armv7) (same repository URL) and, with images,
-  `zynthian-armv7-latest`. On arm64 runners: armv7 natively where the CPU runs 32-bit code, under
-  QEMU otherwise (slow for Qt and PySide: the partial caches carry a stage over several runs).
-
-Workflow artifacts (packages per stage, images) stay for a few days for debugging.
-
-The zynthian image leaves out large data from elsewhere (SoundFonts, sample packs); after the first
-boot, `zynthian-factory-content` on the device installs what ZynthianOS' image comes with, so that
-all factory snapshots load: [docs/factory-content.md](docs/factory-content.md).
-
-### Testing the amd64 image on a desktop
-
-zynthian-ui's `nura/tools/run_qemu.sh` (moved there from this repository's `tools/`) downloads the latest `zynthian-qemu-amd64.img.zst` (to `~/.cache/nura-builds`)
-and runs it in QEMU with KVM, OpenGL through virgl (`virtio-vga-gl`: the guest renders on the
-desktop's GPU), PipeWire audio (virtio-sound), SSH on `localhost:2222` and webconf on
-`localhost:8080` (or the next free ports; it prints them); `-R WxH` sets the screen (default 1280x800), `-U VID:PID` passes a USB MIDI controller through, `-r` starts from a fresh copy,
-`-u` fetches a newer image. It needs QEMU's GL, display and audio modules (it names the missing
-ones; on Arch `qemu-hw-display-virtio-{gpu,gpu-gl,gpu-pci,gpu-pci-gl,vga,vga-gl} qemu-ui-opengl
-qemu-ui-gtk qemu-audio-pipewire`, and `qemu-hw-usb-host` for passthrough) and OVMF (`edk2-ovmf`).
-Headless (`-D none`, serial console and PID file in the cache directory) for agents and tests,
-with `-A silent` (a sound card without host output: `-A none` can stall PipeWire's graph);
-`nura/tools/qemu_setup.sh` installs an SSH key and passwordless sudo in a fresh VM, and
-`nura/tools/qemu_compare.sh` runs upstream zynthian (Tk) and the Qt port side by side at the V5 kit's
-800x480. How zynthian's agents test in a VM: zynthian-ui's [docs/qemu-testing.md](https://github.com/hjanetzek/zynthian-ui/blob/main/docs/qemu-testing.md).
-
-## Building single packages
-
-`packages.yml` (by hand) builds named packages, e.g. new recipes on a branch, without the whole
-target: it starts from the newest cached packages of the `plugins` stage (Qt,
-PySide, the plugins) and uploads the built `.apk` files and the build log as the artifact
-`packages-<run id>`. The named packages are always rebuilt, their dependencies only when missing
-or outdated.
+- **armv7**: zynthian for 32-bit ARM phones, first the Samsung Galaxy S III Neo (`samsung-s3ve3g`,
+  MSM8226): `zynthian.yml` with architecture `armv7` (and weekly), release
+  [`armv7`](../../releases/tag/armv7), images in `zynthian-armv7-latest`. Only part of the plugins
+  (`sets/plugins.sh`: `PACKAGES_armv7`), so no kiosk package; the image has UI `none` with
+  zynthian-ui installed. The device is the generic mainline port `qcom-msm8226`. Recipes of the
+  other repositories that list only `aarch64 x86_64` get `armv7` added in the checkouts
+  (`ADD_ARCH_armv7`). On arm64 runners: armv7 natively where the CPU runs 32-bit code, under QEMU
+  otherwise.
 
 ```sh
 gh workflow run packages.yml --ref my-branch -f packages="dexed-lv2 eq10q-lv2"
@@ -137,10 +108,10 @@ gh run download <run id>
 `plugin.yml` builds new or changed recipes before they go into the zynthian target: a push to a
 `plugin-*` branch builds each recipe directory of `aports/lv2`, `aports/pd` or `aports/engines`
 that the branch changes against `main`, one job per package (through `packages.yml`, on the
-cached packages of the plugins stage), each with its own log and `.apk` artifact. The zynthian
+published package repository), each with its own log and `.apk` artifact. The zynthian
 workflow doesn't run for these branches. When a package builds (and runs on a device), add it to
-the meta package (`zynthian-lv2-plugins`, `zynthian-puredata`) or, for an engine, to
-`STAGE_plugins`, and merge to `main`.
+the meta package (`zynthian-lv2-plugins`, `zynthian-puredata`) (for armv7: `PACKAGES_armv7` in
+`sets/plugins.sh`) and merge to `main`: `sets.yml` builds and publishes just that package.
 
 ```sh
 git switch -c plugin-foo-lv2      # add aports/lv2/foo-lv2/APKBUILD
@@ -157,7 +128,7 @@ gh run list -w plugin -L 1
 | `NURA_IMAGE_PASSWORD` | the user's password in images (default `147147`) |
 
 Without a key, each run signs with a new one: packages of different runs don't trust each other
-and the cache is of no use. Create a key once (`openssl genrsa -out nura-ci.rsa 4096`) and store
+and the published repository can't be merged into. Create a key once (`openssl genrsa -out nura-ci.rsa 4096`) and store
 it as the secret; a device installed from another image needs its public key in `/etc/apk/keys`
 to install packages from these builds (as `nura/deploy.sh -k` does for the local work dir).
 
@@ -168,17 +139,19 @@ On an aarch64 machine, or x86_64 with qemu-user registered for aarch64 (slow for
 ```sh
 export NURA_WORK=$HOME/nura-work NURA_SRC=$HOME/nura-src
 scripts/setup.sh
-for stage in qt1 qt2 qt3 pyside zynthian; do scripts/build.sh $stage; done
+scripts/fetch-released.sh              # the published packages (Qt, PySide, plugins); needs gh
+scripts/build.sh zynthian
 scripts/image.sh google-kukui
 ```
 
-If Zrythm's `tools/nura` is linked into the same pmaports checkout, its Qt recipes and these are
-duplicates: link only one of them.
+If Zrythm's `tools/nura` is linked into the same pmaports checkout as a whole, its Qt recipes and
+these are duplicates: the target zrythm links its recipe directories without `qt6`.
 
 ## Adding a target
 
-Write `targets/<name>.sh` (repositories, stages, inputs, devices) and a workflow calling
-`stage.yml` per stage; shared dependencies go to `aports/`.
+Write `targets/<name>.sh` (repositories with their recipe directories, stages, UI, devices) and a
+workflow like `zrythm.yml` (build-target.yml, then publish); dependencies shared with other
+targets go to `aports/` and a package set (`sets/`).
 
 ## Status
 

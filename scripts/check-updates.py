@@ -4,7 +4,8 @@
 
 Where the newest version comes from:
 - GitHub (source or url on github.com): the latest release, else the highest version tag; for
-  snapshot versions (<x>_git<YYYYMMDD>) the newest commit on the default branch, reported when it
+  snapshot versions (<x>_git<YYYYMMDD>) the newest commit on the default branch (or the recipe's
+  _branch), reported when it
   is more than SNAPSHOT_DAYS newer than the snapshot (or a release newer than it exists)
 - download.qt.io (Qt, PySide): the newest release in Qt's official_releases directory
 - otherwise Repology (the newest version any distribution has)
@@ -19,6 +20,7 @@ import os
 import re
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -64,11 +66,12 @@ def is_version(t):
 
 
 def recipe_info(path):
-    script = ('. ./APKBUILD >/dev/null 2>&1; printf "%s\\0%s\\0%s\\0%s" "$pkgname" "$pkgver" '
-              '"$url" "$(printf "%s\\n" $source | grep "://" | sed "s/^[^:]*:://")"')
+    script = ('. ./APKBUILD >/dev/null 2>&1; printf "%s\\0%s\\0%s\\0%s\\0%s" "$pkgname" "$pkgver" '
+              '"$url" "$(printf "%s\\n" $source | grep "://" | sed "s/^[^:]*:://")" "${_branch:-}"')
     out = subprocess.run(["sh", "-c", script], cwd=path, stdout=subprocess.PIPE,
                          stdin=subprocess.DEVNULL, check=True).stdout.decode().split("\0")
-    return {"pkgname": out[0], "pkgver": out[1], "url": out[2], "sources": out[3].split()}
+    return {"pkgname": out[0], "pkgver": out[1], "url": out[2], "sources": out[3].split(),
+            "branch": out[4] or None}
 
 
 def github_repo(info):
@@ -79,37 +82,35 @@ def github_repo(info):
     return None
 
 
-def newest_github(repo, current):
+def newest_github(repo, current, branch=None):
+    """API errors other than "not found" (rate limits, ...) propagate: reported, not taken for
+    "no update" """
+    def maybe(path):
+        try:
+            return gh(path)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            raise
     snap = re.match(r"(.*)_git(\d{8})$", current)
     best = None
-    try:
-        rel = gh(f"repos/{repo}/releases/latest")
-        t = clean(rel["tag_name"])
-        if is_version(t):
-            best = t
-    except Exception:
-        pass
+    rel = maybe(f"repos/{repo}/releases/latest")
+    if rel and is_version(clean(rel["tag_name"])):
+        best = clean(rel["tag_name"])
     if best is None:
-        try:
-            tags = [clean(t["name"]) for t in gh(f"repos/{repo}/tags?per_page=100")]
-            tags = [t for t in tags if is_version(t)]
-            if tags:
-                best = max(tags, key=vkey)
-        except Exception:
-            pass
+        tags = [clean(t["name"]) for t in (maybe(f"repos/{repo}/tags?per_page=100") or [])]
+        tags = [t for t in tags if is_version(t)]
+        if tags:
+            best = max(tags, key=vkey)
     if snap:
         base, date = snap.group(1), datetime.datetime.strptime(snap.group(2), "%Y%m%d")
         if best and base not in ("0", "") and vkey(best) > vkey(base):
             return best, f"release {best} (snapshot of {snap.group(2)})"
-        try:
-            meta = gh(f"repos/{repo}")
-            c = gh(f"repos/{repo}/commits/{meta['default_branch']}")
-            cdate = datetime.datetime.strptime(c["commit"]["committer"]["date"][:10], "%Y-%m-%d")
-            if (cdate - date).days > SNAPSHOT_DAYS:
-                v = f"{base}_git{cdate:%Y%m%d}"
-                return v, f"newer commits ({c['sha'][:10]}, {cdate:%Y-%m-%d})"
-        except Exception as e:
-            return None, f"github: {e}"
+        branch = branch or gh(f"repos/{repo}")["default_branch"]
+        c = gh(f"repos/{repo}/commits/{branch}")
+        cdate = datetime.datetime.strptime(c["commit"]["committer"]["date"][:10], "%Y-%m-%d")
+        if (cdate - date).days > SNAPSHOT_DAYS:
+            return f"{base}_git{cdate:%Y%m%d}", f"newer commits on {branch} ({c['sha'][:10]}, {cdate:%Y-%m-%d})"
         return None, None
     return best, None
 
@@ -165,7 +166,7 @@ def main(argv):
                 new, src = newest_repology(rules["repology"][0]), "repology"
             elif "github" in rules or github_repo(info):
                 repo = rules["github"][0] if "github" in rules else github_repo(info)
-                new, why = newest_github(repo, cur)
+                new, why = newest_github(repo, cur, info["branch"])
                 src = f"https://github.com/{repo}"
             elif any("download.qt.io" in s for s in info["sources"]):
                 new, src = newest_qt(info), "https://download.qt.io/official_releases/"

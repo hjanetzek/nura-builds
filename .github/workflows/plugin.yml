@@ -1,6 +1,6 @@
 # Single recipes on plugin-* branches, before they go into the zynthian target: a push builds each
 # recipe directory of aports/lv2, aports/pd or aports/engines that the branch changes against main,
-# one job per package (packages.yml: on the newest cached packages of the plugins stage), with its
+# one job per package (packages.yml: on the published package repository), with its
 # own log and .apk artifact. When they build, add them to the meta package (or sets/plugins.sh for
 # engines) and merge to main. The zynthian workflow only runs for main.
 #
