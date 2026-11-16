@@ -108,8 +108,11 @@ def main():
     published = {}   # origin -> version
     if a.index != "-" and os.path.exists(a.index):
         for b in apkindex.read_index(a.index)[1]:
+            # the newest of the origin's entries (an index can list several versions)
             origin = apkindex.field(b, "o") or apkindex.field(b, "P")
-            published.setdefault(origin, apkindex.field(b, "V"))
+            v = apkindex.field(b, "V")
+            if origin not in published or apkindex.version_key(v) > apkindex.version_key(published[origin]):
+                published[origin] = v
     manifest = {}
     if a.manifest != "-" and os.path.exists(a.manifest):
         with open(a.manifest) as f:

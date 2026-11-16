@@ -55,6 +55,17 @@ def read_index(path):
     return descr, blocks
 
 
+def version_key(v):
+    """Sort key of an apk version (1.2.3_git20261108-r2): the version's numbers and letters, then
+    the release; good enough to find the newest of a package's entries"""
+    import re
+    ver, _, rel = v.rpartition("-r")
+    if not ver:
+        ver, rel = v, "0"
+    parts = [(0, int(p), "") if p.isdigit() else (1, 0, p) for p in re.findall(r"\d+|[a-z]+", ver.lower())]
+    return parts, int(rel) if rel.isdigit() else 0
+
+
 def field(block, key):
     for line in block:
         if line.startswith(key + ":"):

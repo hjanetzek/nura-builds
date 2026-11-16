@@ -169,5 +169,6 @@ jobs:
         with: { pattern: "new-*-${{ matrix.arch }}", path: new }
       - uses: actions/download-artifact@v8
         with: { name: "plan-${{ matrix.arch }}", path: plan }
-      # the plan's adopted entries even when nothing was built (the plan as its own directory)
-      - run: scripts/publish.sh sets plan new/*/ 2>&1
+      # the plan's adopted entries even when nothing was built (the plan as its own directory);
+      # download-artifact puts a single artifact into new/ itself, several into new/<name>/
+      - run: scripts/publish.sh sets plan new new/*/ 2>&1
