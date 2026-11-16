@@ -44,7 +44,7 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   there. A plan job (`scripts/plan.sh`) computes all stage keys first: a stage cached under its
   exact key doesn't start at all (the next stage takes its packages from the cache), so a run with
   unchanged Qt takes about 8 minutes. Then one image job per device.
-- Weekly (Sunday 01:00 UTC), and by hand with the `rebuild` input, the stages in `REBUILD_STAGES`
+- Weekly (Sunday 01:00 UTC aarch64, 05:00 UTC x86_64), and by hand with the `rebuild` input, the stages in `REBUILD_STAGES`
   (Qt, PySide) are built from scratch and replace their cached packages: they replace Alpine's
   versions and link against its libraries, so a soname change in Alpine would break them without
   any change to their recipes.
@@ -76,8 +76,8 @@ Builds on `main` are published as releases of this repository (`scripts/publish.
   apk update && apk upgrade
   ```
 
-- **amd64**: the same for x86_64, built only when asked for (Actions > zynthian > Run workflow,
-  architecture `x86_64`; pushes and the weekly run build aarch64): release
+- **amd64**: the same for x86_64, built weekly (Sunday 05:00 UTC) and when asked for (Actions >
+  zynthian > Run workflow, architecture `x86_64`; pushes build aarch64 only): release
   [`x86_64`](../../releases/tag/x86_64) at the same repository URL (apk asks for
   `<repository>/x86_64/APKINDEX.tar.gz`), and with `images` the QEMU image
   `zynthian-qemu-amd64.img.zst` in `zynthian-latest`. On x86-64 runners; cache keys
