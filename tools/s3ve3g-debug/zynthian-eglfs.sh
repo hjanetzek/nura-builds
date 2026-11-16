@@ -17,8 +17,13 @@
 #   rotate Qt Quick, the MDP planes can't rotate by 90); scale 1.5: 853x480 logical pixels
 # - touch through Qt's evdevtouch (QT_QPA_EGLFS_NO_LIBINPUT=1): raw panel coordinates, which the QML
 #   rotation maps; libinput would apply the udev calibration matrix meant for cage
-# - Mesa 26.2.6-r1 (nura-builds armv7 repository) fixes the freedreno a3xx flicker; with Alpine's
-#   26.2.6-r0 set FD_MESA_DEBUG=inorder
+# - FD_MESA_DEBUG=inorder by default (FD_MESA_DEBUG= in the environment turns it off): even with
+#   Mesa 26.2.6-r1 (the freedreno a3xx flicker fix, nura-builds armv7 repository) zynthian's UI
+#   shows glitches on 6.16.12 and 7.3.4 alike, gone with inorder (no reordering/staging of busy
+#   buffers in freedreno); a Mesa problem, not the kernel's
+# - jackd is checked and started again when its ALSA driver doesn't come up: on 7.3.4 the first
+#   start after boot can fail ("could not start playback (Broken pipe)", q6asm "Error queuing
+#   playback buffer -11"); jackd then keeps running without a driver and refuses clients
 # Logs: /tmp/zyn-eglfs.log, /tmp/jackd.log
 period=${JACK_PERIOD:-480}
 
@@ -41,7 +46,19 @@ while [ $i -lt 30 ]; do
 	sleep 0.5; i=$((i + 1))
 done
 
-if ! pgrep -x jackd >/dev/null; then
+# A jackd whose driver failed (see above) is no use: stopped, and started again below
+jack_failed() {
+	grep -qE "could not start playback|Cannot initialize driver|Driver is not running" /tmp/jackd.log 2>/dev/null
+}
+if pgrep -x jackd >/dev/null && jack_failed; then
+	for p in $(pgrep -x jackd); do kill "$p"; done
+	sleep 2
+fi
+
+try=0
+while ! pgrep -x jackd >/dev/null; do
+	try=$((try + 1))
+	[ $try -le 3 ] || { echo "jackd didn't start, see /tmp/jackd.log" >&2; exit 1; }
 	if [ -e /proc/asound/Neo ]; then
 		if command -v s3ve3g-audio >/dev/null; then
 			sudo -n s3ve3g-audio restore >/dev/null 2>&1 || true
@@ -52,11 +69,16 @@ if ! pgrep -x jackd >/dev/null; then
 		jackd -R -d dummy -r48000 "-p$period" > /tmp/jackd.log 2>&1 &
 	fi
 	sleep 3   # (no jack_wait: Alpine's jack has no example clients)
-	pgrep -x jackd >/dev/null || { echo "jackd didn't start, see /tmp/jackd.log" >&2; exit 1; }
-fi
+	if jack_failed; then
+		echo "jackd's driver didn't start (try $try), starting it again" >&2
+		for p in $(pgrep -x jackd); do kill "$p"; done
+		sleep 2
+	fi
+done
 
 [ -f /tmp/kms.json ] || echo '{ "device": "/dev/dri/card1" }' > /tmp/kms.json
 export ZYNTHIAN_UI=qt ZYNTHIAN_FULLSCREEN=1 ZYNTHIAN_UI_SCALE=auto ZYNTHIAN_UI_ROTATION=${ZYNTHIAN_UI_ROTATION:-90}
 export QT_QPA_PLATFORM=eglfs QT_QPA_EGLFS_INTEGRATION=eglfs_kms QT_QPA_EGLFS_KMS_CONFIG=/tmp/kms.json
 export QT_QPA_EGLFS_NO_LIBINPUT=1 QT_SCALE_FACTOR=${QT_SCALE_FACTOR:-1.5} QT_QPA_EGLFS_HIDECURSOR=1
+export FD_MESA_DEBUG=${FD_MESA_DEBUG-inorder}
 exec zynthian > /tmp/zyn-eglfs.log 2>&1

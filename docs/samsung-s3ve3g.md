@@ -161,6 +161,19 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
   freedreno-a306-fails/flakes.txt); glmark2 (glmark2-es2-drm on KMS) as a benchmark on both
   kernels; optionally piglit; fdperf (src/freedreno/perfcntrs) for GPU counters.
 
+### zynthian glitches and audio start (2026-11-16)
+
+- zynthian's UI showed occasional glitches on 6.16.12 and 7.3.4 alike, gone with
+  `FD_MESA_DEBUG=inorder` (freedreno doesn't reorder batches or stage writes to busy buffers):
+  a second freedreno problem besides the a3xx buffer blit fix in Mesa 26.2.6-r1, not a kernel
+  one. The eglfs launcher sets `inorder` by default (`FD_MESA_DEBUG=` turns it off).
+- On 7.3.4 the audio DSP sometimes refuses playback buffers when a JACK stream starts
+  (`q6asm-dai: Error queuing playback buffer -11`, at 37, 147 and 279 s in one boot): jackd's
+  ALSA driver then stops ("could not start playback (Broken pipe)" or later "Driver is not
+  running") and refuses clients, so zynthian exits. Another start usually works. The launcher
+  restarts jackd when the driver fails in its first seconds; failures later in a stream aren't
+  caught. Open (audio side).
+
 ## A minimal base, locally
 
 As for the ODROID N2: pmbootstrap with a config of its own, UI `console` (a login on the screen:
