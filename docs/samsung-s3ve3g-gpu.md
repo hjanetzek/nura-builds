@@ -256,6 +256,16 @@ through XWayland); the rest of the environment as in zynthian-ui's cage session 
 (`LIBINPUT_CALIBRATION_MATRIX=0 -1 1 1 0 0` for "MELFAS MMS114 Touchscreen", the matrix of
 zynthian-ui's Pixel 3 rule). JACK with the dummy backend (no audio codec driver yet).
 
+**At boot (2026-11-16):** device-samsung-s3ve3g installs the launcher below as
+`/usr/bin/s3ve3g-zynthian` and starts it with the service `s3ve3g-zynthian` (OpenRC, in the
+default runlevel; a systemd unit too) as the phone's user (uid 10000, `ZYNTHIAN_USER` in
+`/etc/conf.d/s3ve3g-zynthian`), with real-time priority 95 and unlimited locked memory
+(`rc_ulimit`: services get no pam_limits). It switches the screen on, waits for plymouthd to quit
+(OpenRC's plymouth plugin holds the splash, and DRM master, until the end of the default
+runlevel), and does nothing while zynthian isn't installed. Restart by hand with
+`rc-service s3ve3g-zynthian restart`, not by running the launcher next to the service;
+`rc-update del s3ve3g-zynthian` stops the start at boot.
+
 **Without a compositor (the setup for the S III Neo):** `tools/s3ve3g-debug/zynthian-eglfs.sh`
 runs the Qt UI on Qt's eglfs (KMS, the GPU's `/dev/dri/card1`) as the logged-in user, which gets
 DRM master as the device's only client:
