@@ -10,18 +10,29 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=2
+pkgrel=7
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT"
 arch="aarch64"
 options="!check !archcheck"
+# postmarketos-base-nosplash: the bootsplash virtual without Plymouth. The kit panels are fbtft
+# framebuffers that appear late (module from the root filesystem), so the splash made the initramfs
+# wait 10 s for /dev/fb0 and showed nothing. On an installed device (still with Plymouth):
+#   apk add postmarketos-base-nosplash '!postmarketos-bootsplash'
 depends="
 	linux-firmware-brcm
-	linux-rpi
 	postmarketos-base
+	postmarketos-base-nosplash
 	raspberrypi-bootloader
 	"
 makedepends="devicepkg-dev dtc"
+# The kernel (pmbootstrap init asks): Alpine's linux-rpi, or linux-rpi-rt (nura-builds
+# aports/kernel: the same with PREEMPT_RT). Swap on the device with
+#   apk add device-zynthian-rpi4-kernel-rpi-rt '!device-zynthian-rpi4-kernel-rpi'
+subpackages="
+	$pkgname-kernel-rpi:kernel_rpi
+	$pkgname-kernel-rpi-rt:kernel_rpi_rt
+	"
 install="$pkgname.post-install"
 source="
 	deviceinfo
@@ -32,6 +43,9 @@ source="
 	90-zynthian-hw.rules
 	zynscreen-drm-overlay.dts
 	50-zynthian-rpi4-drm.sh
+	zynthian-hw-modules.conf
+	50-zynthian-rpi4.conf
+	50-zynthian-realtime.conf
 	"
 
 build() {
@@ -46,16 +60,36 @@ package() {
 	install -Dm644 "$srcdir"/zynthian-kit.txt "$pkgdir"/usr/share/$pkgname/zynthian-kit.txt
 	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
 	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
+	install -Dm644 "$srcdir"/zynthian-hw-modules.conf "$pkgdir"/usr/lib/modules-load.d/zynthian-hw.conf
 	install -Dm644 "$srcdir"/50-zynthian-rpi4-drm.sh \
 		"$pkgdir"/usr/share/tinydm/env-wayland.d/50-zynthian-rpi4-drm.sh
+	install -Dm644 "$srcdir"/50-zynthian-rpi4.conf \
+		"$pkgdir"/usr/share/wireplumber/wireplumber.conf.d/50-zynthian-rpi4.conf
+	install -Dm644 "$srcdir"/50-zynthian-realtime.conf \
+		"$pkgdir"/usr/lib/systemd/system/user@.service.d/50-zynthian-realtime.conf
 }
+kernel_rpi() {
+	pkgdesc="Alpine's Raspberry Pi kernel (PREEMPT)"
+	depends="linux-rpi"
+	devicepkg_subpackage_kernel $startdir $pkgname $subpkgname
+}
+
+kernel_rpi_rt() {
+	pkgdesc="The Raspberry Pi kernel with PREEMPT_RT (linux-rpi-rt), for low audio latency"
+	depends="linux-rpi-rt"
+	devicepkg_subpackage_kernel $startdir $pkgname $subpkgname
+}
+
 sha512sums="
 15526ab26d0ce1a9295ed5539e05de0c142aba15d3c113217058f22a6a1bd6180105e85027a1dc664a45a038334f81e5501af52c447521cfdeaa23b33bfd389a  deviceinfo
-68647c0827d06d8a874b82dce2deeeb9ca9b1d385e196f052439c715f83c2cebb5be050a4dbb1c1ac442ea3a71ee3985e79f2f4ec708c3f477fb05fe29d6e5ce  kernel-cmdline.conf
+09309847761b59cc17f58a119873c859814ed5c3c9399970b295cbb7da5cdf7502585c81bf49f4d0efd24d0407216984d3ec80647bbf4e91f6b44c7f77b124b6  kernel-cmdline.conf
 e3515cf9f41807917eac1f7663e0131bd18783824facf15f2bb0381635bf6d9a0c334f3786b6fb76d01469de6449878c871f8b747f45e9e3cee77699905cf319  modules-initfs
-5933a59917bae3ab06f2434a0443688ddb7b236d7beb769f88ecafaf671c15223e74154301d1a403f1678e7fd4ea36f268ae13118a4e1555d9417851d30c040b  usercfg.txt
-255dc119239738eb075bc6ca332afd399b9042ff0743e3fde6587a41c5a36abe449441f73571030b3ff603e358beeac5f57ca16c4b03de31dccda91ca6a045dd  zynthian-kit.txt
+673b33b43744690ab8f3fcaa37090c65e886a32bd7911d7a5abab90be293deeaa900c0cd4fddc789549eb93261963d9d4b69b5f52c666d70a881cc0a48b2929f  usercfg.txt
+cebaad0a22b3cca9ecc18c9bad85418d2f0b4a8298af58d8d52014d03bc7afffd616e1131a21244501942d6384f4ba1daaf1cff717c6af17cdf4751bdc3e9193  zynthian-kit.txt
 9a7fcd1fe663312122e5f960d52bc88bf44741628de288061f326936d56ca031c57a0e63f1eddf45033192236d73c67cba6f25dd3a7eac078c99cd47f2644429  90-zynthian-hw.rules
-8159a964c62469b3f9d66b0f1e065206aeadd502cf2ca5b7d36e473c6d792520bf0261003e0d2839e33cf17cf732a97b9f4d13340e51264f2c351101c976895d  zynscreen-drm-overlay.dts
+6ab909e43569e720e1e344b9e40bd4572556ccb788c7928093102f4e346dee3b013499b5c2a4890b05d7392b0b02d61e67f91fc7f2871fb5cb670e8e10200f8d  zynscreen-drm-overlay.dts
 f7d160f2290fc84be4b502520c697a81a1994ca8f3876faab48d05fb07e22ef6995f8fa011aa32ada125a935324d71aba6f450194812189c4c7146f123a79c9f  50-zynthian-rpi4-drm.sh
+00fbddc74d63d110d6ca775abf4b7dcb802d6c515be850742ed703a987b8c24675733e0410794b5d9aea4f7550bdd25f01e3ab2d54c889b636f8abf37c5d1793  zynthian-hw-modules.conf
+d3a23905ab1f0f239887fe2a34fe20bb55942b2d59388e094ad61f8a2fb0a2982b2d8f2a11bc51110d738c291caf9c734b1c867828d66b911e49c39080ef8f29  50-zynthian-rpi4.conf
+30d05a654c48cf98f9de12806ce2a57d29f2e97d8f0de5396fb8fff4a92e19ff49711ee97a8af5c78c8a1f1dd8e093c7c4e2f3953951fa40f6a4c5d6132f7d8d  50-zynthian-realtime.conf
 "

@@ -38,11 +38,8 @@ dtparam=krnbt=on
 # USB gadget (OTG) on the USB-C port
 dtoverlay=dwc2
 
-# The onboard audio (headphone jack)
-dtparam=audio=on
-audio_pwm_mode=2
-
 dtoverlay=vc4-kms-v3d
 
-# The kit: sound card and display overlays, written by zynthian's kit setup
+# The kit: sound card and display overlays and the onboard audio (headphone jack), written by
+# zynthian's kit setup (zynthian-kit: on unless ZYNTHIAN_DISABLE_RBPI_AUDIO=1, as on ZynthianOS)
 include zynthian-kit.txt

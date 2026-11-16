@@ -5,7 +5,7 @@
  * CE0, DC on GPIO 24, reset on GPIO 25, backlight on GPIO 22; the ads7846 touch controller on
  * CE1 with its pen interrupt on GPIO 17 (zynthian-sys' V4 settings).
  *
- *   dtoverlay=zynscreen-drm[,rotation=270][,speed=64000000]
+ *   dtoverlay=zynscreen-drm[,rotation=0|180][,speed=64000000]  (0 and 180: landscape; which one is upright depends on how the panel is mounted)
  */
 
 /dts-v1/;
@@ -69,7 +69,7 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&zynscreen_pins>;
 				spi-max-frequency = <64000000>;
-				rotation = <270>;
+				rotation = <0>;
 				reset-gpios = <&gpio 25 1>;
 				dc-gpios = <&gpio 24 0>;
 				backlight = <&zynscreen_backlight>;
