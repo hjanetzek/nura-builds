@@ -1,0 +1,50 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# group=qt6
+# zrythm: new module in Qt 6.12, not in aports yet; follows the other Qt
+# module recipes of aports MR !107047 (see ../README.md)
+pkgname=qt6-qttasktree
+pkgver=6.12.0
+pkgrel=0
+pkgdesc="Declarative description and execution of asynchronous task trees"
+url="https://qt.io/"
+arch="all"
+license="LGPL-3.0-only AND GPL-2.0-only AND GPL-3.0-only AND Qt-GPL-exception-1.0"
+makedepends="
+	cmake
+	perl
+	qt6-qtbase-dev
+	qt6-qtbase-private-dev
+	samurai
+	"
+subpackages="$pkgname-dev"
+options="!check" # No tests
+builddir="$srcdir/qttasktree-everywhere-src-${pkgver/_/-}"
+
+case $pkgver in
+	*_alpha*|*_beta*|*_rc*) _rel=development_releases;;
+	*) _rel=official_releases;;
+esac
+source="https://download.qt.io/$_rel/qt/${pkgver%.*}/${pkgver/_/-}/submodules/qttasktree-everywhere-src-${pkgver/_/-}.tar.xz"
+
+build() {
+	# zrythm: built without LTO and without debug info (Release), like the
+	# other Qt modules here
+	cmake -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+dev() {
+	default_dev
+
+	amove usr/lib/qt6/sbom
+}
+
+sha512sums="
+feeb1bc9536a0c34e7a6994e9286ef94cc4fe3d0c8c7f7a9b084711537ed79f09202414cb877619b46be7dc4bf2a7cd52fbea85b301242ebb3923d2e70ddc829  qttasktree-everywhere-src-6.12.0.tar.xz
+"

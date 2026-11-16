@@ -1,1 +1,1 @@
-qt-base qt-declarative qt-wayland pyside plugins mesa
+qt-base qt-declarative qt-wayland qt-tools pyside plugins mesa

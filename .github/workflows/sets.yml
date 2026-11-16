@@ -1,4 +1,4 @@
-# The package sets (sets/: Qt, PySide, plugins, Mesa) for all architectures, per package
+# The package sets (sets/: Qt, PySide, plugins, Mesa; sets/order) for all architectures, per package
 # (docs/ci-plan.md): the plan compares each recipe with the published package repository and its
 # manifest and builds only what is new, has another version or a changed recipe (and what
 # FORCE_AFTER makes depend on that); the sets in order (sets/order), each on top of the release
@@ -31,6 +31,7 @@ jobs:
       qt_base: ${{ steps.plan.outputs.qt_base }}
       qt_declarative: ${{ steps.plan.outputs.qt_declarative }}
       qt_wayland: ${{ steps.plan.outputs.qt_wayland }}
+      qt_tools: ${{ steps.plan.outputs.qt_tools }}
       pyside: ${{ steps.plan.outputs.pyside }}
       plugins: ${{ steps.plan.outputs.plugins }}
       mesa: ${{ steps.plan.outputs.mesa }}
@@ -96,8 +97,16 @@ jobs:
     with: { set: qt-wayland, arch: "${{ matrix.arch }}" }
     secrets: inherit
 
-  pyside:
+  qt-tools:
     needs: [plan, qt-wayland]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.qt_tools != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_tools) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: qt-tools, arch: "${{ matrix.arch }}" }
+    secrets: inherit
+
+  pyside:
+    needs: [plan, qt-tools]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.pyside != '[]' }}
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.pyside) }}" } }
     uses: ./.github/workflows/build-set.yml
@@ -123,7 +132,7 @@ jobs:
   # Only when no set failed (a half-built Qt shouldn't be published); KEEPGOING failures inside a
   # set (a plugin) don't fail it. Serialized per architecture with every other publishing workflow.
   publish:
-    needs: [plan, qt-base, qt-declarative, qt-wayland, pyside, plugins, mesa]
+    needs: [plan, qt-base, qt-declarative, qt-wayland, qt-tools, pyside, plugins, mesa]
     if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.plan.outputs.arches != '[]' && github.ref == 'refs/heads/main' }}
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.arches) }}" } }
     concurrency: { group: "publish-${{ matrix.arch }}", cancel-in-progress: false }

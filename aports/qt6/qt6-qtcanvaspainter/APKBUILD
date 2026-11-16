@@ -1,0 +1,57 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# group=qt6
+# zrythm: new module in Qt 6.12, not in aports yet; follows the other Qt
+# module recipes of aports MR !107047 (see ../README.md)
+pkgname=qt6-qtcanvaspainter
+pkgver=6.12.0
+pkgrel=0
+pkgdesc="Accelerated 2D painting API for Qt Quick and QRhi"
+url="https://qt.io/"
+arch="all !armhf"
+license="GPL-3.0-only AND Qt-GPL-exception-1.0 AND Zlib AND OFL-1.1 AND BSD-3-Clause"
+depends_dev="
+	qt6-qtdeclarative-dev
+	qt6-qtshadertools-dev
+	vulkan-headers
+	"
+makedepends="$depends_dev
+	cmake
+	perl
+	qt6-qtbase-dev
+	qt6-qtbase-private-dev
+	qt6-qtdeclarative-private-dev
+	samurai
+	"
+subpackages="$pkgname-dev"
+options="!check" # No tests
+builddir="$srcdir/qtcanvaspainter-everywhere-src-${pkgver/_/-}"
+
+case $pkgver in
+	*_alpha*|*_beta*|*_rc*) _rel=development_releases;;
+	*) _rel=official_releases;;
+esac
+source="https://download.qt.io/$_rel/qt/${pkgver%.*}/${pkgver/_/-}/submodules/qtcanvaspainter-everywhere-src-${pkgver/_/-}.tar.xz"
+
+build() {
+	# zrythm: built without LTO and without debug info (Release), like the
+	# other Qt modules here
+	export PATH="$PATH:/usr/lib/qt6/bin"
+	cmake -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+dev() {
+	default_dev
+
+	amove usr/lib/qt6/sbom
+}
+
+sha512sums="
+0e450c7572a89d4227754bfa1eb9e7e97d5c432ef460c7fa42669e0caa835a45516f635d688fa159fad1ade539633bf6335f69657c1335322ec8505c12759907  qtcanvaspainter-everywhere-src-6.12.0.tar.xz
+"

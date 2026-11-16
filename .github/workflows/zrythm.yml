@@ -1,0 +1,69 @@
+# Zrythm for Nura: its libraries, Zrythm from the checkout of hjanetzek/zrythm (branch nura-duet)
+# and the kiosk UI (targets/zrythm.sh), on top of the published package repository (Qt 6.12 with
+# Qt Tools, Canvas Painter, TaskTree: workflow sets.yml), and images. docs/ci-plan.md. By hand
+# and weekly (aarch64, x86_64).
+name: zrythm
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch: { description: "architecture", type: choice, options: [aarch64, x86_64], default: aarch64 }
+      zrythm-ref: { description: "zrythm branch", default: nura-duet }
+      images: { description: "build the device images", type: boolean, default: false }
+  schedule:
+    - cron: "0 3 * * 0"   # Sunday 03:00 UTC: aarch64
+    - cron: "0 7 * * 0"   # Sunday 07:00 UTC: x86_64
+  push:
+    branches: [main]
+    paths: ["targets/zrythm.sh", ".github/workflows/zrythm.yml"]
+
+concurrency:
+  group: zrythm-${{ github.ref }}-${{ inputs.arch || (github.event.schedule == '0 7 * * 0' && 'x86_64') || 'aarch64' }}
+  cancel-in-progress: true
+
+jobs:
+  arch:
+    runs-on: ubuntu-latest
+    outputs:
+      arch: ${{ steps.a.outputs.arch }}
+      refs: ${{ steps.a.outputs.refs }}
+    steps:
+      - id: a
+        env:
+          ARCH: ${{ inputs.arch || (github.event.schedule == '0 7 * * 0' && 'x86_64') || 'aarch64' }}
+          REF: ${{ inputs.zrythm-ref || 'nura-duet' }}
+        run: |
+          echo "arch=$ARCH" >> "$GITHUB_OUTPUT"
+          echo "refs=ZRYTHM_REF=$REF" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: arch
+    uses: ./.github/workflows/build-target.yml
+    with:
+      target: zrythm
+      arch: ${{ needs.arch.outputs.arch }}
+      refs: ${{ needs.arch.outputs.refs }}
+      images: ${{ inputs.images || false }}
+    secrets: inherit
+
+  publish:
+    needs: [arch, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.ref == 'refs/heads/main' }}
+    concurrency: { group: "publish-${{ needs.arch.outputs.arch }}", cancel-in-progress: false }
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    env:
+      NURA_ARCH: ${{ needs.arch.outputs.arch }}
+      NURA_IMAGE_TAG: zrythm-latest
+      GH_TOKEN: ${{ github.token }}
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with: { name: "new-zrythm-${{ needs.arch.outputs.arch }}", path: new }
+      - uses: actions/download-artifact@v8
+        if: inputs.images
+        with: { pattern: "zrythm-*", path: images, merge-multiple: true }
+      - name: Publish
+        run: scripts/publish.sh zrythm new -- $(ls images/*.img.zst 2>/dev/null)

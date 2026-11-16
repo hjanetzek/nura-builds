@@ -114,9 +114,19 @@ fi
 # Recipe directories into pmaports
 aports=$(pmbootstrap -c "$CFG" config aports)
 ln -sfn "$here/aports" "$aports/nura-builds"
+# (several directories, comma-separated in REPOS: each linked into aports/<repo>/, e.g. zrythm's
+# recipes without its own copy of Qt, which nura-builds' aports/qt6 has)
 echo "$REPOS" | while read -r name url branch recipes; do
 	[ -n "$name" ] && [ "$recipes" != "-" ] || continue
-	ln -sfn "$NURA_SRC/$name/$recipes" "$aports/$name"
+	case $recipes in
+	*,*)
+		[ -L "$aports/$name" ] && rm "$aports/$name"
+		rm -rf "$aports/$name" && mkdir -p "$aports/$name"
+		for r in $(echo "$recipes" | tr ',' ' '); do
+			ln -sfn "$NURA_SRC/$name/$r" "$aports/$name/$(basename "$r")"
+		done ;;
+	*) ln -sfn "$NURA_SRC/$name/$recipes" "$aports/$name" ;;
+	esac
 done
 
 # Device packages (kernel, ...) at the versions postmarketOS has built, not newer recipes
