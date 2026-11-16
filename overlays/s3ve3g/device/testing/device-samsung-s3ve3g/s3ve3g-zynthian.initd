@@ -35,14 +35,25 @@ start_pre() {
 	/usr/bin/s3ve3g-screen on || true
 }
 
-stop_post() {
-	# what the launcher started besides zynthian's own launcher: jackd, the UI, aeolus
+zynthian_pids() {
 	local p
-	for p in $(pgrep -x zynthian_deskto) $(pgrep -x aeolus) $(pgrep -x jackd); do
-		kill "$p" 2>/dev/null
-	done
+	pgrep -x zynthian_deskto; pgrep -x aeolus; pgrep -x jackd
 	for p in $(pgrep -x python3); do
-		grep -q zynthian_qt_main "/proc/$p/cmdline" 2>/dev/null && kill "$p"
+		grep -q zynthian_qt_main "/proc/$p/cmdline" 2>/dev/null && echo "$p"
 	done
+}
+
+stop_post() {
+	# what the launcher started besides zynthian's own launcher: jackd, the UI, aeolus. Waited for
+	# (up to 10 s, then killed): an old UI still holding the display makes the next start's UI
+	# fail to get DRM master ("Could not set DRM mode ... Permission denied", nothing on screen)
+	local pids i=0
+	pids=$(zynthian_pids)
+	[ -n "$pids" ] && kill $pids 2>/dev/null
+	while [ -n "$(zynthian_pids)" ] && [ $i -lt 20 ]; do
+		sleep 0.5; i=$((i + 1))
+	done
+	pids=$(zynthian_pids)
+	[ -n "$pids" ] && kill -9 $pids 2>/dev/null
 	return 0
 }
