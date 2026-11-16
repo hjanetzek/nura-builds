@@ -1,0 +1,21 @@
+# Samsung Galaxy S III Neo: zynthian's Qt UI full-screen (eglfs, no compositor) with JACK, started at
+# boot as the phone's user (uid 10000), see /usr/bin/s3ve3g-zynthian
+[Unit]
+Description=zynthian (Qt UI on eglfs, JACK)
+After=systemd-user-sessions.service plymouth-quit.service s3ve3g-screen-off.service s3ve3g-powerkey.service
+ConditionPathExists=/usr/sbin/zynthian
+
+[Service]
+User=10000
+PAMName=login
+Environment=XDG_RUNTIME_DIR=/tmp/runtime-10000
+LimitRTPRIO=95
+LimitMEMLOCK=infinity
+# s3ve3g-screen-off blanked the screen after boot
+ExecStartPre=+/usr/bin/s3ve3g-screen on
+ExecStart=/usr/bin/s3ve3g-zynthian
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

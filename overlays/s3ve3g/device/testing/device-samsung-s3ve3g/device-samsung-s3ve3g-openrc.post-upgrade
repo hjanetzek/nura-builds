@@ -7,6 +7,8 @@ rc-update -q add s3ve3g-screen-off default
 # the audio output chosen last (s3ve3g-audio)
 rc-update -q add s3ve3g-audio default
 rc-update -q add s3ve3g-powerkey default
+# zynthian at boot (does nothing until zynthian is installed)
+rc-update -q add s3ve3g-zynthian default
 # bring-up: an early telnet login on the USB network
 rc-update -q add s3ve3g-debug-telnet sysinit
 rc-update -q del nftables default 2>/dev/null || true

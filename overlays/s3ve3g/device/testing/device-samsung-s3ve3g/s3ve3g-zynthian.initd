@@ -1,0 +1,48 @@
+#!/sbin/openrc-run
+# Samsung Galaxy S III Neo: zynthian's Qt UI full-screen (eglfs, no compositor) with JACK, started at
+# boot as the phone's user (/usr/bin/s3ve3g-zynthian; settings in /etc/conf.d/s3ve3g-zynthian).
+# The screen is switched on for it; the power key switches it off and on (s3ve3g-powerkey).
+
+description="zynthian (Qt UI on eglfs, JACK)"
+supervisor=supervise-daemon
+command=/usr/bin/s3ve3g-zynthian
+respawn_delay=5
+respawn_max=5
+
+# the phone's user (postmarketOS: uid 10000), with its groups (video, input, audio)
+: "${ZYNTHIAN_USER:=$(getent passwd 10000 | cut -d: -f1)}"
+command_user="$ZYNTHIAN_USER"
+
+depend() {
+	need seatd
+	after s3ve3g-screen-off s3ve3g-audio s3ve3g-powerkey udev-settle
+}
+
+start_pre() {
+	if ! command -v zynthian >/dev/null; then
+		eerror "zynthian isn't installed"
+		return 1
+	fi
+	if [ -z "$ZYNTHIAN_USER" ]; then
+		eerror "no user for zynthian (ZYNTHIAN_USER in /etc/conf.d/s3ve3g-zynthian)"
+		return 1
+	fi
+	local home
+	home=$(getent passwd "$ZYNTHIAN_USER" | cut -d: -f6)
+	export HOME="$home" USER="$ZYNTHIAN_USER" LOGNAME="$ZYNTHIAN_USER"
+	export XDG_RUNTIME_DIR="/tmp/runtime-$ZYNTHIAN_USER"
+	# s3ve3g-screen-off blanked it after boot (burn-in protection while nothing is shown)
+	/usr/bin/s3ve3g-screen on || true
+}
+
+stop_post() {
+	# what the launcher started besides zynthian's own launcher: jackd, the UI, aeolus
+	local p
+	for p in $(pgrep -x zynthian_deskto) $(pgrep -x aeolus) $(pgrep -x jackd); do
+		kill "$p" 2>/dev/null
+	done
+	for p in $(pgrep -x python3); do
+		grep -q zynthian_qt_main "/proc/$p/cmdline" 2>/dev/null && kill "$p"
+	done
+	return 0
+}

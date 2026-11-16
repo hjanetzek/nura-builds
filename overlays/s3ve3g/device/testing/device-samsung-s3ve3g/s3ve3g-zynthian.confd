@@ -1,0 +1,15 @@
+# Samsung Galaxy S III Neo: zynthian at boot (s3ve3g-zynthian; "rc-update del s3ve3g-zynthian"
+# to stop starting it at boot)
+
+# the user zynthian runs as (default: the phone's user, uid 10000)
+#ZYNTHIAN_USER=user
+
+# JACK and zynthian's audio threads: real-time priority and locked memory, as the audio group's
+# limits (/etc/security/limits.d/95-s3ve3g-audio-rt.conf) give a login
+rc_ulimit="-r 95 -l unlimited"
+
+# settings read by the launcher (see /usr/bin/s3ve3g-zynthian)
+#export JACK_PERIOD=480
+#export ZYNTHIAN_UI_ROTATION=90
+#export QT_SCALE_FACTOR=1.5
+#export FD_MESA_DEBUG=inorder

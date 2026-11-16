@@ -47,6 +47,10 @@ source="
 	s3ve3g-powerkey.initd
 	s3ve3g-powerkey.service
 	s3ve3g-powerkey-logind.conf
+	s3ve3g-zynthian.sh
+	s3ve3g-zynthian.initd
+	s3ve3g-zynthian.confd
+	s3ve3g-zynthian.service
 "
 
 build() {
@@ -133,6 +137,15 @@ package() {
 	ln -s ../s3ve3g-powerkey.service \
 		"$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/s3ve3g-powerkey.service
 
+	# nura-builds: zynthian's Qt UI at boot, full-screen without a compositor (Qt eglfs), with JACK
+	# on the sound card, as the phone's user (uid 10000); zynthian itself isn't a dependency (not
+	# packaged for armv7 yet): the services don't start without it
+	install -Dm755 "$srcdir"/s3ve3g-zynthian.sh "$pkgdir"/usr/bin/s3ve3g-zynthian
+	install -Dm644 "$srcdir"/s3ve3g-zynthian.service \
+		"$pkgdir"/usr/lib/systemd/system/s3ve3g-zynthian.service
+	ln -s ../s3ve3g-zynthian.service \
+		"$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/s3ve3g-zynthian.service
+
 	# bring-up: restart on an oops (alpine's 00-alpine.conf has kernel.panic = 120, no panic_on_oops)
 	install -Dm644 "$srcdir"/s3ve3g-panic.sysctl "$pkgdir"/etc/sysctl.d/90-s3ve3g-panic.conf
 
@@ -159,6 +172,8 @@ _openrc() {
 	install -Dm755 "$srcdir"/s3ve3g-screen-off.initd "$subpkgdir"/etc/init.d/s3ve3g-screen-off
 	install -Dm755 "$srcdir"/s3ve3g-audio.initd "$subpkgdir"/etc/init.d/s3ve3g-audio
 	install -Dm755 "$srcdir"/s3ve3g-powerkey.initd "$subpkgdir"/etc/init.d/s3ve3g-powerkey
+	install -Dm755 "$srcdir"/s3ve3g-zynthian.initd "$subpkgdir"/etc/init.d/s3ve3g-zynthian
+	install -Dm644 "$srcdir"/s3ve3g-zynthian.confd "$subpkgdir"/etc/conf.d/s3ve3g-zynthian
 	# bring-up: a telnet login on the USB network before udev (busybox-extras' telnetd)
 	install -Dm755 "$srcdir"/s3ve3g-debug-telnet.initd "$subpkgdir"/etc/init.d/s3ve3g-debug-telnet
 }
@@ -183,4 +198,8 @@ bccab917b63ed8868d655c1d7141505dad917539c8a28bf774c0483a199b8fb43954c423a61f4149
 bd34eb0dd4383596ee930b23114ce976c47a357c7d216db7ea7cf1420d9c6a92ce49c40949258ddcf8d48b95847e6047bdbbc64c5ede3620831923b1216d2abb  s3ve3g-powerkey.initd
 b8ad7c9037238c6b740ffeb8d34c677d1cc413f43a419e798089d17af493ebe9bffef7912c2e6669bc48ceb3decb5a2f955e05ac4dfd19948156f72a59a98f91  s3ve3g-powerkey.service
 0b5a8e1a3c3b70de174f759879bf3c23e8b753359a6887954ee3bce6418db7e3f87b9def27bc26b4d89a28b0b989806cbf8593d734d0e62c71381c096d5fecd5  s3ve3g-powerkey-logind.conf
+ea05a1fada11ffe8605efb4e16279b8e444577e73ba37792adb3cc810a4d14e9a2ef240c5b9504bb9663e1a1a0911e8f69e60c65416b74a3c7dc345d41ac4065  s3ve3g-zynthian.sh
+499407bdec3deefd84de67982c88f1e545236521d56366af715f1b1b1e598473ec414998caee4078679bb88ab20398742ac697623322e6ca9788881087f3e2a1  s3ve3g-zynthian.initd
+690e5cba0f0cd79ac61a93ad16b6f8989af3aba524985da7541df5be7952c8ee8e8506ff031bb84ef6049de7d89f4c893b6d9919667cda0cb41761dc9642e61d  s3ve3g-zynthian.confd
+98fb8a48b768e86f026364e03c593e6e171efabc27baa022ff9d8fb72c950191413f77343de3910b9f77ac2678f55a2eb62c249ab0f9da89b7b9eadad7c169d7  s3ve3g-zynthian.service
 "
