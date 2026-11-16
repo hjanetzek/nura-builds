@@ -1,0 +1,64 @@
+From: nura-builds
+Subject: [PATCH] drm/msm/mdss: MSM8226: splash handover as a black border fill, timing engine running
+
+The splash handover before the MDP's IOMMU attach (0019) stopped INTF1's timing engine and
+then unstaged the splash pipe: the panel lost its video stream until msm's first modeset, and
+two blue flashes showed before the boot splash. Hand over as downstream does instead: both
+layer mixers' border colour black, the splash pipe unstaged from both CTLs and flushed while
+the timing engine keeps running (the flush latches at the next vsync), so the panel shows black
+and the MDP fetches nothing when the IOMMU comes on.
+---
+diff --git a/drivers/gpu/drm/msm/msm_mdss.c b/drivers/gpu/drm/msm/msm_mdss.c
+index 5fd49dd754a4..d45f75249050 100644
+--- a/drivers/gpu/drm/msm/msm_mdss.c
++++ b/drivers/gpu/drm/msm/msm_mdss.c
+@@ -435,9 +435,11 @@ static struct msm_mdss *msm_mdss_init(struct platform_device *pdev, bool is_mdp5
+ 	 * MSM8226: the bootloader's splash screen is still scanned out (RGB0 from its physical
+ 	 * framebuffer). Once the MDP's IOMMU is attached (when the MDP probes, before
+ 	 * mdp5_kms_init()), those fetches fault, and the faults leave the MDP and the DSI
+-	 * command DMA unusable until the next power collapse. Stop the timing engine of INTF1
+-	 * now and wait for the frame to end, as downstream's splash handoff does (border fill,
+-	 * then the IOMMU attach).
++	 * command DMA unusable until the next power collapse. Hand over as downstream does: a
++	 * black border fill (both mixers' border colour black, the splash pipe unstaged from both
++	 * CTLs, flushed), with the timing engine running, so the panel keeps getting a (black)
++	 * video stream and the MDP fetches nothing; wait for the flush to latch at the next vsync.
++	 * (Stopping the timing engine instead showed blue flashes before the boot splash.)
+ 	 */
+ 	if (is_mdp5 && of_machine_is_compatible("qcom,msm8226")) {
+ 		struct device_node *mdp = of_get_compatible_child(pdev->dev.of_node, "qcom,mdp5");
+@@ -448,20 +450,27 @@ static struct msm_mdss *msm_mdss_init(struct platform_device *pdev, bool is_mdp5
+ 		if (intf1) {
+ 			if (readl(intf1)) {
+ 				void __iomem *ctl = ioremap(0xfd900600, 0x200);
+-
+-				writel(0, intf1);
+-				msleep(40);
+-				/* unstage the splash pipe from both CTLs' mixers too (border fill) */
+-				if (ctl) {
++				void __iomem *lm = ioremap(0xfd903200, 0xd00);
++
++				if (ctl && lm) {
++					/* LM0 (0x3100) and LM1 (0x3d00) border colour 0/1: black */
++					writel(0, lm + 0x008);
++					writel(0, lm + 0x010);
++					writel(0, lm + 0xc08);
++					writel(0, lm + 0xc10);
+ 					writel(0, ctl + 0x000);
+ 					writel(0, ctl + 0x004);
+ 					writel(0x3ffff, ctl + 0x018);
+ 					writel(0, ctl + 0x100);
+ 					writel(0, ctl + 0x104);
+ 					writel(0x3ffff, ctl + 0x118);
+-					iounmap(ctl);
++					msleep(50);
++					dev_info(&pdev->dev, "splash handed over (black border fill) for the IOMMU\n");
+ 				}
+-				dev_info(&pdev->dev, "splash scanout stopped for the IOMMU\n");
++				if (lm)
++					iounmap(lm);
++				if (ctl)
++					iounmap(ctl);
+ 			}
+ 			iounmap(intf1);
+ 		}

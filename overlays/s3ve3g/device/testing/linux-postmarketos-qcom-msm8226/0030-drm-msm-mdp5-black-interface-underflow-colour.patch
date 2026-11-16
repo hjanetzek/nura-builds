@@ -1,0 +1,22 @@
+From: nura-builds
+Subject: [PATCH] drm/msm/mdp5: black interface underflow colour
+
+mdp5 sets the interface's underflow colour to 0xff, blue: what the panel shows for pixels the
+MDP couldn't fetch in time. On MSM8226 every enable has a few frames of underruns (the
+interface starts before the planes are committed, about ten underrun interrupts), which showed
+as blue flashes before the boot splash and at each screen-on. Black instead.
+---
+diff --git a/drivers/gpu/drm/msm/disp/mdp5/mdp5_encoder.c b/drivers/gpu/drm/msm/disp/mdp5/mdp5_encoder.c
+index eaba3b2d73b5..cb66037ef783 100644
+--- a/drivers/gpu/drm/msm/disp/mdp5/mdp5_encoder.c
++++ b/drivers/gpu/drm/msm/disp/mdp5/mdp5_encoder.c
+@@ -101,7 +101,8 @@ static void mdp5_vid_encoder_mode_set(struct drm_encoder *encoder,
+ 	mdp5_write(mdp5_kms, REG_MDP5_INTF_DISPLAY_VSTART_F0(intf), display_v_start);
+ 	mdp5_write(mdp5_kms, REG_MDP5_INTF_DISPLAY_VEND_F0(intf), display_v_end);
+ 	mdp5_write(mdp5_kms, REG_MDP5_INTF_BORDER_COLOR(intf), 0);
+-	mdp5_write(mdp5_kms, REG_MDP5_INTF_UNDERFLOW_COLOR(intf), 0xff);
++	/* black, not blue: underruns at each enable showed as blue flashes (MSM8226) */
++	mdp5_write(mdp5_kms, REG_MDP5_INTF_UNDERFLOW_COLOR(intf), 0);
+ 	mdp5_write(mdp5_kms, REG_MDP5_INTF_HSYNC_SKEW(intf), dtv_hsync_skew);
+ 	mdp5_write(mdp5_kms, REG_MDP5_INTF_POLARITY_CTL(intf), ctrl_pol);
+ 	mdp5_write(mdp5_kms, REG_MDP5_INTF_ACTIVE_HCTL(intf),

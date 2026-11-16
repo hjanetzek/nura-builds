@@ -116,6 +116,13 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
     is the SMMU's "tbu" clock. 7 of 7 boots clean afterwards (before: about every second).
   - Fixed (patch 0028): the layer mixer's border colour (shown without a staged plane) is set
     to black; it was blue (flashes during the boot splash, the blue screen after screen-off).
+  - Open: one or two short blue flickers before the boot splash (msm takes over at ~4.3-4.7 s,
+    panel on at ~5.2 s). Ruled out: the layer mixer's border colour at the splash handover and
+    at mode set (0028, and 0029's black border fill with the timing engine running instead of
+    stopped), the interface underflow colour (0030; ~10 underrun interrupts at each enable).
+    Remaining candidates: the panel itself while it is reset and initialised (S6E8AA0A
+    prepare/enable), the bootloader's handover (LK's splash, simpledrm's takeover). 0029/0030
+    stay: harmless, and they keep blue out of other moments (underruns, CRTC without a plane).
   - The GPU microcode (a330_pm4/pfp.fw) is in the initramfs now (device package's mkinitfs
     files list): msm binds there and requested it before the rootfs was mounted.
   - After the screen-off service (~20 s), something re-enables the CRTC without its plane in

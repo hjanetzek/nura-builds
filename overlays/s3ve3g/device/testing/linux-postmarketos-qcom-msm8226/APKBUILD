@@ -81,6 +81,8 @@ source="
 	0026-hwrng-qcom-rng-the-PRNG-as-hwrng-seeds-the-CRNG-at-boot.patch
 	0027-iommu-qcom-MSM8226-MDP-IOMMU-TLB-maintenance-only-while-powered.patch
 	0028-drm-msm-mdp5-black-layer-mixer-border-colour.patch
+	0029-drm-msm-mdss-MSM8226-splash-handover-as-a-black-border-fill.patch
+	0030-drm-msm-mdp5-black-interface-underflow-colour.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -160,5 +162,7 @@ a1be72523650902dc70b3acb11c211ddb2400d1457d8a284d3ef72d5e34854bd1ba58744df0ea21f
 c5ceb698625a83073c9e4b88bb09888e421ab2319cc12e31002180e6cf28a370d16797909aba70b15b2ea0b59f414b3f3dfe828f99695770147a53c02460f1d5  0026-hwrng-qcom-rng-the-PRNG-as-hwrng-seeds-the-CRNG-at-boot.patch
 415405bd4b027c302f854f7ccc9299b18fe1cb2f0d57e5f5078cab47f1729f60ef01f743598688284a2b78483bb566ae93838ea7bae31fdbc50fd5049164a1dd  0027-iommu-qcom-MSM8226-MDP-IOMMU-TLB-maintenance-only-while-powered.patch
 faaf49f78ccc8b3a4112f60272fad6a4e5a153020b3289efce1533e8ef3c89e7aa6d13354b14e4a3e88ddd12420f7abea5f96ddcfec85a95652821343911ceeb  0028-drm-msm-mdp5-black-layer-mixer-border-colour.patch
+6b6bfc5423f0188dcfffd312e19152fcbefd25f0a6063b1c664130a02ff1d3d8424a61adef4d146c98fc66d4aca11faeb653850461cec5144926be66fede9183  0029-drm-msm-mdss-MSM8226-splash-handover-as-a-black-border-fill.patch
+1060c101c46db268fd5ebef493202ce347c9cc90dfa77496e01959fc7ec0ece41b6c1df844aae1ab91c8fa122217827c89f4298937849a352d17e43c44b42de3  0030-drm-msm-mdp5-black-interface-underflow-colour.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
