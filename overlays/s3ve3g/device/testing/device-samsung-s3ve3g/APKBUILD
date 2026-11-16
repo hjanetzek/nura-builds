@@ -18,12 +18,13 @@ depends="
 	linux-postmarketos-qcom-msm8226
 	mkbootimg
 	postmarketos-base
-	postmarketos-base-nosplash
+	postmarketos-bootsplash
 	soc-qcom-msm8226
 "
 makedepends="devicepkg-dev"
-# nura-builds: no boot splash (postmarketos-base-ui wants postmarketos-bootsplash-virtual, which
-# postmarketos-base-nosplash provides without plymouth); OpenRC settings in the -openrc subpackage
+# nura-builds: pmOS's boot splash (plymouth, DRM renderer; msm in the initramfs, deviceinfo), its
+# kernel command line options built into the kernel (CONFIG_CMDLINE, see below); OpenRC settings
+# in the -openrc subpackage
 subpackages="$pkgname-openrc:_openrc"
 install="$pkgname.post-install $pkgname.post-upgrade $pkgname-openrc.post-install $pkgname-openrc.post-upgrade"
 source="
@@ -57,11 +58,19 @@ package() {
 
 	# nura-builds: Samsung's bootloader appends ~840 characters to the boot image's command line
 	# and doesn't boot more than 1024 in total: the device options are built into the kernel
-	# (CONFIG_CMDLINE), and quiet and plymouth's options (00-base.conf, 20-plymouth.conf in
+	# (CONFIG_CMDLINE, plymouth's "splash plymouth.ignore-serial-consoles plymouth.prefer-fbcon"
+	# too), and quiet and plymouth's options (00-base.conf, 20-plymouth.conf in
 	# /usr/lib/kernel-cmdline.d) are overridden with empty files, so the boot image only has
 	# pmOS's pmos_boot_uuid, pmos_root_uuid and pmos_rootfsopts (about 130 characters)
 	install -Dm644 /dev/null "$pkgdir"/etc/kernel-cmdline.d/00-base.conf
 	install -Dm644 /dev/null "$pkgdir"/etc/kernel-cmdline.d/20-plymouth.conf
+
+	# nura-builds: the display driver in the initramfs, so that msm takes over from the
+	# bootloader's framebuffer (simpledrm) within the first seconds and plymouth's boot splash
+	# runs on it (the IOMMUs it needs since 7.x are built in: QCOM_IOMMU, ARM_SMMU). mkinitfs
+	# takes the modules from these lists (it no longer reads deviceinfo_modules_initfs)
+	printf "%s\n" msm panel-samsung-s3ve3g-s6e8aa0a |
+		install -Dm644 /dev/stdin "$pkgdir"/usr/share/mkinitfs/modules/90-$pkgname.modules
 
 	# nura-builds: the Wi-Fi firmware (apnhlos) and NV calibration file (system) copied from the
 	# stock partitions into /lib/firmware once, before udev, instead of msm-firmware-loader (which

@@ -1,0 +1,57 @@
+From: nura-builds
+Subject: [PATCH] hwrng: qcom-rng: the "qcom,prng" block as a hwrng (seeds the CRNG at boot)
+
+On MSM8226 the CRNG initialised only at ~5.6 s, and udevd in the initramfs waited ~1.9 s for
+it, delaying the display driver and the boot splash. Register the older PRNG block as a hwrng
+(enabling it if needed, as the driver did before it became hwrng-only). A trade-off accepted for
+a tinkering device: upstream does not credit this PRNG as a true RNG.
+---
+--- a/drivers/char/hw_random/qcom-rng.c
++++ b/drivers/char/hw_random/qcom-rng.c
+@@ -72,8 +72,30 @@
+ static int qcom_hwrng_init(struct hwrng *hwrng)
+ {
+ 	struct qcom_rng *qrng = container_of(hwrng, struct qcom_rng, hwrng);
++	u32 val;
++	int ret;
++
++	ret = clk_prepare_enable(qrng->clk);
++	if (ret)
++		return ret;
++
++	/*
++	 * The older "qcom,prng" block (e.g. MSM8226): enable it unless TrustZone or the bootloader
++	 * already did, as the driver did before it became hwrng-only
++	 */
++	val = readl_relaxed(qrng->base + PRNG_CONFIG);
++	if (!(val & PRNG_CONFIG_HW_ENABLE)) {
++		val = readl_relaxed(qrng->base + PRNG_LFSR_CFG);
++		val &= ~PRNG_LFSR_CFG_MASK;
++		val |= PRNG_LFSR_CFG_CLOCKS;
++		writel(val, qrng->base + PRNG_LFSR_CFG);
++
++		val = readl_relaxed(qrng->base + PRNG_CONFIG);
++		val |= PRNG_CONFIG_HW_ENABLE;
++		writel(val, qrng->base + PRNG_CONFIG);
++	}
+ 
+-	return clk_prepare_enable(qrng->clk);
++	return 0;
+ }
+ 
+ static int qcom_hwrng_read(struct hwrng *hwrng, void *data, size_t max, bool wait)
+@@ -129,8 +151,13 @@
+ 	return ret;
+ }
+ 
++/*
++ * nura-builds (Samsung Galaxy S III Neo, a device for tinkering): the "qcom,prng" block as a
++ * hwrng too, so that it seeds the kernel's random pool at boot (without it the CRNG took ~5 s to
++ * initialise and udevd waited for it). Upstream doesn't credit this PRNG as a true RNG.
++ */
+ static struct qcom_rng_match_data qcom_prng_match_data = {
+-	.hwrng_support = false,
++	.hwrng_support = true,
+ };
+ 
+ static struct qcom_rng_match_data qcom_prng_ee_match_data = {
