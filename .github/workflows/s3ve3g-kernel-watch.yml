@@ -1,0 +1,147 @@
+# Samsung Galaxy S III Neo: does our kernel (overlay linux-postmarketos-qcom-msm8226: kernel.org
+# with our patch stack and config) still build on newer kernel releases? Weekly, and by hand: looks
+# up kernel.org's releases (releases.json), and for the newest release of our series (a stable
+# update) and the newest stable release (a new series), if newer than the recipe on REF, moves the
+# recipe there (tools/s3ve3g-kernel-bump.sh) and builds the kernel stage (kernel and device
+# package). A failed build opens an issue "s3ve3g kernel <version> doesn't build" with the log
+# (or comments on the open one); a successful build closes it. Nothing is pushed or published:
+# the packages and the log are artifacts.
+#
+# Schedules run only on the default branch: this file has to be on main for the weekly run; it
+# checks out REF (default s3ve3g-kernel-next) for the recipe.
+name: s3ve3g-kernel-watch
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"   # Monday 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      ref: { description: "branch with the s3ve3g kernel recipe", default: s3ve3g-kernel-next }
+      versions: { description: "versions to try instead of kernel.org's newest (space separated)", default: "" }
+
+concurrency:
+  group: s3ve3g-kernel-watch
+  cancel-in-progress: false
+
+env:
+  REF: ${{ inputs.ref || 's3ve3g-kernel-next' }}
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    outputs:
+      versions: ${{ steps.v.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: "${{ env.REF }}" }
+      - id: v
+        env:
+          WANTED: ${{ inputs.versions }}
+        run: |
+          current=$(sed -n 's/^pkgver=//p' overlays/s3ve3g/device/testing/linux-postmarketos-qcom-msm8226/APKBUILD)
+          if [ -n "$WANTED" ]; then
+            versions=$WANTED
+          else
+            json=$(curl -fsSL https://www.kernel.org/releases.json)
+            series=${current%.*}
+            # the newest release of our series (stable, or longterm later on), and the newest stable
+            same=$(echo "$json" | jq -r --arg s "$series." '.releases[] | select(.moniker == "stable" or .moniker == "longterm") | .version | select(startswith($s))' | head -n 1)
+            newest=$(echo "$json" | jq -r '.latest_stable.version')
+            versions=
+            for v in $same $newest; do
+              # newer than the recipe (version sort), each once
+              [ "$(printf '%s\n%s\n' "$current" "$v" | sort -V | tail -n 1)" = "$v" ] && [ "$v" != "$current" ] || continue
+              case " $versions " in *" $v "*) ;; *) versions="$versions $v" ;; esac
+            done
+          fi
+          echo "recipe: $current, to try:${versions:- none}" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "versions=$(printf '%s\n' $versions | jq -R . | jq -sc 'map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: versions
+    if: needs.versions.outputs.versions != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.versions.outputs.versions) }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 240
+    permissions: { contents: read, issues: write }
+    env:
+      TARGET: s3ve3g
+      NURA_ARCH: armv7
+      NURA_WORK: /home/runner/nura-work
+      NURA_SRC: /home/runner/nura-src
+      NURA_OUT: /home/runner/nura-out
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: "${{ env.REF }}" }
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost || true
+      - name: Recipe to ${{ matrix.version }}
+        run: tools/s3ve3g-kernel-bump.sh "$VERSION"
+      - uses: ./.github/actions/pmaports
+      - name: Set up pmbootstrap
+        run: scripts/setup.sh
+      - name: Build the kernel stage
+        id: build
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          set -o pipefail
+          scripts/build.sh kernel 2>&1 | tee /home/runner/build.log
+      - name: Packages and log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s3ve3g-kernel-${{ matrix.version }}
+          path: |
+            /home/runner/build.log
+            /home/runner/nura-out/packages.tar
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # The notification: an issue per version (GitHub mails failed scheduled runs only to whoever
+      # last edited the schedule)
+      - name: Report a failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          title="s3ve3g kernel $VERSION doesn't build"
+          run="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo "Our kernel recipe ($REF, tools/s3ve3g-kernel-bump.sh $VERSION) failed to build: $run"
+            echo
+            echo "Errors in the log:"
+            echo '```'
+            grep -nE "error:|ERROR|FAILED|Hunk #[0-9]+ FAILED|can't find file to patch|\*\*\*" /home/runner/build.log 2>/dev/null | tail -n 40 || echo "(no log, see the run)"
+            echo '```'
+            echo
+            echo "Last lines:"
+            echo '```'
+            tail -n 30 /home/runner/build.log 2>/dev/null || true
+            echo '```'
+          } > body.md
+          num=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if [ -n "$num" ]; then
+            gh issue comment "$num" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi
+      - name: Close the issue after a successful build
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          title="s3ve3g kernel $VERSION doesn't build"
+          for num in $(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq ".[] | select(.title == \"$title\") | .number"); do
+            gh issue close "$num" --comment "Builds now: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          done
+          echo "$VERSION builds (artifact s3ve3g-kernel-$VERSION)" >> "$GITHUB_STEP_SUMMARY"
