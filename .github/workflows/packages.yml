@@ -22,6 +22,12 @@ on:
       zynthian-ui-ref: { type: string, default: main }
       zyncoder-ref: { type: string, default: nura }
       arch: { type: string, default: aarch64 }
+    secrets:
+      NURA_ABUILD_KEY: { required: false }
+      NURA_ABUILD_KEY_NAME: { required: false }
+
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
 
 jobs:
   build:
@@ -39,6 +45,7 @@ jobs:
       ZYNCODER_REF: ${{ inputs.zyncoder-ref }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
 
       - name: Free disk space
         run: |

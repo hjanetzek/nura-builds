@@ -21,6 +21,9 @@ concurrency:
   group: zrythm-${{ github.ref }}-${{ inputs.arch || (github.event.schedule == '0 7 * * 0' && 'x86_64') || 'aarch64' }}
   cancel-in-progress: true
 
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
 jobs:
   arch:
     runs-on: ubuntu-latest
@@ -44,7 +47,10 @@ jobs:
       arch: ${{ needs.arch.outputs.arch }}
       refs: ${{ needs.arch.outputs.refs }}
       images: ${{ inputs.images || false }}
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      NURA_IMAGE_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
 
   publish:
     needs: [arch, build]
@@ -60,6 +66,7 @@ jobs:
       NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
       - uses: actions/download-artifact@v8
         with: { name: "new-zrythm-${{ needs.arch.outputs.arch }}", path: new }
       - uses: actions/download-artifact@v8

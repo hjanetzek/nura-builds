@@ -25,6 +25,9 @@ concurrency:
   group: zynthian-${{ github.ref }}-${{ inputs.arch || (github.event.schedule == '0 5 * * 0' && 'x86_64') || (github.event.schedule == '0 9 * * 0' && 'armv7') || 'aarch64' }}
   cancel-in-progress: true
 
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
 jobs:
   arch:
     runs-on: ubuntu-latest
@@ -49,7 +52,10 @@ jobs:
       arch: ${{ needs.arch.outputs.arch }}
       refs: ${{ needs.arch.outputs.refs }}
       images: ${{ inputs.images || false }}
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      NURA_IMAGE_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
 
   # main only: the packages merged into the release "<arch>", the images into "zynthian-latest"
   # (armv7: "zynthian-armv7-latest"), see scripts/publish.sh. Serialized per architecture with
@@ -68,6 +74,7 @@ jobs:
       NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
       - uses: actions/download-artifact@v8
         with: { name: "new-zynthian-${{ needs.arch.outputs.arch }}", path: new }
       - uses: actions/download-artifact@v8

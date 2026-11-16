@@ -16,17 +16,19 @@ on:
       packages: { description: "only these recipes (space separated)", default: "" }
       issues: { description: "create/update issues", type: boolean, default: true }
 
-permissions: { contents: read, issues: write, actions: write }
+permissions: { contents: read }
 
 jobs:
   updates:
     runs-on: ubuntu-latest
+    permissions: { contents: read, issues: write }
     env:
       GH_TOKEN: ${{ github.token }}
       PACKAGES: ${{ inputs.packages }}
       ISSUES: ${{ github.event_name == 'schedule' || inputs.issues }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
       - name: Newer upstream versions
         run: |
           # shellcheck disable=SC2086 # a list
@@ -67,6 +69,8 @@ jobs:
 
   abi:
     runs-on: ubuntu-latest
+    # issues: the report; actions: starting sets.yml for the rebuild
+    permissions: { contents: read, issues: write, actions: write }
     strategy:
       fail-fast: false
       matrix:
@@ -76,6 +80,7 @@ jobs:
       ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
       - name: Packages with missing shared libraries
         run: |
           python3 scripts/check-abi.py "$ARCH" > broken.txt 2> details.txt || true

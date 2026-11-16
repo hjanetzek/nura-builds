@@ -1,0 +1,10 @@
+# zizmor (workflow security audit): GitHub's own actions may be pinned by tag (actions/checkout@v7
+# etc.); anything else by commit hash
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "actions/*": ref-pin
+        "*": hash-pin
+  self-repository:
+    disable: true

@@ -13,6 +13,9 @@ on:
       NURA_ABUILD_KEY: { required: false }
       NURA_ABUILD_KEY_NAME: { required: false }
 
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
 jobs:
   build:
     runs-on: ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
@@ -20,6 +23,7 @@ jobs:
     env:
       TARGET: zynthian
       NURA_ARCH: ${{ inputs.arch }}
+      SET: ${{ inputs.set }}
       NURA_WORK: /home/runner/nura-work
       NURA_SRC: /home/runner/nura-src
       NURA_OUT: /home/runner/nura-out
@@ -28,6 +32,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
 
       - name: Free disk space
         run: |
@@ -65,11 +70,11 @@ jobs:
       - name: Build ${{ inputs.set }}
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          scripts/build-set.sh "${{ inputs.set }}" /home/runner/plan/plan.json
+          scripts/build-set.sh "$SET" /home/runner/plan/plan.json
 
       - name: New packages
         if: success() || failure()
-        run: scripts/collect-new.sh "${{ inputs.set }}-${{ inputs.arch }}" /home/runner/plan/plan.json
+        run: scripts/collect-new.sh "$SET-$NURA_ARCH" /home/runner/plan/plan.json
 
       - uses: actions/upload-artifact@v7
         if: success() || failure()

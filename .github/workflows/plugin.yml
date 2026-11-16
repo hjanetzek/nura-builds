@@ -17,6 +17,9 @@ concurrency:
   group: plugin-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
 jobs:
   changed:
     runs-on: ubuntu-24.04-arm
@@ -24,7 +27,7 @@ jobs:
       packages: ${{ steps.c.outputs.packages }}
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 0 }
+        with: { fetch-depth: 0, persist-credentials: false }
       - id: c
         run: |
           # recipe directories changed against main, without the meta packages (they would only
@@ -45,4 +48,6 @@ jobs:
         package: ${{ fromJSON(needs.changed.outputs.packages) }}
     uses: ./.github/workflows/packages.yml
     with: { packages: "${{ matrix.package }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}

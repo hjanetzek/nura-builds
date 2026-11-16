@@ -23,6 +23,9 @@ concurrency:
   group: sets-${{ github.ref }}
   cancel-in-progress: false
 
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -38,6 +41,7 @@ jobs:
       arches: ${{ steps.plan.outputs.arches }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
       - id: plan
         env:
           GH_TOKEN: ${{ github.token }}
@@ -80,7 +84,9 @@ jobs:
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_base) }}" } }
     uses: ./.github/workflows/build-set.yml
     with: { set: qt-base, arch: "${{ matrix.arch }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
   qt-declarative:
     needs: [plan, qt-base]
@@ -88,7 +94,9 @@ jobs:
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_declarative) }}" } }
     uses: ./.github/workflows/build-set.yml
     with: { set: qt-declarative, arch: "${{ matrix.arch }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
   qt-wayland:
     needs: [plan, qt-declarative]
@@ -96,7 +104,9 @@ jobs:
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_wayland) }}" } }
     uses: ./.github/workflows/build-set.yml
     with: { set: qt-wayland, arch: "${{ matrix.arch }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
   qt-tools:
     needs: [plan, qt-wayland]
@@ -104,7 +114,9 @@ jobs:
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_tools) }}" } }
     uses: ./.github/workflows/build-set.yml
     with: { set: qt-tools, arch: "${{ matrix.arch }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
   pyside:
     needs: [plan, qt-tools]
@@ -112,7 +124,9 @@ jobs:
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.pyside) }}" } }
     uses: ./.github/workflows/build-set.yml
     with: { set: pyside, arch: "${{ matrix.arch }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
   plugins:
     needs: [plan, pyside]
@@ -120,7 +134,9 @@ jobs:
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.plugins) }}" } }
     uses: ./.github/workflows/build-set.yml
     with: { set: plugins, arch: "${{ matrix.arch }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
   mesa:
     needs: [plan, plugins]
@@ -128,7 +144,9 @@ jobs:
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.mesa) }}" } }
     uses: ./.github/workflows/build-set.yml
     with: { set: mesa, arch: "${{ matrix.arch }}" }
-    secrets: inherit
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
   # Only when no set failed (a half-built Qt shouldn't be published); KEEPGOING failures inside a
   # set (a plugin) don't fail it. Serialized per architecture with every other publishing workflow.
@@ -146,6 +164,7 @@ jobs:
       NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
       - uses: actions/download-artifact@v8
         with: { pattern: "new-*-${{ matrix.arch }}", path: new }
       - uses: actions/download-artifact@v8
