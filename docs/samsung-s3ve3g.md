@@ -172,7 +172,26 @@ callbacks are atomic now), 0015, 0017 (ASoC renames), 0018 adapted; none went up
   ALSA driver then stops ("could not start playback (Broken pipe)" or later "Driver is not
   running") and refuses clients, so zynthian exits. Another start usually works. The launcher
   restarts jackd when the driver fails in its first seconds; failures later in a stream aren't
-  caught. Open (audio side).
+  caught.
+- **Fixed (patches 0024, 0025):** the trigger is an xrun, not the start itself. zynthian's
+  clients miss deadlines while it starts ("Process error"), and jackd recovers with prepare and
+  start.
+  - **q6asm-dai (0024):** since upstream e386c2cf3df2 (6.19) playback periods are queued from
+    `.ack`, as far as `appl_ptr - queue_ptr`. `queue_ptr` was never reset, while prepare resets
+    `appl_ptr`. After the recovery the difference underflowed, and `.ack` sent write commands until
+    the APR channel's SMD FIFO to the ADSP was full: the -11 (`rpmsg_trysend()`), and the
+    application's write failed. Now `queue_ptr` is reset in prepare and wraps at the boundary,
+    never more than the buffer's periods are queued at once, a full FIFO keeps the periods pending
+    (queued from a work item or the next write-done), and the DSP buffer index and hardware pointer
+    start over with a new buffer mapping. Reproduced on the old kernel by stopping jackd for
+    0.3 s (SIGSTOP/SIGCONT): the error pair at once.
+  - **wcd9306 (0025):** with 0024 alone the recovered stream ran but was silent: the codec's
+    trigger stop disabled its SLIMbus slave ports, which only hw_params enables again, and a
+    restart has no hw_params. The ports are now disabled in hw_free.
+  - Tested on #101 with both patches: 50 jackd starts without a failure. 15 were with zynthian
+    through the launcher (a fresh jackd each time; before, one in six failed), 30 bare with a
+    forced xrun each, and 5 checks of the sound itself: a 1 kHz tone through JACK, after 0, 3 and 5
+    forced xruns, recorded at the same level on the headphone out (Scarlett) and by the main mic.
 
 ## A minimal base, locally
 

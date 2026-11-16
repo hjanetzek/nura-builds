@@ -1,0 +1,234 @@
+From b88f337f6c73c07ef23da6cecc81e9f62fe0a25d Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 16 Nov 2026 10:01:31 +0100
+Subject: [PATCH] ASoC: qcom: q6asm-dai: keep the playback queue in step with
+ the stream
+
+Since e386c2cf3df2 ("ASoC: qcom: q6asm-dai: schedule all available
+frames to avoid dsp under-runs") playback periods are queued from the
+.ack callback, as far as the application has written: appl_ptr -
+queue_ptr. queue_ptr was only ever increased. prepare resets appl_ptr
+(to 0 for a stream that isn't running), so after an xrun and the
+prepare that recovers from it, as JACK does, appl_ptr - queue_ptr
+underflows and .ack queues write commands until the APR channel's FIFO
+to the DSP is full:
+
+  q6asm-dai ...: Error queuing playback buffer -11
+
+(rpmsg_trysend() on SMD, MSM8226), the write fails, and JACK's ALSA
+driver stops ("could not start playback (Broken pipe)", or "Process
+error" and "Driver is not running" once clients connect).
+
+- reset queue_ptr in prepare, and wrap it at the boundary like appl_ptr;
+- never queue more than the buffer's periods at once (anything more is
+  the pointers out of step, not data);
+- a full APR FIFO (-EAGAIN) isn't an error of the stream: keep the
+  periods pending and queue them from a work item (and when the DSP
+  returns a buffer);
+- q6asm_write_async() advanced the DSP buffer index before sending, so
+  a failed send left it one buffer ahead: step it back;
+- a new buffer mapping (the stream prepared again) starts at the first
+  buffer: reset the DSP buffer index and the hardware pointer, which
+  were kept from the previous stream.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ sound/soc/qcom/qdsp6/q6asm-dai.c | 99 +++++++++++++++++++++++++++-----
+ sound/soc/qcom/qdsp6/q6asm.c     | 10 +++-
+ 2 files changed, 95 insertions(+), 14 deletions(-)
+
+diff --git a/sound/soc/qcom/qdsp6/q6asm-dai.c b/sound/soc/qcom/qdsp6/q6asm-dai.c
+index e3742663c13e..42a2d6d19523 100644
+--- a/sound/soc/qcom/qdsp6/q6asm-dai.c
++++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
+@@ -9,6 +9,7 @@
+ #include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <linux/slab.h>
++#include <linux/workqueue.h>
+ #include <sound/soc.h>
+ #include <sound/soc-dapm.h>
+ #include <sound/pcm.h>
+@@ -64,6 +65,8 @@ struct q6asm_dai_rtd {
+ 	uint64_t copied_total;
+ 	uint16_t bits_per_sample;
+ 	snd_pcm_uframes_t queue_ptr;
++	/* retries queuing playback periods the APR channel had no room for */
++	struct delayed_work queue_work;
+ 	uint16_t source; /* Encoding source bit mask */
+ 	struct audio_client *audio_client;
+ 	uint32_t next_track_stream_id;
+@@ -189,6 +192,9 @@ static void event_handler(uint32_t opcode, uint32_t token,
+ 		break;
+ 	case ASM_CLIENT_EVENT_DATA_WRITE_DONE:
+ 		snd_pcm_period_elapsed(substream);
++		/* periods the APR channel had no room for earlier: room again now */
++		if (delayed_work_pending(&prtd->queue_work))
++			mod_delayed_work(system_highpri_wq, &prtd->queue_work, 0);
+ 		break;
+ 	case ASM_CLIENT_EVENT_DATA_READ_DONE:
+ 		snd_pcm_period_elapsed(substream);
+@@ -222,6 +228,13 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 	}
+ 
+ 	prtd->pcm_count = snd_pcm_lib_period_bytes(substream);
++	/*
++	 * The stream starts over: prepare resets the application pointer (to hw_ptr, which is 0 for a
++	 * stream that isn't running). A queue_ptr left from before (an xrun and a prepare to recover,
++	 * as JACK does) would make appl_ptr - queue_ptr underflow, and ack would queue "periods" until
++	 * the APR channel is full.
++	 */
++	prtd->queue_ptr = 0;
+ 	/* rate and channels are sent to audio driver */
+ 	if (prtd->state == Q6ASM_STREAM_RUNNING) {
+ 		/* clear the previous setup if any  */
+@@ -309,24 +322,81 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 	return ret;
+ }
+ 
++/*
++ * Queue the playback periods the application has written since the last call. APR sends with
++ * rpmsg_trysend(): when the channel's FIFO to the DSP is full (on SMD right after the commands of
++ * a stream start, before the DSP has read them) it fails with -EAGAIN. That is not an error of the
++ * stream: the periods stay pending and are queued again from a work item. Called with the stream
++ * lock held.
++ */
++static int q6asm_dai_queue_pending(struct q6asm_dai_rtd *prtd)
++{
++	struct snd_pcm_substream *substream = prtd->substream;
++	struct snd_pcm_runtime *runtime = substream->runtime;
++	snd_pcm_uframes_t appl_ptr = runtime->control->appl_ptr;
++	snd_pcm_sframes_t avail, avail_periods;
++	int i, ret;
++
++	if (prtd->state != Q6ASM_STREAM_RUNNING)
++		return 0;
++
++	/* the application pointer wraps at the boundary */
++	avail = appl_ptr - prtd->queue_ptr;
++	if (avail < 0)
++		avail += runtime->boundary;
++	avail_periods = avail / runtime->period_size;
++	/* more than the buffer holds is the pointers out of step, not data to queue */
++	if (avail_periods > runtime->periods) {
++		dev_warn_ratelimited(substream->pcm->card->dev,
++				     "playback pointers out of step (appl %lu, queued %lu)\n",
++				     appl_ptr, prtd->queue_ptr);
++		prtd->queue_ptr = appl_ptr;
++		return 0;
++	}
++	for (i = 0; i < avail_periods; i++) {
++		ret = q6asm_write_async(prtd->audio_client, prtd->stream_id,
++					prtd->pcm_count, 0, 0, 0);
++		if (ret == -EAGAIN) {
++			mod_delayed_work(system_highpri_wq, &prtd->queue_work,
++					 msecs_to_jiffies(1));
++			return 0;
++		}
++		if (ret < 0)
++			return ret;
++		prtd->queue_ptr += runtime->period_size;
++		if (prtd->queue_ptr >= runtime->boundary)
++			prtd->queue_ptr -= runtime->boundary;
++	}
++
++	return 0;
++}
++
++static void q6asm_dai_queue_work(struct work_struct *work)
++{
++	struct q6asm_dai_rtd *prtd = container_of(to_delayed_work(work),
++						  struct q6asm_dai_rtd, queue_work);
++	struct snd_pcm_substream *substream = prtd->substream;
++	unsigned long flags;
++	int ret;
++
++	snd_pcm_stream_lock_irqsave(substream, flags);
++	ret = q6asm_dai_queue_pending(prtd);
++	snd_pcm_stream_unlock_irqrestore(substream, flags);
++
++	if (ret < 0)
++		dev_err(substream->pcm->card->dev, "Error queuing playback buffer %d\n", ret);
++}
++
+ static int q6asm_dai_ack(struct snd_soc_component *component, struct snd_pcm_substream *substream)
+ {
+ 	struct snd_pcm_runtime *runtime = substream->runtime;
+ 	struct q6asm_dai_rtd *prtd = runtime->private_data;
+-	int i, ret = 0, avail_periods;
+-
+-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK && prtd->state == Q6ASM_STREAM_RUNNING) {
+-		avail_periods = (runtime->control->appl_ptr - prtd->queue_ptr)/runtime->period_size;
+-		for (i = 0; i < avail_periods; i++) {
+-			ret = q6asm_write_async(prtd->audio_client, prtd->stream_id,
+-					   prtd->pcm_count, 0, 0, 0);
++	int ret = 0;
+ 
+-			if (ret < 0) {
+-				dev_err(component->dev, "Error queuing playback buffer %d\n", ret);
+-				return ret;
+-			}
+-			prtd->queue_ptr += runtime->period_size;
+-		}
++	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
++		ret = q6asm_dai_queue_pending(prtd);
++		if (ret < 0)
++			dev_err(component->dev, "Error queuing playback buffer %d\n", ret);
+ 	}
+ 
+ 	return ret;
+@@ -347,6 +417,7 @@ static int q6asm_dai_trigger(struct snd_soc_component *component,
+ 				       0, 0, 0);
+ 		break;
+ 	case SNDRV_PCM_TRIGGER_STOP:
++		cancel_delayed_work(&prtd->queue_work);
+ 		ret = q6asm_cmd_nowait(prtd->audio_client, prtd->stream_id,
+ 				       CMD_EOS);
+ 		break;
+@@ -388,6 +459,7 @@ static int q6asm_dai_open(struct snd_soc_component *component,
+ 		return -ENOMEM;
+ 
+ 	prtd->substream = substream;
++	INIT_DELAYED_WORK(&prtd->queue_work, q6asm_dai_queue_work);
+ 	prtd->audio_client = q6asm_audio_client_alloc(dev,
+ 				(q6asm_cb)event_handler, prtd, stream_id,
+ 				LEGACY_PCM_MODE);
+@@ -461,6 +533,7 @@ static int q6asm_dai_close(struct snd_soc_component *component,
+ 	struct snd_soc_pcm_runtime *soc_prtd = snd_soc_substream_to_rtd(substream);
+ 	struct q6asm_dai_rtd *prtd = runtime->private_data;
+ 
++	cancel_delayed_work_sync(&prtd->queue_work);
+ 	if (prtd->audio_client) {
+ 		if (prtd->state == Q6ASM_STREAM_RUNNING) {
+ 			q6asm_cmd(prtd->audio_client, prtd->stream_id,
+diff --git a/sound/soc/qcom/qdsp6/q6asm.c b/sound/soc/qcom/qdsp6/q6asm.c
+index de0bd8fd08ee..88769e870550 100644
+--- a/sound/soc/qcom/qdsp6/q6asm.c
++++ b/sound/soc/qcom/qdsp6/q6asm.c
+@@ -517,6 +517,9 @@ int q6asm_map_memory_regions(unsigned int dir, struct audio_client *ac,
+ 
+ 	buf[0].phys = phys;
+ 	buf[0].size = period_sz;
++	/* a new mapping (a stream prepared again): its first buffer is the next one */
++	ac->port[dir].dsp_buf = 0;
++	atomic_set(&ac->port[dir].hw_ptr, 0);
+ 
+ 	for (cnt = 1; cnt < periods; cnt++) {
+ 		if (period_sz > 0) {
+@@ -1553,7 +1556,12 @@ int q6asm_write_async(struct audio_client *ac, uint32_t stream_id, uint32_t len,
+ 	spin_unlock_irqrestore(&ac->lock, flags);
+ 	rc = apr_send_pkt(ac->adev, pkt);
+ 	if (rc == pkt_size)
+-		rc = 0;
++		return 0;
++
++	/* Not sent (-EAGAIN: no room in the channel): the buffer is still the next one */
++	spin_lock_irqsave(&ac->lock, flags);
++	port->dsp_buf = write->seq_id;
++	spin_unlock_irqrestore(&ac->lock, flags);
+ 
+ 	return rc;
+ }
+-- 
+2.56.0
+

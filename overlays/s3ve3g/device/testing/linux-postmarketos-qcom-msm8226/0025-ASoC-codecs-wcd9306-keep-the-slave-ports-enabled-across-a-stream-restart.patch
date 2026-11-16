@@ -1,0 +1,57 @@
+From 659075f45616333ba0c3aa1d4e5d01d0a07335d8 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 16 Nov 2026 10:26:50 +0100
+Subject: [PATCH] ASoC: codecs: wcd9306: keep the slave ports enabled across a
+ stream restart
+
+The trigger's stop disabled the SLIMbus slave ports, which only
+hw_params sets up. A stream restarted with prepare and start alone (JACK
+recovering from an xrun) then ran with the codec's ports off: the DSP
+took its buffers and nothing played. Disable the ports in hw_free,
+symmetric with hw_params; the trigger still disables and enables the
+SLIMbus stream.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ sound/soc/codecs/wcd9306.c | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/sound/soc/codecs/wcd9306.c b/sound/soc/codecs/wcd9306.c
+index 973971aeaf43..00cb60784d8e 100644
+--- a/sound/soc/codecs/wcd9306.c
++++ b/sound/soc/codecs/wcd9306.c
+@@ -4902,7 +4902,11 @@ static int tapan_trigger(struct snd_pcm_substream *substream, int cmd, struct sn
+ 		slim_stream_disable(dai_data->sruntime);
+ 		slim_stream_unprepare(dai_data->sruntime);
+ 		dai_data->stream_up = false;
+-		tapan_slim_ports_disable(tapan, dai_data, substream->stream);
++		/*
++		 * The slave ports stay enabled: a stream is restarted with prepare and start only
++		 * (JACK after an xrun), without hw_params that would set them up again; they are
++		 * disabled in hw_free
++		 */
+ 		break;
+ 	default:
+ 		break;
+@@ -4972,8 +4976,18 @@ static int tapan_get_channel_map(const struct snd_soc_dai *dai,
+ 	return 0;
+ }
+ 
++static int tapan_slim_hw_free(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
++{
++	struct tapan_priv *tapan = snd_soc_component_get_drvdata(dai->component);
++
++	tapan_slim_ports_disable(tapan, &tapan->dai[dai->id], substream->stream);
++
++	return 0;
++}
++
+ static const struct snd_soc_dai_ops tapan_dai_ops = {
+ 	.hw_params = tapan_slim_hw_params,
++	.hw_free = tapan_slim_hw_free,
+ 	.trigger = tapan_trigger,
+ 	.set_channel_map = tapan_set_channel_map,
+ 	.get_channel_map = tapan_get_channel_map,
+-- 
+2.56.0
+
