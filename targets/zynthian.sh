@@ -27,6 +27,9 @@ STAGES="zynthian upstream"
 # the Rust build fails early); its recipe fetches the Rust crates itself. The kiosk package depends on it.
 STAGE_zynthian="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
 SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
+# aarch64: also the zynthian kits' hardware (Raspberry Pi 4, docs/zynthian-rpi.md): zyncoder-hw (the
+# kits' builds of zyncore, from the zyncoder checkout) and zynthian-hw (zynthian-kit, the kit setup)
+STAGE_zynthian_aarch64="$STAGE_zynthian; --src=@zyncoder zyncoder-hw; zynthian-hw"
 # zynthian-ui from upstream's branches (vangelis, tomita) with the port patches, the Tk UI, for
 # those who want zynthian as upstream ships it (aports/zynthian-upstream, docs/zynthian-upstream.md).
 # After the zynthian stage: they need zyncoder, which is only built from its checkout there.
@@ -35,7 +38,11 @@ STAGE_upstream="zynthian-ui-vangelis zynthian-ui-tomita"
 
 # Images: pmbootstrap UI and the devices (pmaports device names)
 UI=zynthian
-DEVICES="google-kukui"
+DEVICES="google-kukui zynthian-rpi4"
+# zynthian-rpi4: a Raspberry Pi 4 with a zynthian kit (devices/device-zynthian-rpi4,
+# docs/zynthian-rpi.md, docs/rpi-plan.md). Extra packages of a device's image:
+# EXTRA_PACKAGES_<device, "-" as "_">
+EXTRA_PACKAGES_zynthian_rpi4="zynthian-hw"
 # amd64: the QEMU virtual machine (zynthian-ui's nura/tools/run_qemu.sh), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
 # raspberry-pi4 is in pmaports' "downstream" category; add it here once tested

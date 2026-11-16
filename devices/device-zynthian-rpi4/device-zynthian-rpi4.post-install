@@ -1,0 +1,8 @@
+#!/bin/sh
+# Groups for the kits' interfaces (90-zynthian-hw.rules)
+for g in gpio i2c spi; do
+	getent group $g >/dev/null || addgroup -S $g
+done
+# The kit's overlays: written by the kit setup, so not a file of this package
+[ -e /boot/zynthian-kit.txt ] || cp /usr/share/device-zynthian-rpi4/zynthian-kit.txt /boot/zynthian-kit.txt
+exit 0

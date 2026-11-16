@@ -4,6 +4,8 @@
 # dependencies too) and uploads the built .apk files and the build log as an artifact.
 #
 #   gh workflow run packages.yml --ref my-branch -f packages="dexed-lv2 eq10q-lv2"
+#   gh workflow run packages.yml --ref my-branch -f packages="zyncoder-hw=@zyncoder zynthian-hw" -f image=zynthian-rpi4
+# (PKG=@REPO: from the checkout of a source repository of the target, as the stages build it)
 name: packages
 
 on:
@@ -14,6 +16,7 @@ on:
       zynthian-ui-ref: { description: "zynthian-ui branch", default: main }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
       arch: { description: "architecture", type: choice, options: [aarch64, x86_64, armv7], default: aarch64 }
+      image: { description: "then an image for this device (e.g. zynthian-rpi4) from the release and these packages", default: "" }
   # Also called per package by plugin.yml (pushes to plugin-* branches)
   workflow_call:
     inputs:
@@ -22,9 +25,11 @@ on:
       zynthian-ui-ref: { type: string, default: main }
       zyncoder-ref: { type: string, default: nura }
       arch: { type: string, default: aarch64 }
+      image: { type: string, default: "" }
     secrets:
       NURA_ABUILD_KEY: { required: false }
       NURA_ABUILD_KEY_NAME: { required: false }
+      NURA_IMAGE_PASSWORD: { required: false }
 
 # Read-only by default; jobs that publish ask for more
 permissions: { contents: read }
@@ -92,6 +97,26 @@ jobs:
           name: packages-${{ github.run_id }}-${{ inputs.packages }}
           path: /home/runner/nura-out/built
           retention-days: 7
+
+      # An image from the published packages and the ones just built (scripts/image.sh), without
+      # running the target's stages: a quick test image for one device from a branch
+      - name: Image for ${{ inputs.image }}
+        if: inputs.image != ''
+        env:
+          DEVICE: ${{ inputs.image }}
+          NURA_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/image.sh "$DEVICE"
+
+      - name: Upload the image
+        if: inputs.image != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ github.run_id }}-${{ inputs.image }}
+          path: /home/runner/nura-out/*.img.zst
+          retention-days: 7
+          compression-level: 0
 
       - name: Build log
         if: failure()

@@ -10,9 +10,12 @@
 device=$1
 pmb config device "$device"
 pmb config ui "$UI"
-# IMAGE_PACKAGES (target file, e.g. IMAGE_PACKAGES_armv7): packages installed besides the UI's
-pmb install --password "${NURA_PASSWORD:-147147}" \
-	${IMAGE_PACKAGES:+--add "$(echo $IMAGE_PACKAGES | tr ' ' ',')"}
+# IMAGE_PACKAGES (target file, e.g. IMAGE_PACKAGES_armv7) and the device's EXTRA_PACKAGES_<device,
+# "-" as "_"> (e.g. zynthian-hw for zynthian-rpi4): packages installed besides the UI's
+eval "extra=\${EXTRA_PACKAGES_$(echo "$device" | tr - _):-}"
+# shellcheck disable=SC2154 # set by eval
+add=$(echo $IMAGE_PACKAGES $extra | tr ' ' ',')
+pmb install --password "${NURA_PASSWORD:-147147}" ${add:+--add "$add"}
 
 img="$NURA_WORK/chroot_native/home/pmos/rootfs/$device.img"
 [ -f "$img" ] || { echo "no image at $img" >&2; exit 1; }

@@ -1,0 +1,97 @@
+/*
+ * zynthian ZynScreen 3.5 (v1), the V4 kit's 480x320 SPI panel, as a DRM device: the kernel's
+ * tiny DRM driver ili9486 (compatible "ozzmaker,piscreen") instead of fbtft (piscreen2r), so that
+ * Wayland compositors and Qt's linuxfb/DRM output can use it. Same wiring as piscreen2r: SPI0
+ * CE0, DC on GPIO 24, reset on GPIO 25, backlight on GPIO 22; the ads7846 touch controller on
+ * CE1 with its pen interrupt on GPIO 17 (zynthian-sys' V4 settings).
+ *
+ *   dtoverlay=zynscreen-drm[,rotation=270][,speed=64000000]
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&spi0>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target = <&spidev0>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@2 {
+		target = <&spidev1>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+
+	fragment@3 {
+		target = <&gpio>;
+		__overlay__ {
+			zynscreen_pins: zynscreen_pins {
+				brcm,pins = <17 25 24 22>;
+				brcm,function = <0 1 1 1>; /* in out out out */
+			};
+		};
+	};
+
+	fragment@4 {
+		target-path = "/";
+		__overlay__ {
+			zynscreen_backlight: zynscreen-backlight {
+				compatible = "gpio-backlight";
+				gpios = <&gpio 22 0>;
+				default-on;
+			};
+		};
+	};
+
+	fragment@5 {
+		target = <&spi0>;
+		__overlay__ {
+			/* needed to avoid dtc warning */
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			zynscreen: zynscreen@0 {
+				compatible = "ozzmaker,piscreen";
+				reg = <0>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&zynscreen_pins>;
+				spi-max-frequency = <64000000>;
+				rotation = <270>;
+				reset-gpios = <&gpio 25 1>;
+				dc-gpios = <&gpio 24 0>;
+				backlight = <&zynscreen_backlight>;
+			};
+
+			zynscreen_ts: zynscreen-ts@1 {
+				compatible = "ti,ads7846";
+				reg = <1>;
+				spi-max-frequency = <2000000>;
+				interrupts = <17 2>; /* high-to-low edge triggered */
+				interrupt-parent = <&gpio>;
+				pendown-gpio = <&gpio 17 1>;
+				ti,swap-xy;
+				ti,x-plate-ohms = /bits/ 16 <100>;
+				ti,pressure-max = /bits/ 16 <255>;
+			};
+		};
+	};
+
+	__overrides__ {
+		speed =		<&zynscreen>,"spi-max-frequency:0";
+		rotation =	<&zynscreen>,"rotation:0";
+		xohms =		<&zynscreen_ts>,"ti,x-plate-ohms;0";
+	};
+};

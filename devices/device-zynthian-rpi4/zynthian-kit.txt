@@ -1,0 +1,2 @@
+# The zynthian kit's overlays (sound card, display): written by zynthian's kit setup.
+# Empty: onboard audio and HDMI only.

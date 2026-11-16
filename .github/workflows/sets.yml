@@ -1,4 +1,4 @@
-# The package sets (sets/: Qt, PySide, plugins, Mesa; sets/order) for all architectures, per package
+# The package sets (sets/: Qt, PySide, plugins, Mesa, kernels, device packages; sets/order) for all architectures, per package
 # (docs/ci-plan.md): the plan compares each recipe with the published package repository and its
 # manifest and builds only what is new, has another version or a changed recipe (and what
 # FORCE_AFTER makes depend on that); the sets in order (sets/order), each on top of the release
@@ -16,7 +16,7 @@ on:
       force: { description: "rebuild the selected packages even if up to date", type: boolean, default: false }
   push:
     branches: [main]
-    paths: ["aports/**", "sets/**"]
+    paths: ["aports/**", "devices/**", "sets/**"]
 
 # Queued, not cancelled: a run that publishes shouldn't be cut off
 concurrency:
@@ -38,6 +38,8 @@ jobs:
       pyside: ${{ steps.plan.outputs.pyside }}
       plugins: ${{ steps.plan.outputs.plugins }}
       mesa: ${{ steps.plan.outputs.mesa }}
+      kernels: ${{ steps.plan.outputs.kernels }}
+      devices: ${{ steps.plan.outputs.devices }}
       arches: ${{ steps.plan.outputs.arches }}
     steps:
       - uses: actions/checkout@v7
@@ -148,10 +150,30 @@ jobs:
       NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
       NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
 
+  kernels:
+    needs: [plan, mesa]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.kernels != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.kernels) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: kernels, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  devices:
+    needs: [plan, kernels]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.devices != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.devices) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: devices, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
   # Only when no set failed (a half-built Qt shouldn't be published); KEEPGOING failures inside a
   # set (a plugin) don't fail it. Serialized per architecture with every other publishing workflow.
   publish:
-    needs: [plan, qt-base, qt-declarative, qt-wayland, qt-tools, pyside, plugins, mesa]
+    needs: [plan, qt-base, qt-declarative, qt-wayland, qt-tools, pyside, plugins, mesa, kernels, devices]
     if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.plan.outputs.arches != '[]' && github.ref == 'refs/heads/main' }}
     strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.arches) }}" } }
     concurrency: { group: "publish-${{ matrix.arch }}", cancel-in-progress: false }

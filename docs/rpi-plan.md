@@ -18,7 +18,7 @@ All three are about 30 commits behind main and predate the CI restructuring
 | `odroid-n2-rt-kernel` (12, contains rpi4-rt) | `linux-postmarketos-amlogic-rt`; U-Boot and device package for the plain N2; `docs/odroid-n2.md` | packages only, no image |
 | `rpi-findings` (local, worktree nura-builds-docs) | `docs/zynthian-rpi.md` | not pushed |
 
-## A. Into the new structure (mechanics)
+## A. Into the new structure (mechanics) — done 2026-11-17 (branch rpi-merge)
 
 1. Device packages in `devices/` (`device-zynthian-rpi4`, `device-odroid-n2`, `u-boot-odroid-n2`),
    each linked into pmaports' `device/testing/` by setup.sh: `pmbootstrap init` skips unknown

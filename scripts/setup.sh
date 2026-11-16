@@ -114,6 +114,12 @@ fi
 # Recipe directories into pmaports
 aports=$(pmbootstrap -c "$CFG" config aports)
 ln -sfn "$here/aports" "$aports/nura-builds"
+# Device packages and their boot loaders (devices/): each into device/testing/, where pmbootstrap
+# looks for devices (pmbootstrap init skips unknown categories such as device/nura-builds)
+for d in "$here"/devices/*/; do
+	[ -f "$d/APKBUILD" ] || continue
+	ln -sfn "${d%/}" "$aports/device/testing/$(basename "$d")"
+done
 # (several directories, comma-separated in REPOS: each linked into aports/<repo>/, e.g. zrythm's
 # recipes without its own copy of Qt, which nura-builds' aports/qt6 has)
 echo "$REPOS" | while read -r name url branch recipes; do

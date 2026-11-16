@@ -39,12 +39,13 @@ def shell_vars(path, names):
 
 
 def recipes():
-    """recipe directory name -> path, for nura-builds' recipes (aports/)"""
+    """recipe directory name -> path, for nura-builds' recipes (aports/, devices/)"""
     found = {}
-    for root, dirs, files in os.walk(os.path.join(here, "aports")):
-        if "APKBUILD" in files:
-            found.setdefault(os.path.basename(root), root)
-            dirs[:] = []
+    for top in ("aports", "devices"):
+        for root, dirs, files in os.walk(os.path.join(here, top)):
+            if "APKBUILD" in files:
+                found.setdefault(os.path.basename(root), root)
+                dirs[:] = []
     return found
 
 

@@ -7,7 +7,7 @@ Targets so far:
 
 | Target | What | Devices |
 |---|---|---|
-| `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss), zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
+| `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss), zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 with a zynthian kit (`zynthian-rpi4`, to test: [docs/zynthian-rpi.md](docs/zynthian-rpi.md), [docs/rpi-plan.md](docs/rpi-plan.md)); QEMU (`qemu-amd64`); Samsung Galaxy S III Neo (`qcom-msm8226`, armv7) |
 | `zrythm` | Zrythm (the DAW) in a labwc kiosk session: its libraries, zrythm from the checkout of `hjanetzek/zrythm` (`nura`), `postmarketos-ui-zrythm`; recipes in Zrythm's `tools/nura/` | Lenovo IdeaPad Duet (`google-kukui`), QEMU (`qemu-amd64`) |
 | (in `zynthian`) | zynthian-ui from upstream (`zynthian-ui-vangelis`, `zynthian-ui-tomita`): the Tk UI with the port patches, packages only, see [docs/zynthian-upstream.md](docs/zynthian-upstream.md) | as above |
 
@@ -42,7 +42,9 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
 - **Package sets** (`sets/`, workflow `sets.yml`): Qt 6.12 and PySide6 for armv7 (`qt-base`,
   `qt-declarative`, `qt-wayland`, `pyside`; aarch64 and x86_64 use Alpine's, see
   `aports/qt6/README.md` and `sets/dropped.sh`), Qt TaskTree and Canvas Painter for Zrythm
-  (`qt-tools`), the plugins (LV2, Pure Data, engines, zynthian's jalv) and Mesa (armv7),
+  (`qt-tools`), the plugins (LV2, Pure Data, engines, zynthian's jalv), Mesa (armv7), PREEMPT_RT kernels
+  (`kernels`: linux-rpi-rt, linux-postmarketos-amlogic-rt) and our device packages (`devices/`, set
+  `devices`: zynthian-rpi4, the ODROID N2 with its U-Boot, [docs/odroid-n2.md](docs/odroid-n2.md)),
   with their architectures and per-architecture lists. `scripts/plan-packages.py` compares each
   recipe with the published index and `manifest.json` (per package: recipe hash, version, set or
   target, run): it builds what is new, has another version or a changed recipe (with `--force`),
