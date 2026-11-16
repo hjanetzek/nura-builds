@@ -129,6 +129,20 @@ echo "$REPOS" | while read -r name url branch recipes; do
 	esac
 done
 
+# Recipes of packages the distribution has now on this architecture (sets/dropped.sh): hidden
+# from pmbootstrap here by "!<arch>" in their arch= (in this checkout only; the recipes stay for
+# the other architectures, and their hashes for the plan unchanged). Otherwise a recipe with a
+# higher pkgrel than the distribution's package (qt6-qtwayland 6.12.0-r1 vs Alpine's r0) would be
+# built instead of using the distribution's.
+for origin in $("$here/scripts/dropped.sh"); do
+	for f in "$here"/aports/*/"$origin"/APKBUILD "$here"/aports/"$origin"/APKBUILD; do
+		[ -f "$f" ] || continue
+		grep -q "^arch=\".*!$ARCH" "$f" && continue
+		sed -i "s/^arch=\"\(.*\)\"/arch=\"\1 !$ARCH\"/" "$f"
+		echo "${f#"$here/"}: $(grep '^arch=' "$f") (sets/dropped.sh)"
+	done
+done
+
 # Device packages (kernel, ...) at the versions postmarketOS has built, not newer recipes
 "$here/scripts/pin-binary.sh"
 
