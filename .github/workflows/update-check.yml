@@ -1,0 +1,98 @@
+# Weekly checks of nura-builds' recipes (docs/ci-plan.md):
+# - updates: newer upstream versions (scripts/check-updates.py, adjust per recipe in
+#   updates.conf): one issue per recipe, "update <pkgname> to <version>" (label "update"), written
+#   to hand to an agent; updated when a still newer version appears, never duplicated
+# - abi: published packages whose shared libraries Alpine/postmarketOS no longer provide
+#   (scripts/check-abi.py): rebuilds them with sets.yml (packages, force) and keeps an issue
+#   "ABI: rebuild on <arch>" listing them (packages of targets, e.g. zynthian-ui, need their
+#   target's workflow)
+name: update-check
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"   # Monday 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      packages: { description: "only these recipes (space separated)", default: "" }
+      issues: { description: "create/update issues", type: boolean, default: true }
+
+permissions: { contents: read, issues: write, actions: write }
+
+jobs:
+  updates:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PACKAGES: ${{ inputs.packages }}
+      ISSUES: ${{ github.event_name == 'schedule' || inputs.issues }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Newer upstream versions
+        # shellcheck disable=SC2086 # a list
+        run: python3 scripts/check-updates.py --json updates.json $PACKAGES | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Issues
+        if: env.ISSUES == 'true'
+        run: |
+          gh label create update --color 0E8A16 --description "upstream update of a recipe" 2>/dev/null || true
+          run="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          jq -c '.[]' updates.json | while read -r u; do
+            pkg=$(echo "$u" | jq -r .pkgname); cur=$(echo "$u" | jq -r .current); new=$(echo "$u" | jq -r .new)
+            recipe=$(echo "$u" | jq -r .recipe); src=$(echo "$u" | jq -r .source); note=$(echo "$u" | jq -r .note)
+            title="update $pkg to $new"
+            cat > body.md <<EOF
+          \`$pkg\` ($recipe) is at $cur; upstream has $new${note:+ ($note)}.
+          Source: $src
+
+          Steps:
+          1. In \`$recipe/APKBUILD\`: \`pkgver=$new\` (snapshots: the commit and its date), \`pkgrel=0\`,
+             new checksums (\`abuild checksum\`, or \`pmbootstrap checksum $pkg\`). Check the upstream
+             changelog for new dependencies or build options, and the recipe's patches.
+          2. Test build on a branch \`plugin-$pkg\` (plugin.yml builds changed recipes of aports/lv2,
+             aports/pd, aports/engines) or with \`gh workflow run packages.yml --ref <branch> -f packages=$pkg -f arch=<arch>\`,
+             for every architecture of its set (sets/*.sh: ARCHES, PACKAGES_<arch>).
+          3. Merge to main: sets.yml builds and publishes it (only this package).
+
+          Found by $run
+          EOF
+            existing=$(gh issue list --label update --state open --json number,title \
+              --jq ".[] | select(.title | startswith(\"update $pkg to \")) | \"\(.number) \(.title)\"" | head -n 1)
+            if [ -z "$existing" ]; then
+              gh issue create --title "$title" --label update --body-file body.md
+            elif [ "${existing#* }" != "$title" ]; then
+              gh issue edit "${existing%% *}" --title "$title" --body-file body.md
+              gh issue comment "${existing%% *}" --body "Newer upstream version: $new ($run)"
+            fi
+          done
+
+  abi:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, x86_64, armv7]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Packages with missing shared libraries
+        run: |
+          python3 scripts/check-abi.py "$ARCH" > broken.txt 2> details.txt || true
+          cat details.txt
+          { echo "### $ARCH"; sed 's/^/- /' details.txt; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Rebuild and report
+        run: |
+          title="ABI: rebuild on $ARCH"
+          num=$(gh issue list --state open --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if [ ! -s broken.txt ]; then
+            [ -z "$num" ] || gh issue close "$num" --comment "All shared libraries available again."
+            exit 0
+          fi
+          run="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          gh workflow run sets.yml --ref main -f arch="$ARCH" -f force=true -f packages="$(tr '\n' ' ' < broken.txt)"
+          { echo "Published packages on $ARCH whose shared libraries Alpine/postmarketOS no longer provide ($run):"
+            echo; sed 's/^ */- /' details.txt; echo
+            echo "sets.yml was started for them (packages of sets only); packages of targets need their"
+            echo "target's workflow (zynthian.yml, zrythm.yml) on $ARCH."; } > body.md
+          if [ -n "$num" ]; then gh issue comment "$num" --body-file body.md
+          else gh issue create --title "$title" --body-file body.md; fi
