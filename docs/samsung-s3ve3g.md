@@ -441,12 +441,55 @@ Tested (2026-11-12): S2 follows the frequency (0x69 at 300 MHz, 0x73 at 600/787.
 1190.4 MHz (925 runs, none wrong, 62 °C) and with boost at 1593.6 MHz (1088 runs, none wrong,
 67 °C, levelling off).
 
+### Boot splash (2026-11-16)
+
+pmOS's boot splash (plymouth with the DRM renderer, `postmarketos-bootsplash`) comes up right
+after the Samsung logo, with no console text before it:
+- **Kernel command line:** plymouth's `splash plymouth.ignore-serial-consoles plymouth.prefer-fbcon`
+  are in CONFIG_CMDLINE (the boot image's command line has no room: Samsung's bootloader appends
+  ~840 characters, 1024 at most); the device package still empties `20-plymouth.conf`.
+- **No text before the splash:** `quiet loglevel=3 vt.global_cursor_default=0` and
+  FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER: fbcon only takes over simpledrm's framebuffer when
+  something is printed, so the bootloader's logo stays until msm and plymouth take over
+  (loglevel=3 after quiet: msm's KERN_ERR messages, e.g. "Couldn't initialize GPU devfreq", would
+  otherwise trigger the takeover). simpledrm itself stays: it keeps the MDSS clocks and power
+  domain on until msm takes over (without the simple-framebuffer node msm crashed reading the
+  DSI PLL).
+- **msm in the initramfs:** the device package's mkinitfs modules list
+  (`/usr/share/mkinitfs/modules/90-device-samsung-s3ve3g.modules`: msm, the panel module);
+  mkinitfs no longer reads `deviceinfo_modules_initfs`. The GPU microcode (a330_pm4/pfp) is in the
+  initramfs too (files list), since msm asks for it before the rootfs is mounted. msm is ready at
+  ~4.5 s instead of ~11.7 s; boot image ~8.0 of 10 MB.
+- **CRNG seeded early (0026):** udevd in the initramfs waited ~1.9 s for the CRNG (ready at 5.6 s).
+  qcom-rng now registers MSM8226's PRNG (`qcom,prng`) as a hwrng with full quality: the CRNG is
+  ready at 0.23 s. A trade-off accepted for a tinkering device (upstream doesn't credit this PRNG).
+- **Fixes on the way:** the MDP IOMMU's TLB sync timed out (5 s) on about every second boot and
+  the first panel enable then failed (blue, then black screen): TLB maintenance now only while the
+  SMMU is powered, a full invalidate on resume, the MDP core clock as the SMMU's "tbu" clock (0027).
+  The mixer border colour was blue (msm never set it), seen as blue flashes at the takeover and
+  after the screen-off service: black now (0028).
+- Timeline now: init 0.5 s; subpartitions mounted, initramfs-extra (plymouth, 8.9 MB) extracted
+  by ~3.4 s; stage 2 / udev 3.4 s; msm ~4.5 s; plymouth on msm.
+
+### Debugging aid: screen and GPU capture on the home key (2026-11-16)
+
+`tools/s3ve3g-debug/s3ve3g-capture.py` (root): on each press of the home key (KEY_HOMEPAGE on
+"GPIO Buttons") it saves to `/var/tmp/s3ve3g-captures/<time>-*` the framebuffer on the screen
+as PNG (also rotated as zynthian shows it), 5 s of GPU submissions from msm's debugfs `rd`
+(command streams; RD_FULL=1 adds the buffers; for Mesa's freedreno tools, cffdump) and the kernel
+log. The screenshot reads the scanned-out buffer through DRM as root (GETFB2, exported as a dma-buf
+and mapped; msm's GEM_INFO mmap offset is refused for another client's buffer on 7.3.4), so the
+application keeps DRM master. `--once` captures without the key. Started by hand, not a service.
+
 ## Network over USB (2026-11-12)
 
 The phone's Wi-Fi gives about 550 KiB/s; the USB network (172.16.42.1 phone, 172.16.42.2 host)
 carries about 7 MB/s (an ssh transfer, and a mirror download through the host). For installing
 packages the phone can use the host's internet connection:
 
+- **The USB interface's name depends on the USB port** (enp34s0f3u1u3u2, later enp34s0f3u1u1u3):
+  after replugging into another port the ufw route rule must name the new one, otherwise TCP
+  stalls (ping still works) - apk then hangs with "Socket not connected". Wi-Fi is the fallback.
 - **Host (needs root), with ufw:** `net/ipv4/ip_forward=1` in `/etc/ufw/sysctl.conf`; at the top of
   `/etc/ufw/before.rules` a NAT table
   `*nat` / `:POSTROUTING ACCEPT [0:0]` / `-A POSTROUTING -s 172.16.42.0/24 -o <uplink> -j MASQUERADE` / `COMMIT`;
