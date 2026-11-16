@@ -262,7 +262,11 @@ default runlevel; a systemd unit too) as the phone's user (uid 10000, `ZYNTHIAN_
 `/etc/conf.d/s3ve3g-zynthian`), with real-time priority 95 and unlimited locked memory
 (`rc_ulimit`: services get no pam_limits). It switches the screen on, waits for plymouthd to quit
 (OpenRC's plymouth plugin holds the splash, and DRM master, until the end of the default
-runlevel), and does nothing while zynthian isn't installed. Restart by hand with
+runlevel), and does nothing while zynthian isn't installed. Before starting, the launcher rescans zynthian's engines when
+`/usr/lib/lv2` (a plugin added or removed), the user's LV2 directory or zynthian's default engine
+config is newer than `~/.config/zynthian/engine_config.json`: only that rescan
+(`zynthian_lv2.py engines`, run by upstream's update script) enables newly installed plugins as
+zynthian's defaults say; without it all of them stay disabled (~10 s, `/tmp/zyn-rescan.log`). Restart by hand with
 `rc-service s3ve3g-zynthian restart`, not by running the launcher next to the service;
 `rc-update del s3ve3g-zynthian` stops the start at boot.
 
