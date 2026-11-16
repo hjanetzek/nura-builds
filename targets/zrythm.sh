@@ -1,12 +1,12 @@
 # Target: Zrythm (the DAW, Qt Quick UI) for Nura, booting into a labwc kiosk session (aarch64,
-# x86_64). Sourced by scripts/*.sh. The recipes are Zrythm's own (tools/nura/ on the nura-duet
+# x86_64). Sourced by scripts/*.sh. The recipes are Zrythm's own (tools/nura/ on the nura
 # branch, see its README); Qt 6.12 including the modules only Zrythm needs (qt-tools) comes from
 # nura-builds' package sets (sets/, aports/qt6) via the package repository, so the target links
 # Zrythm's recipe directories except its copy of Qt (two recipes of a name would clash).
 
 # Source repositories: name, URL, branch (override with ZRYTHM_REF), recipe directories
 REPOS="
-zrythm https://github.com/hjanetzek/zrythm nura-duet tools/nura/deps,tools/nura/zrythm,tools/nura/postmarketos-ui-zrythm,tools/nura/zrythm-quirks-google-kukui
+zrythm https://github.com/hjanetzek/zrythm nura tools/nura/deps,tools/nura/zrythm,tools/nura/postmarketos-ui-zrythm,tools/nura/zrythm-quirks-google-kukui
 "
 
 # Zrythm's libraries that aports doesn't package (tools/nura/deps, at the versions in conan.lock):

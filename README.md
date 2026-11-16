@@ -8,7 +8,7 @@ Targets so far:
 | Target | What | Devices |
 |---|---|---|
 | `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss), zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 planned |
-| `zrythm` | Zrythm (the DAW) in a labwc kiosk session: its libraries, zrythm from the checkout of `hjanetzek/zrythm` (`nura-duet`), `postmarketos-ui-zrythm`; recipes in Zrythm's `tools/nura/` | Lenovo IdeaPad Duet (`google-kukui`), QEMU (`qemu-amd64`) |
+| `zrythm` | Zrythm (the DAW) in a labwc kiosk session: its libraries, zrythm from the checkout of `hjanetzek/zrythm` (`nura`), `postmarketos-ui-zrythm`; recipes in Zrythm's `tools/nura/` | Lenovo IdeaPad Duet (`google-kukui`), QEMU (`qemu-amd64`) |
 | (in `zynthian`) | zynthian-ui from upstream (`zynthian-ui-vangelis`, `zynthian-ui-tomita`): the Tk UI with the port patches, packages only, see [docs/zynthian-upstream.md](docs/zynthian-upstream.md) | as above |
 
 Next: the Google Pixel 3 (`google-blueline`), see [docs/google-blueline.md](docs/google-blueline.md):

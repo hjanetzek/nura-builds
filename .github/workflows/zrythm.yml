@@ -1,4 +1,4 @@
-# Zrythm for Nura: its libraries, Zrythm from the checkout of hjanetzek/zrythm (branch nura-duet)
+# Zrythm for Nura: its libraries, Zrythm from the checkout of hjanetzek/zrythm (branch nura)
 # and the kiosk UI (targets/zrythm.sh), on top of the published package repository (Qt 6.12 with
 # Qt Tools, Canvas Painter, TaskTree: workflow sets.yml), and images. docs/ci-plan.md. By hand
 # and weekly (aarch64, x86_64).
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       arch: { description: "architecture", type: choice, options: [aarch64, x86_64], default: aarch64 }
-      zrythm-ref: { description: "zrythm branch", default: nura-duet }
+      zrythm-ref: { description: "zrythm branch", default: nura }
       images: { description: "build the device images", type: boolean, default: false }
   schedule:
     - cron: "0 3 * * 0"   # Sunday 03:00 UTC: aarch64
@@ -31,7 +31,7 @@ jobs:
       - id: a
         env:
           ARCH: ${{ inputs.arch || (github.event.schedule == '0 7 * * 0' && 'x86_64') || 'aarch64' }}
-          REF: ${{ inputs.zrythm-ref || 'nura-duet' }}
+          REF: ${{ inputs.zrythm-ref || 'nura' }}
         run: |
           echo "arch=$ARCH" >> "$GITHUB_OUTPUT"
           echo "refs=ZRYTHM_REF=$REF" >> "$GITHUB_OUTPUT"

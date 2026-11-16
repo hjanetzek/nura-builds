@@ -14,7 +14,7 @@ second target.
 | 1. Base libraries | Qt 6.12 (6 modules), PySide6: replace Alpine's versions, link against Alpine's libraries | `aports/qt6`, `aports/pyside6` | stages qt1–qt3 and pyside of every target; weekly rebuild from scratch (`REBUILD_STAGES`) |
 | 2. Plugins and engines | 70 LV2 plugins, 15 Pd externals, 7 engines (zynaddsubfx, setbfree, linuxsampler, aeolus, ...), zynthian-jalv | `aports/{lv2,pd,engines,zynthian-jalv}` | plugins stage; single recipes on `plugin-*` branches (`plugin.yml`, `packages.yml`) |
 | 3. Project libraries | libraries only one project needs, e.g. zrythm's 9 deps (scnlib, magic-enum, type-safe, ...) | the project's repository (`zrythm/tools/nura/deps`) | built locally so far |
-| 4. Targets (projects) | the nura'ified repositories: zynthian (zynthian-ui, zyncoder, webconf, packages, drivenbymoss, kiosk), zynthian's upstream variants; new: zrythm (branch `nura-duet`, recipes in `tools/nura/`, kiosk `postmarketos-ui-zrythm`) | the projects' repositories (`nura/`, `tools/nura/`) | the zynthian stage, always rebuilt |
+| 4. Targets (projects) | the nura'ified repositories: zynthian (zynthian-ui, zyncoder, webconf, packages, drivenbymoss, kiosk), zynthian's upstream variants; new: zrythm (branch `nura`, recipes in `tools/nura/`, kiosk `postmarketos-ui-zrythm`) | the projects' repositories (`nura/`, `tools/nura/`) | the zynthian stage, always rebuilt |
 | 5. Kernels and devices | s3ve3g (mainline 7.3.4), pixel3 (OTG), rpi4-rt, odroid-n2-rt: pmaports overlays and device packages | `overlays/<device>`, each on its own branch | per-device workflows (`galaxy-s3-neo.yml`, ...) |
 | 6. Images | target × device (google-kukui, qemu-amd64; later s3ve3g, rpi4, ...) | – | the target's workflow |
 
@@ -124,7 +124,7 @@ the target file:
 
 ### G. Zrythm as a target
 
-- `targets/zrythm.sh`: `REPOS="zrythm https://github.com/hjanetzek/zrythm nura-duet tools/nura"`
+- `targets/zrythm.sh`: `REPOS="zrythm https://github.com/hjanetzek/zrythm nura tools/nura"`
   (the fork on GitHub still to be checked: the local clone only has `github` → `zrythm/zrythm`)
 - its 9 libraries (`tools/nura/deps`) as the project's library set: built from the checkout,
   published and update-checked like the other packages
