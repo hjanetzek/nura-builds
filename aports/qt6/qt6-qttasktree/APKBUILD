@@ -4,7 +4,7 @@
 # module recipes of aports MR !107047 (see ../README.md)
 pkgname=qt6-qttasktree
 pkgver=6.12.0
-pkgrel=0
+pkgrel=1
 pkgdesc="Declarative description and execution of asynchronous task trees"
 url="https://qt.io/"
 arch="all"

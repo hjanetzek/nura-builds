@@ -39,8 +39,10 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   merged (`scripts/publish.sh`: the published index plus the new packages, signed with the CI key;
   serialized per architecture across workflows, concurrency group `publish-<arch>`). The Actions
   cache holds no packages.
-- **Package sets** (`sets/`, workflow `sets.yml`): Qt (`qt-base`, `qt-declarative`, `qt-wayland`,
-  `qt-tools`), PySide6, the plugins (LV2, Pure Data, engines, zynthian's jalv) and Mesa (armv7),
+- **Package sets** (`sets/`, workflow `sets.yml`): Qt 6.12 and PySide6 for armv7 (`qt-base`,
+  `qt-declarative`, `qt-wayland`, `pyside`; aarch64 and x86_64 use Alpine's, see
+  `aports/qt6/README.md` and `sets/dropped.sh`), Qt TaskTree and Canvas Painter for Zrythm
+  (`qt-tools`), the plugins (LV2, Pure Data, engines, zynthian's jalv) and Mesa (armv7),
   with their architectures and per-architecture lists. `scripts/plan-packages.py` compares each
   recipe with the published index and `manifest.json` (per package: recipe hash, version, set or
   target, run): it builds what is new, has another version or a changed recipe (with `--force`),

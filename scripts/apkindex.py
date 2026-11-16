@@ -12,9 +12,11 @@ Usage:
   apkindex.py list INDEX                       name version file per package
   apkindex.py merge OUT BASE NEW [--drop NAME...] [--key KEY --key-name NAME] [--description TEXT]
       the packages of BASE (the published index), minus those NEW has (by name) and minus the
-      names given with --drop, plus all of NEW; signed with KEY (PEM) as KEY-NAME
+      names given with --drop, plus all of NEW (NEW may be "-": none); signed with KEY (PEM) as KEY-NAME
       (e.g. pmos@local-6ae1d406.rsa) when given. BASE may be "-" (none).
   apkindex.py sign IN OUT --key KEY --key-name NAME   (re)sign an index
+  apkindex.py origins INDEX                    origin file per package (file: <name>-<version>.apk)
+  merge also takes --drop-origins "A B": the packages built from these origins (subpackages too)
   apkindex.py filter IN OUT FILE...            unsigned index of only the packages whose file
       (<name>-<version>.apk) is among FILE (paths or names), e.g. the packages a build added
 """
@@ -119,6 +121,7 @@ def main(argv):
             return value
         return default
 
+    drop_origins = set((opt("--drop-origins") or "").split())
     key = opt("--key")
     key_name = opt("--key-name")
     descr_opt = opt("--description")
@@ -137,14 +140,19 @@ def main(argv):
             print(field(b, "P"), f'{field(b, "V")}', f'{field(b, "P")}-{field(b, "V")}.apk')
     elif cmd == "merge":
         out, base, new = argv[2:5]
-        descr_new, new_blocks = read_index(new)
+        descr_new, new_blocks = read_index(new) if new != "-" else ("", [])
         base_blocks = read_index(base)[1] if base != "-" else []
         names = {field(b, "P") for b in new_blocks} | set(drop)
-        blocks = [b for b in base_blocks if field(b, "P") not in names] + new_blocks
+        blocks = [b for b in base_blocks if field(b, "P") not in names
+                  and (field(b, "o") or field(b, "P")) not in drop_origins] + new_blocks
         blocks.sort(key=lambda b: field(b, "P") or "")
         write_index(out, descr_opt if descr_opt is not None else descr_new, blocks, key, key_name)
         print(f"{out}: {len(blocks)} packages ({len(new_blocks)} new or updated, "
               f"{len(base_blocks) - (len(blocks) - len(new_blocks))} replaced or dropped)")
+    elif cmd == "origins":
+        _, blocks = read_index(argv[2])
+        for b in blocks:
+            print(field(b, "o") or field(b, "P"), f'{field(b, "P")}-{field(b, "V")}.apk')
     elif cmd == "filter":
         import os
         descr, blocks = read_index(argv[2])

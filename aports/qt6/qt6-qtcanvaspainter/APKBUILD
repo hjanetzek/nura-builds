@@ -4,7 +4,7 @@
 # module recipes of aports MR !107047 (see ../README.md)
 pkgname=qt6-qtcanvaspainter
 pkgver=6.12.0
-pkgrel=0
+pkgrel=1
 pkgdesc="Accelerated 2D painting API for Qt Quick and QRhi"
 url="https://qt.io/"
 arch="all !armhf"

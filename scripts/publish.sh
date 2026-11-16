@@ -71,7 +71,10 @@ done
 count=$(find "$tmp/new" -name '*.apk' | wc -l)
 echo "publishing $count new or changed packages to release $repo_tag"
 
-if [ "$count" -gt 0 ] || [ -n "$plans" ]; then
+# Packages the distribution has now (sets/dropped.sh): out of the index, the manifest and the release
+dropped=$(NURA_ARCH=$arch "$here/scripts/dropped.sh")
+
+if [ "$count" -gt 0 ] || [ -n "$plans" ] || [ -n "$dropped" ]; then
 	gh release view "$repo_tag" >/dev/null 2>&1 ||
 		gh release create "$repo_tag" --prerelease --title "Package repository ($arch)" --notes "$notes"
 	# The published state, now (another workflow may have published since this build started)
@@ -87,11 +90,22 @@ if [ "$count" -gt 0 ] || [ -n "$plans" ]; then
 	assets=$(gh api "repos/{owner}/{repo}/releases/$release_id/assets?per_page=100" --paginate \
 		--jq '.[] | "\(.name) \(.digest // "")"')
 
-	if [ "$count" -gt 0 ]; then
+	# Anything of the dropped origins still published?
+	drop_now=
+	if [ -n "$dropped" ] && [ "$base" != - ]; then
+		drop_now=$($apkindex origins "$base" | while read -r origin _; do
+			case " $dropped " in *" $origin "*) echo "$origin" ;; esac
+		done | sort -u | tr '\n' ' ')
+		[ -z "$drop_now" ] || echo "dropping (sets/dropped.sh): $drop_now"
+	fi
+
+	if [ "$count" -gt 0 ] || [ -n "$drop_now" ]; then
+		# only dropping: no new index ("-")
+		[ -n "$newindex" ] || newindex=-
 		# Signing key for the index
 		key=$tmp/key.rsa
 		( umask 077; printf '%s\n' "${NURA_ABUILD_KEY:?NURA_ABUILD_KEY is not set}" > "$key" )
-		$apkindex merge "$tmp/APKINDEX.tar.gz" "$base" "$newindex" \
+		$apkindex merge "$tmp/APKINDEX.tar.gz" "$base" "$newindex" --drop-origins "$dropped" \
 			--key "$key" --key-name "${NURA_ABUILD_KEY_NAME:?}" --description "nura-builds $arch"
 		rm -f "$key"
 
@@ -99,6 +113,7 @@ if [ "$count" -gt 0 ] || [ -n "$plans" ]; then
 		# another file under the same name: the index has its checksum, so the old one must go)
 		new=
 		for f in "$tmp/new"/*.apk; do
+			[ -f "$f" ] || continue
 			sum="sha256:$(sha256sum "$f" | cut -d' ' -f1)"
 			echo "$assets" | grep -qxF "$(basename "$f") $sum" || new="$new $f"
 		done
@@ -108,7 +123,7 @@ if [ "$count" -gt 0 ] || [ -n "$plans" ]; then
 	fi
 
 	# The manifest: the built packages' entries (those now in the index), the adopted ones
-	HERE=$here python3 - "$tmp/manifest.json.pub" "$tmp/manifest.json" "$run_url" "$target" "${newindex:--}" $plans <<'PY'
+	HERE=$here DROPPED="$dropped" python3 - "$tmp/manifest.json.pub" "$tmp/manifest.json" "$run_url" "$target" "${newindex:--}" $plans <<'PY'
 import datetime, json, os, sys
 sys.path.insert(0, os.path.join(os.environ.get("HERE", "."), "scripts"))
 pub, out, run, target, newindex, plans = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6:]
@@ -131,13 +146,15 @@ for p in plans:
         if pkg not in pk:
             pk[pkg] = dict(e, run=None, date=now, by="adopted")
             a += 1
+for pkg in os.environ.get("DROPPED", "").split():
+    pk.pop(pkg, None)
 json.dump(m, open(out, "w"), indent=1, sort_keys=True)
 print(f"manifest: {n} built, {a} adopted, {len(pk)} entries")
 PY
 	gh release upload "$repo_tag" "$tmp/manifest.json" --clobber
 
-	# Files the index no longer has (replaced versions)
-	if [ "$count" -gt 0 ]; then
+	# Files the index no longer has (replaced versions, dropped origins)
+	if [ "$count" -gt 0 ] || [ -n "$drop_now" ]; then
 		$apkindex list "$tmp/APKINDEX.tar.gz" | cut -d' ' -f3 > "$tmp/indexed.txt"
 		echo "$assets" | while read -r name _; do
 			case $name in *.apk) ;; *) continue ;; esac

@@ -25,6 +25,13 @@ gh release download "$tag" -R "$repo" -D "$out" -p manifest.json 2>/dev/null ||
 [ "${1:-}" != "--index-only" ] || exit 0
 
 gh release download "$tag" -R "$repo" -D "$out/apk" -p '*.apk'
+# Not the packages the distribution has now (sets/dropped.sh)
+dropped=$("$here/scripts/dropped.sh")
+if [ -n "$dropped" ]; then
+	python3 "$here/scripts/apkindex.py" origins "$out/APKINDEX.tar.gz" | while read -r origin file; do
+		case " $dropped " in *" $origin "*) rm -f "$out/apk/$file"; echo "left out (sets/dropped.sh): $file" ;; esac
+	done
+fi
 echo "fetched $(ls "$out/apk" | wc -l) packages ($(du -sh "$out/apk" | cut -f1)) of release $tag"
 (cd "$out/apk" && sha256sum -- *.apk) > "$out/fetched.txt"
 
