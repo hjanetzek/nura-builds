@@ -1,0 +1,21 @@
+#!/bin/sh
+# Groups for the kits' interfaces (90-zynthian-hw.rules)
+for g in gpio i2c spi; do
+	getent group $g >/dev/null || addgroup -S $g
+done
+# The kit's overlays: written by the kit setup, so not a file of this package
+[ -e /boot/zynthian-kit.txt ] || cp /usr/share/device-zynthian-rpi4/zynthian-kit.txt /boot/zynthian-kit.txt
+# The kit choice for zynthian-kit-boot (zynthian-hw), edited by the user on the FAT partition
+[ -e /boot/zynthian.txt ] || cp /usr/share/device-zynthian-rpi4/zynthian.txt /boot/zynthian.txt
+# The boot splash's theme: ZynthianOS' zynloganim (in /etc/plymouth/plymouthd.conf, which the plymouth
+# package owns: set here instead of shipped); the mkinitfs trigger then puts it into the initramfs
+conf=/etc/plymouth/plymouthd.conf
+mkdir -p /etc/plymouth
+if ! grep -q '^Theme=zynloganim' "$conf" 2>/dev/null; then
+	if grep -q '^\[Daemon\]' "$conf" 2>/dev/null; then
+		sed -i '/^Theme=/d; /^\[Daemon\]/a Theme=zynloganim' "$conf"
+	else
+		printf '[Daemon]\nTheme=zynloganim\n' >> "$conf"
+	fi
+fi
+exit 0

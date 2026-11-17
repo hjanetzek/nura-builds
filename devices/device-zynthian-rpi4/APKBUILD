@@ -10,19 +10,21 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=11
+pkgrel=12
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT AND GPL-3.0-or-later"
 arch="aarch64"
 options="!check !archcheck"
-# postmarketos-base-nosplash: the bootsplash virtual without Plymouth. The kit panels are fbtft
-# framebuffers that appear late (module from the root filesystem), so the splash made the initramfs
-# wait 10 s for /dev/fb0 and showed nothing. On an installed device (still with Plymouth):
-#   apk add postmarketos-base-nosplash '!postmarketos-bootsplash'
+# postmarketos-bootsplash: postmarketOS' boot splash (Plymouth in the initramfs) with ZynthianOS'
+# theme zynloganim (zynthian-sys plymouth/), so the kits boot as zynthian users know it. The kit
+# panel's modules are in the initramfs (90-device-zynthian-rpi4.modules) so its framebuffer appears
+# before the splash starts (r8-r11 had no splash: the fbtft panel registered only from the root
+# filesystem, and the initramfs waited 10 s for /dev/fb0); an initramfs hook switches the
+# backlight on.
 depends="
 	linux-firmware-brcm
 	postmarketos-base
-	postmarketos-base-nosplash
+	postmarketos-bootsplash
 	raspberrypi-bootloader
 	"
 makedepends="devicepkg-dev dtc"
@@ -33,8 +35,11 @@ subpackages="
 	$pkgname-kernel-rpi:kernel_rpi
 	$pkgname-kernel-rpi-rt:kernel_rpi_rt
 	"
-install="$pkgname.post-install"
+install="$pkgname.post-install $pkgname.post-upgrade"
+# zynthian-sys (the boot animation zynloganim), at the commit zynthian-ui's zynthian-data uses
+_sys_commit=c2eea576e528e451270b829aa114f504bd34ee90
 source="
+	zynthian-sys-$_sys_commit.tar.gz::https://github.com/zynthian/zynthian-sys/archive/$_sys_commit.tar.gz
 	deviceinfo
 	kernel-cmdline.conf
 	modules-initfs
@@ -43,6 +48,7 @@ source="
 	zynthian.txt
 	91-zynscreen-touch.rules
 	92-zynthian-backlight.rules
+	90-zynthian-backlight.sh
 	piscreen2r-notouch.dts
 	piscreen2r-backlight.dts
 	goodix_z2.dts
@@ -79,6 +85,13 @@ package() {
 	install -Dm644 "$srcdir"/91-zynscreen-touch.rules -t "$pkgdir"/usr/lib/udev/rules.d/
 	# The panel's backlight on at boot (it came up powered down with fbtft), switchable by video
 	install -Dm644 "$srcdir"/92-zynthian-backlight.rules -t "$pkgdir"/usr/lib/udev/rules.d/
+	# The boot splash: ZynthianOS' Plymouth theme (selected by the post-install script: plymouth owns
+	# plymouthd.conf), the kit panel's modules in the initramfs, the backlight on in the initramfs
+	install -Dm644 "$srcdir"/zynthian-sys-$_sys_commit/plymouth/zynloganim/* \
+		-t "$pkgdir"/usr/share/plymouth/themes/zynloganim/
+	printf "%s\n" spi_bcm2835 backlight gpio_backlight fbtft fb_ili9486 |
+		install -Dm644 /dev/stdin "$pkgdir"/usr/share/mkinitfs/modules/90-$pkgname.modules
+	install -Dm755 "$srcdir"/90-zynthian-backlight.sh -t "$pkgdir"/usr/share/mkinitfs/hooks/
 	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
 	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
 	local o
@@ -106,6 +119,7 @@ kernel_rpi_rt() {
 }
 
 sha512sums="
+687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
 15526ab26d0ce1a9295ed5539e05de0c142aba15d3c113217058f22a6a1bd6180105e85027a1dc664a45a038334f81e5501af52c447521cfdeaa23b33bfd389a  deviceinfo
 09309847761b59cc17f58a119873c859814ed5c3c9399970b295cbb7da5cdf7502585c81bf49f4d0efd24d0407216984d3ec80647bbf4e91f6b44c7f77b124b6  kernel-cmdline.conf
 e3515cf9f41807917eac1f7663e0131bd18783824facf15f2bb0381635bf6d9a0c334f3786b6fb76d01469de6449878c871f8b747f45e9e3cee77699905cf319  modules-initfs
@@ -114,6 +128,7 @@ cebaad0a22b3cca9ecc18c9bad85418d2f0b4a8298af58d8d52014d03bc7afffd616e1131a212445
 da2bb2b174fb5f3d3984cd69cf6c5d2349fed6e657eec9db3b3137a9fe035ee4cab92f8d1bea197892ac7c607b58e7e924022e8dc89333c2fc8536449b630d24  zynthian.txt
 efd70b1d319caa1e9c7a7a57704ca1a793aeb075f2122f756984a01175c53efe238ee6d99367a0d836afd0e5ed941af028929078f992ab3a2885ea8220fe3ef3  91-zynscreen-touch.rules
 9665a0a13a700d03190d1f5bbf645f913d11b8fb1602ba1307bcf24c57ac94e511c27b368429d95e081f8e188f602d1890cd888e4e0cedb15ce36779439c4e28  92-zynthian-backlight.rules
+7b886647e778bc23ece3100630bf1636585d1eabf33a4bc53f81d58609ce7799b43480b64827ee2583800cf5f9c1c70a313fb2b946797b78460b1b976f8fb21c  90-zynthian-backlight.sh
 3d2e65b60e0a4fc20a51c27c881b25833b9a74847f2ab69df986279afa4129f3d27e7c2dfdcc68000976871ca18e79b88398c081c0c118f5456dadca16ac6ff1  piscreen2r-notouch.dts
 67293aac00e62cad118c02e06499ab2c6d1afafaa95f7a832dc43063997a644fd7c185867916565b04ac077758253253199424d214a25a5ab20a44b1cb31eb5c  piscreen2r-backlight.dts
 344bb1fbf6d48edf76b8ebacde6969f687e1ceefc9f016508180ce831b1cc1e4ec7450f84d56e143a1492e8aed8c2be253454d06543cf7f6e5064328de47a57f  goodix_z2.dts
