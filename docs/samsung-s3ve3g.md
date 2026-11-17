@@ -540,6 +540,24 @@ compare its mtime with the boot time.
 
 ## Network over USB (2026-11-12)
 
+> **The way to go for installing packages on the phone: the NAT route through the host over USB.**
+> The phone's Wi-Fi is too slow for big packages (105-550 KiB/s; zynthian-data is ~330 MB), USB
+> carries ~7 MB/s. The host side is set up once (below) and stays; per session only:
+> 1. Check the phone's USB interface name on the host (`ip -br addr | grep 172.16.42`): it changes
+>    with the USB port. If it differs from the one in the ufw route rule, add it (the only step
+>    that needs root; takes effect at once):
+>    `sudo ufw route allow in on <usb interface> out on enp67s0`
+>    (2026-11-17: `enp34s0f3u1u1u3`; before: `enp34s0f3u1u3u2`).
+> 2. On the phone: `sudo ip route replace default via 172.16.42.2 dev usb0 metric 100 mtu 1480 advmss 1440`
+>    and `sudo sysctl -q net.ipv6.conf.wlan0.disable_ipv6=1`.
+> 3. Test TCP, not ping: `nc -zv -w 5 185.199.108.133 443` (GitHub's download host) must say "open".
+> 4. `sudo apk add -u ...` / `apk upgrade` as usual. Afterwards (or after a reboot it's gone anyway):
+>    `sudo ip route del default via 172.16.42.2 dev usb0`, IPv6 on wlan0 back with `=0`.
+>
+> Symptom of a stale interface name: the route is set, but every TCP connection times out (ufw
+> silently drops the forwarded packets). The HTTP proxy further down is only a fallback without
+> root on the host.
+
 The phone's Wi-Fi gives about 550 KiB/s; the USB network (172.16.42.1 phone, 172.16.42.2 host)
 carries about 7 MB/s (an ssh transfer, and a mirror download through the host). For installing
 packages the phone can use the host's internet connection:
@@ -568,7 +586,8 @@ packages the phone can use the host's internet connection:
   (`/etc/apk/repositories`, the original kept as `.orig`). Measuring with BusyBox: `date` has no
   nanoseconds, use `/proc/uptime`; throughput of an interface from `/proc/net/dev` over a few
   seconds (no iftop needed).
-- **Without root on the host:** `tools/s3ve3g-debug/http-proxy.py` listening on 172.16.42.2 and
+- **Fallback only, without root on the host:** `tools/s3ve3g-debug/http-proxy.py` (as committed it binds
+  127.0.0.1 from the abandoned tunnel attempt; change the bind address to 172.16.42.2) and
   `http_proxy=` for apk (passed through `sudo env`, `sudo -E` drops it); `ssh -R` doesn't work, the
   phone's sshd has `AllowTcpForwarding no`. The host's firewall must allow the port from the USB
   interface.
