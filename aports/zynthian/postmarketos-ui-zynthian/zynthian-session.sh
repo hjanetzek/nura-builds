@@ -64,8 +64,36 @@ zynthian_wait_for_audio() {
 	return 1
 }
 
+# zynthian's engine list rescanned when LV2 plugins were added or removed, or zynthian's default
+# engine config changed, since the last rescan: zynthian enables newly installed plugins only through
+# this rescan ("zynthian_lv2.py engines", which merges zynthian-sys' defaults; ZynthianOS' update
+# script runs it), otherwise they stay disabled (a new image enabled 20 of 800 engines). A stamp of
+# what was scanned: zynthian rewrites engine_config.json at every start, so its mtime can't tell.
+# About 10 s on a Pi 4, only when something changed.
+zynthian_rescan_engines() {
+	zdir=${ZYNTHIAN_DIR:-/usr/share/zynthian}
+	cfg=${ZYNTHIAN_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zynthian}
+	stamp="$cfg/.nura-engines-scanned"
+	now="$(stat -c %Y /usr/lib/lv2 "${XDG_DATA_HOME:-$HOME/.local/share}/zynthian/plugins/lv2" \
+		"$zdir/zynthian-sys/config/engine_config.json" 2>/dev/null | tr '\n' ' ')"
+	[ -f "$cfg/engine_config.json" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$now" ] && return 0
+	mkdir -p "$cfg"
+	before=$(stat -c %Y "$cfg/engine_config.json" 2>/dev/null || echo 0)
+	# In zynthian's environment (its config and data directories, the bundled Python packages), as
+	# the launcher sets it up; the rescan exits 0 even when it fails: the stamp only when it wrote
+	# the engine list
+	ZYNTHIAN_DIR=$zdir ZYNTHIAN_UI_DIR=$zdir/zynthian-ui bash -c '
+		. "$ZYNTHIAN_UI_DIR/desktop/zynthian_desktop_env.sh" &&
+		export PYTHONPATH="$ZYNTHIAN_DIR/python${PYTHONPATH:+:$PYTHONPATH}" &&
+		cd "$ZYNTHIAN_UI_DIR" && python3 zyngine/zynthian_lv2.py engines' > /tmp/zynthian-rescan.log 2>&1
+	sleep 1
+	[ "$(stat -c %Y "$cfg/engine_config.json" 2>/dev/null || echo 0)" = "$before" ] || echo "$now" > "$stamp"
+	return 0
+}
+
 # Audio and the environment zynthian runs in
 zynthian_session_env() {
+	zynthian_rescan_engines || true
 	zynthian_wait_for_audio || true
 	# JACK period: ZynthianOS runs jackd with 256 frames. PipeWire picks the quantum from what its
 	# clients ask for; force 256 (5.3 ms at 48 kHz) for the whole graph, fine for a kiosk. The
