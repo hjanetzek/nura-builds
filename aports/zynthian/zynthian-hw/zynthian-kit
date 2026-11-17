@@ -17,7 +17,9 @@
 #   the display's kernel options to /etc/kernel-cmdline.d/90-zynthian-kit.conf;
 # - the user into the groups gpio, i2c, spi (the kit's interfaces), audio, video and input;
 # - the kiosk session for the kit's display: zynthian-fb (Qt on a framebuffer, no compositor) for
-#   fbtft SPI panels, zynthian (cage) for HDMI and DSI.
+#   fbtft SPI panels, zynthian (cage) for HDMI and DSI;
+# - the Qt UI's theme for the display (ZYNTHIAN_QT_THEME in /etc/default/zynthian): v4 for 480x320
+#   panels (the V4 kits), the default otherwise.
 # At boot, zynthian-kit-boot applies the kit named in /boot/zynthian.txt (kit=V4), so the kit can be
 # chosen on the SD card's FAT partition before the first boot.
 # The boot settings take effect after a reboot.
@@ -105,6 +107,14 @@ case $display in
 		fi ;;
 esac
 session=${ZYNTHIAN_KIT_SESSION:-$session}
+# The Qt UI's theme for the kit's display: v4 for 480x320 panels (the V4 kits' ZynScreen 3.5:
+# controllers next to their knobs, 8 mixer strips, 4 x 4 pads; zynthian-ui docs/qt-theme-v4.md),
+# the default theme otherwise. ZYNTHIAN_KIT_QT_THEME in the environment overrides it.
+width=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_WIDTH:-}"' sh "$kit_file")
+height=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_HEIGHT:-}"' sh "$kit_file")
+qt_theme=
+[ "${width}x${height}" != 480x320 ] || qt_theme=v4
+qt_theme=${ZYNTHIAN_KIT_QT_THEME:-$qt_theme}
 {
 	echo "# zynthian kit $kit (zynthian-kit, from zynthian-sys' zynthian_envars_$kit.sh)"
 	echo "# Sound card"
@@ -123,6 +133,7 @@ if [ $dry = 1 ]; then
 	echo "--- $boot_kit"; cat "$tmp"
 	echo "--- $cmdline_kit"; printf '%s\n' "${cmdline:-(none)}"
 	echo "--- kiosk session: $session"
+	echo "--- Qt theme: ${qt_theme:-(default)}"
 	exit 0
 fi
 changed=0
@@ -151,7 +162,18 @@ for g in gpio i2c spi audio video input; do
 	id -nG "$user" | tr ' ' '\n' | grep -qx "$g" || { sudo addgroup "$user" "$g"; changed=1; }
 done
 
-# 4. The kiosk session for the kit's display (postmarketos-ui-zynthian's kiosk-session)
+# 4. The Qt theme for the kit's display, in /etc/default/zynthian (the kiosk sessions export it)
+defaults=/etc/default/zynthian
+if [ -f "$defaults" ]; then
+	grep -v '^ZYNTHIAN_QT_THEME=' "$defaults" > "$tmp" || true
+	[ -z "$qt_theme" ] || echo "ZYNTHIAN_QT_THEME=$qt_theme" >> "$tmp"
+	if ! cmp -s "$tmp" "$defaults"; then
+		sudo cp "$tmp" "$defaults"
+		echo "Qt theme: ${qt_theme:-the default}"
+	fi
+fi
+
+# 5. The kiosk session for the kit's display (postmarketos-ui-zynthian's kiosk-session)
 if command -v kiosk-session >/dev/null; then
 	kiosk-session -n "$session" >/dev/null && echo "kiosk session: $session"
 fi

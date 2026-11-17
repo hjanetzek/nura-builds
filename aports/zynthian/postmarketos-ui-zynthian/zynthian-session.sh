@@ -40,6 +40,9 @@ zynthian_device_defaults() {
 	# Upstream zynthian-ui (zynthian-ui-vangelis, -tomita from nura-builds) has no Qt UI
 	[ -f /usr/share/zynthian/zynthian-ui/zynthian_qt_main.py ] || ZYNTHIAN_UI=tk
 	export ZYNTHIAN_UI
+	# The Qt UI's theme (ZYNTHIAN_QT_THEME in /etc/default/zynthian, set by zynthian-kit: v4 on the
+	# V4 kits' 480x320 panel), exported for zynthian_qt_main.py
+	[ -z "${ZYNTHIAN_QT_THEME:-}" ] || export ZYNTHIAN_QT_THEME
 	# shellcheck disable=SC2034 # used by the sourcing scripts
 	zynthian_output_transform=${ZYNTHIAN_OUTPUT_TRANSFORM-$zynthian_transform}
 	# shellcheck disable=SC2034
