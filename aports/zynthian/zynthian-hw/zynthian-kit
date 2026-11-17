@@ -160,14 +160,14 @@ if [ $dry = 1 ]; then
 fi
 changed=0
 if ! cmp -s "$tmp" "$boot_kit"; then
-	sudo cp "$tmp" "$boot_kit"
+	sudo install -m644 "$tmp" "$boot_kit"
 	changed=1
 fi
 if [ -n "$cmdline" ]; then
 	printf '%s\n' "$cmdline" > "$tmp"
 	if ! cmp -s "$tmp" "$cmdline_kit"; then
 		sudo mkdir -p "${cmdline_kit%/*}"
-		sudo cp "$tmp" "$cmdline_kit"
+		sudo install -m644 "$tmp" "$cmdline_kit"
 		changed=1
 	fi
 elif [ -e "$cmdline_kit" ]; then
@@ -190,7 +190,7 @@ if [ -f "$defaults" ]; then
 	grep -v '^ZYNTHIAN_QT_THEME=' "$defaults" > "$tmp" || true
 	[ -z "$qt_theme" ] || echo "ZYNTHIAN_QT_THEME=$qt_theme" >> "$tmp"
 	if ! cmp -s "$tmp" "$defaults"; then
-		sudo cp "$tmp" "$defaults"
+		sudo install -m644 "$tmp" "$defaults"
 		echo "Qt theme: ${qt_theme:-the default}"
 	fi
 fi
