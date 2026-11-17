@@ -10,7 +10,7 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=16
+pkgrel=17
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT AND GPL-3.0-or-later"
 arch="aarch64"
@@ -60,6 +60,7 @@ source="
 	50-zynthian-rpi4-drm.sh
 	zynthian-hw-modules.conf
 	50-zynthian-rpi4.conf
+	50-zynthian-journal.conf
 	50-zynthian-realtime.conf
 	"
 
@@ -122,6 +123,7 @@ package() {
 		"$pkgdir"/usr/share/tinydm/env-wayland.d/50-zynthian-rpi4-drm.sh
 	install -Dm644 "$srcdir"/50-zynthian-rpi4.conf \
 		"$pkgdir"/usr/share/wireplumber/wireplumber.conf.d/50-zynthian-rpi4.conf
+	install -Dm644 "$srcdir"/50-zynthian-journal.conf -t "$pkgdir"/usr/lib/systemd/journald.conf.d/
 	install -Dm644 "$srcdir"/50-zynthian-realtime.conf \
 		"$pkgdir"/usr/lib/systemd/system/user@.service.d/50-zynthian-realtime.conf
 }
@@ -138,6 +140,7 @@ kernel_rpi_rt() {
 }
 
 sha512sums="
+78c634a75a31e4dbe1ec84b0e64d8dddeb05bbd143771aea1121d596e1f9a08c014a7a1c7d9441c57aa850277ef378f7ab070df345bdd283cde6c8cde5978674  50-zynthian-journal.conf
 687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
 15526ab26d0ce1a9295ed5539e05de0c142aba15d3c113217058f22a6a1bd6180105e85027a1dc664a45a038334f81e5501af52c447521cfdeaa23b33bfd389a  deviceinfo
 b21a942567fc355f1b4853deff1bb9b6bc8ad37748ec107103522508271634c1b44b10a2753b91638c37ef22c2bed0ab040ddc288b0e4f95d4006342f436625b  kernel-cmdline.conf
