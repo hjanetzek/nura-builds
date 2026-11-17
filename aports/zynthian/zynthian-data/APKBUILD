@@ -2,12 +2,14 @@
 # Built from the upstream repositories (vangelis branch), unchanged.
 pkgname=zynthian-data
 pkgver=2610_git20261030
-pkgrel=0
+pkgrel=1
 pkgdesc="zynthian factory data: presets, soundfonts, snapshots, sample files"
 url="https://github.com/zynthian/zynthian-data"
 arch="noarch"
 license="GPL-3.0-or-later AND custom"
 options="!check"
+# TimGM6mb (Alpine's soundfont-timgm, also pulled in by fluidsynth-libs): linked below
+depends="soundfont-timgm"
 subpackages="zynthian-help:_help zynthian-sys-config:_sys_config"
 _data_commit=271e9188cc6bcbd5ff89ba27d1b312a8c68a3417
 _help_commit=510e768852648f1ea11d5f2d3a94a3c818f6368d
@@ -30,10 +32,16 @@ package() {
 	scanelf -RBF '%F' "$pkgdir" | while read -r f; do
 		rm -f "$f"
 	done
+
+	# Alpine installs TimGM6mb in /usr/share/soundfonts: link it where zynthian's fluidsynth engine
+	# lists soundfonts (System banks), as nura-builds' fluid-soundfont does for FluidR3
+	ln -s /usr/share/soundfonts/TimGM6mb.sf2 \
+		"$pkgdir"/usr/share/zynthian/zynthian-data/soundfonts/sf2/TimGM6mb.sf2
 }
 
 _help() {
 	pkgdesc="zynthian help pages"
+	depends=""
 	url="https://github.com/zynthian/zynthian-help"
 	license="GPL-3.0-or-later"
 	mkdir -p "$subpkgdir"/usr/share/zynthian
@@ -42,6 +50,7 @@ _help() {
 
 _sys_config() {
 	pkgdesc="zynthian configuration templates (from zynthian-sys)"
+	depends=""
 	url="https://github.com/zynthian/zynthian-sys"
 	license="GPL-3.0-or-later"
 	mkdir -p "$subpkgdir"/usr/share/zynthian/zynthian-sys
