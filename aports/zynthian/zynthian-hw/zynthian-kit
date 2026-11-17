@@ -15,7 +15,11 @@
 # - the sound card and display overlays to /boot/zynthian-kit.txt (included by usercfg.txt), and
 #   the onboard audio (headphone jack) unless the user's ZYNTHIAN_DISABLE_RBPI_AUDIO is 1;
 #   the display's kernel options to /etc/kernel-cmdline.d/90-zynthian-kit.conf;
-# - the user into the groups gpio, i2c, spi (the kit's interfaces) and audio.
+# - the user into the groups gpio, i2c, spi (the kit's interfaces), audio, video and input;
+# - the kiosk session for the kit's display: zynthian-fb (Qt on a framebuffer, no compositor) for
+#   fbtft SPI panels, zynthian (cage) for HDMI and DSI.
+# At boot, zynthian-kit-boot applies the kit named in /boot/zynthian.txt (kit=V4), so the kit can be
+# chosen on the SD card's FAT partition before the first boot.
 # The boot settings take effect after a reboot.
 set -eu
 
@@ -85,13 +89,22 @@ soundcard=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${SOUNDCARD_CONFIG:-}"' 
 display=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_CONFIG:-}"' sh "$kit_file")
 cmdline=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_KERNEL_OPTIONS:-}"' sh "$kit_file")
 rbpi_audio_off=$(sed -n 's/^export ZYNTHIAN_DISABLE_RBPI_AUDIO="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$envars" | tail -n 1)
-# The ZynScreen 3.5 (piscreen2r: fbtft, a framebuffer only) through DRM where the device has the
-# overlay (device-zynthian-rpi4: zynscreen-drm, the kernel's ili9486 driver, touch included):
-# Wayland compositors need DRM
+# The kiosk session for the display: SPI panels driven by fbtft (piscreen2r: the ZynScreen 3.5 of
+# the V4 kits; other fbtft overlays) are framebuffers without DRM, so zynthian's Qt UI runs on them
+# without a compositor (zynthian-fb, Qt's linuxfb); HDMI and DSI panels are DRM (zynthian: cage).
+# ZYNTHIAN_KIT_SESSION in the environment overrides it.
+# The ZynScreen 3.5 through DRM (device-zynthian-rpi4's zynscreen-drm overlay, the kernel's ili9486
+# driver) only with ZYNTHIAN_KIT_DRM=1: the panel stays white with that driver's init sequence
+# (nura-builds docs/zynthian-rpi.md), so fbtft is the default.
+session=zynthian
 case $display in
-	*piscreen2r*)
-		[ ! -e /boot/overlays/zynscreen-drm.dtbo ] || display="dtoverlay=zynscreen-drm,rotation=0" ;;
+	*piscreen*|*waveshare*|*pitft*|*tft35*|*ili9*)
+		session=zynthian-fb
+		if [ "${ZYNTHIAN_KIT_DRM:-0}" = 1 ] && [ -e /boot/overlays/zynscreen-drm.dtbo ]; then
+			case $display in *piscreen2r*) display="dtoverlay=zynscreen-drm,rotation=0"; session=zynthian ;; esac
+		fi ;;
 esac
+session=${ZYNTHIAN_KIT_SESSION:-$session}
 {
 	echo "# zynthian kit $kit (zynthian-kit, from zynthian-sys' zynthian_envars_$kit.sh)"
 	echo "# Sound card"
@@ -109,6 +122,7 @@ esac
 if [ $dry = 1 ]; then
 	echo "--- $boot_kit"; cat "$tmp"
 	echo "--- $cmdline_kit"; printf '%s\n' "${cmdline:-(none)}"
+	echo "--- kiosk session: $session"
 	exit 0
 fi
 changed=0
@@ -132,10 +146,15 @@ fi
 
 # 3. The kit's interfaces for this user (udev rules of the device package)
 user=$(id -un)
-for g in gpio i2c spi audio; do
+for g in gpio i2c spi audio video input; do
 	getent group "$g" >/dev/null || continue
 	id -nG "$user" | tr ' ' '\n' | grep -qx "$g" || { sudo addgroup "$user" "$g"; changed=1; }
 done
+
+# 4. The kiosk session for the kit's display (postmarketos-ui-zynthian's kiosk-session)
+if command -v kiosk-session >/dev/null; then
+	kiosk-session -n "$session" >/dev/null && echo "kiosk session: $session"
+fi
 
 if [ $changed = 1 ]; then
 	echo "boot settings changed: reboot (sudo reboot) for the kit's sound card, display and interfaces"

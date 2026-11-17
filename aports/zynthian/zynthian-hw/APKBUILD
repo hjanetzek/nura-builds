@@ -6,7 +6,7 @@
 # what zynthian does as root on ZynthianOS (a first step). Plan: nura-builds docs/zynthian-rpi.md.
 pkgname=zynthian-hw
 pkgver=1
-pkgrel=2
+pkgrel=3
 pkgdesc="zynthian hardware support: kit selection, zyncoder for the kits"
 url="https://github.com/hjanetzek/zynthian-ui"
 arch="aarch64"
@@ -20,14 +20,23 @@ depends="
 options="!check"
 source="
 	zynthian-kit
+	zynthian-kit-boot
+	zynthian-kit-boot.service
 	sudoers
 	"
 
 package() {
 	install -Dm755 "$srcdir"/zynthian-kit "$pkgdir"/usr/bin/zynthian-kit
 	install -Dm440 "$srcdir"/sudoers "$pkgdir"/etc/sudoers.d/90-zynthian-hw
+	# The kit from /boot/zynthian.txt (the SD card's FAT partition) at boot, before the kiosk
+	install -Dm755 "$srcdir"/zynthian-kit-boot -t "$pkgdir"/usr/libexec/zynthian/
+	install -Dm644 "$srcdir"/zynthian-kit-boot.service -t "$pkgdir"/usr/lib/systemd/system/
+	mkdir -p "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants
+	ln -s ../zynthian-kit-boot.service "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/
 }
 sha512sums="
-bc178457fbd4ba273f848673cbd4c393c7fa97d7d2a672545f127cad25ded38d6bca31dc83ffd7066e99f9dfd274e32ca1c0fb21abca3ca2c6cf412b684475b9  zynthian-kit
+8ee013735f29a1613fa70055709bf352c104d5c0e8a75046c07c037d23909144391b5f662fc689cb67d755656e84ece8317a35d4fff7799ac4521be826650367  zynthian-kit
+4c4f925868e4bc2c687551952eff6c9ef463448f7554ea6494110c502c4638fdc0e3c8179120f91d63ac29f87f3cbe73a678c2bb51847aefed24f78df77b9320  zynthian-kit-boot
+97e0c1a845d6a0b5eac1d3ed52b94c9b27c38381e179c86f6585eff45de0ef6a522c4ac3674afb9accba865122e67208d6e455dfd6aaa2c5318cab5c80eb5805  zynthian-kit-boot.service
 f7e3144d4366d2f0805a69b61803e44d42176b34970af57961a7c1b031aa94584f8e0bafc3ba9fff76f13cc3633a20ba61a3030622ff861265b5e70f66662b5c  sudoers
 "

@@ -1,0 +1,32 @@
+#!/bin/sh
+# At boot, before the kiosk (zynthian-kit-boot.service): apply the zynthian kit named in
+# /boot/zynthian.txt on the SD card's FAT partition ("kit=V4"; zynthian-kit list), so the kit can be
+# chosen from any computer before the first boot. Runs zynthian-kit as the device user (the kiosk
+# session's user, uid 10000) when the entry differs from the kit applied last
+# (/var/lib/zynthian-kit/applied), then reboots once if the boot settings changed (sound card and
+# display overlays, kernel options). No entry: nothing changes (HDMI and onboard audio).
+set -eu
+
+conf=/boot/zynthian.txt
+state=/var/lib/zynthian-kit/applied
+[ -f "$conf" ] || exit 0
+kit=$(sed -n 's/^[[:space:]]*kit[[:space:]]*=[[:space:]]*\([A-Za-z0-9_.-]*\).*/\1/p' "$conf" | tail -n 1)
+[ -n "$kit" ] || exit 0
+[ "$(cat "$state" 2>/dev/null)" != "$kit" ] || exit 0
+
+user=$(getent passwd 10000 | cut -d: -f1)
+[ -n "$user" ] || { echo "zynthian-kit-boot: no device user (uid 10000)" >&2; exit 1; }
+home=$(getent passwd "$user" | cut -d: -f6)
+echo "zynthian-kit-boot: kit $kit for $user (from $conf)"
+out=$(runuser -u "$user" -- env HOME="$home" USER="$user" LOGNAME="$user" zynthian-kit "$kit" 2>&1) || {
+	printf '%s\n' "$out" >&2
+	exit 1
+}
+printf '%s\n' "$out"
+mkdir -p "${state%/*}"
+echo "$kit" > "$state"
+case $out in
+	*"boot settings changed"*)
+		echo "zynthian-kit-boot: rebooting for the kit's boot settings"
+		systemctl --no-block reboot ;;
+esac
