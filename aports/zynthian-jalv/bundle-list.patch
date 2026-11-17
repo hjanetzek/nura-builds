@@ -1,7 +1,7 @@
 From 7e18fff08b39188a740c57f6b67f7d05f2b52783 Mon Sep 17 00:00:00 2001
 From: Hannes Janetzek <hannes.janetzek@gmail.com>
 Date: Tue, 17 Nov 2026 16:34:24 +0100
-Subject: [PATCH] Add -B option: load only the given bundles instead of
+Subject: [PATCH 1/2] Add -B option: load only the given bundles instead of
  LV2_PATH
 
 Loading the whole LV2 world (lilv_world_load_all) parses the manifest of
@@ -140,6 +140,44 @@ index 21101c0..b703e8b 100644
    char**   controls;        ///< Control values
    uint32_t buffer_size;     ///< Plugin <=> UI communication buffer size
    double   update_rate;     ///< UI update rate in Hz
+-- 
+2.56.0
+
+
+From 7a89abbe43ca7191860b6ac42288389a225d3cb5 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Tue, 17 Nov 2026 20:10:41 +0100
+Subject: [PATCH 2/2] GTK: -B (--bundles) too
+
+The GTK frontend parses its options with GOption, not with the console
+frontend's parser, so jalv.gtk3 had no -B and a host starting plugin GUIs
+with it still loaded all of LV2_PATH. Same option, same opts.bundles: the
+loading in jalv.c is shared.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FXkgPvuShs23GDcEBASZCU
+---
+ src/jalv_gtk.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/jalv_gtk.c b/src/jalv_gtk.c
+index c67c819..44da0c6 100644
+--- a/src/jalv_gtk.c
++++ b/src/jalv_gtk.c
+@@ -99,6 +99,13 @@ jalv_frontend_init(int* argc, char*** argv, JalvOptions* opts)
+      &opts->ui_uri,
+      "Load the UI with the given URI",
+      "URI"},
++    {"bundles",
++     'B',
++     0,
++     G_OPTION_ARG_STRING,
++     &opts->bundles,
++     "Load only these bundles (':'-separated), not LV2_PATH",
++     "DIRS"},
+     {"buffer-size",
+      'b',
+      0,
 -- 
 2.56.0
 
