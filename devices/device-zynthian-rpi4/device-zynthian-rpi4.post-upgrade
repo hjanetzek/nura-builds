@@ -11,11 +11,9 @@ done
 # package owns: set here instead of shipped); the mkinitfs trigger then puts it into the initramfs
 conf=/etc/plymouth/plymouthd.conf
 mkdir -p /etc/plymouth
-if ! grep -q '^Theme=zynloganim' "$conf" 2>/dev/null; then
-	if grep -q '^\[Daemon\]' "$conf" 2>/dev/null; then
-		sed -i '/^Theme=/d; /^\[Daemon\]/a Theme=zynloganim' "$conf"
-	else
-		printf '[Daemon]\nTheme=zynloganim\n' >> "$conf"
-	fi
-fi
+# DeviceTimeout 0.1 s: plymouth waits that long for a DRM display before it takes a framebuffer;
+# vc4's HDMI has no display connected on the kits, and with the default (5 s, pmOS) the splash fell
+# back to the SPI panel only after plymouth had been told to quit (0 itself makes plymouthd abort)
+grep -q '^\[Daemon\]' "$conf" 2>/dev/null || printf '[Daemon]\n' >> "$conf"
+sed -i '/^Theme=/d; /^DeviceTimeout=/d; /^\[Daemon\]/a Theme=zynloganim\nDeviceTimeout=0.1' "$conf"
 exit 0
