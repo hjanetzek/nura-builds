@@ -48,6 +48,9 @@ EXTRA_PACKAGES_zynthian_rpi4="zynthian-hw"
 # nothing to configure. The Duet's image by hand (zynthian.yml, input devices).
 IMAGE_DEVICES_aarch64="zynthian-rpi4"
 IMAGE_KITS_zynthian_rpi4="V4 V5"
+# The Pi's kernel (device-zynthian-rpi4-kernel-*): Alpine's linux-rpi for now; rpi-rt is ours with
+# PREEMPT_RT (aports/kernel/linux-rpi-rt), not the default until tested on the kits
+IMAGE_KERNEL_zynthian_rpi4="rpi"
 # The user's password in the images: ZynthianOS' ("raspberry"), so zynthian owners can log in as they
 # are used to (the secret NURA_IMAGE_PASSWORD overrides it)
 IMAGE_PASSWORD="raspberry"

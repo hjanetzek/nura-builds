@@ -14,6 +14,12 @@
 device=$1
 pmb config device "$device"
 pmb config ui "$UI"
+# The kernel of devices that offer a choice (device-<codename>-kernel-<name> subpackages):
+# IMAGE_KERNEL_<device, "-" as "_"> in the target file (e.g. rpi or rpi-rt for zynthian-rpi4);
+# pmbootstrap's default "stable" otherwise
+eval "kernel=\${IMAGE_KERNEL_$(echo "$device" | tr - _):-stable}"
+# shellcheck disable=SC2154 # set by eval
+pmb config kernel "$kernel"
 # IMAGE_PACKAGES (target file, e.g. IMAGE_PACKAGES_armv7) and the device's EXTRA_PACKAGES_<device,
 # "-" as "_"> (e.g. zynthian-hw for zynthian-rpi4): packages installed besides the UI's
 eval "extra=\${EXTRA_PACKAGES_$(echo "$device" | tr - _):-}"
