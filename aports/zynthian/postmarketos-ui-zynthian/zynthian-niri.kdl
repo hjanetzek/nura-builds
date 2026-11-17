@@ -33,6 +33,13 @@ overview {
     backdrop-color "#101010"
 }
 
+// The power key isn't niri's (by default it suspends the device): the screen is switched by
+// nura-powerkey / the device's handler, logind ignores the key. With niri's handling the Duet
+// suspended on a press and on the next one woke up only to suspend again.
+input {
+    disable-power-key-handling
+}
+
 // No animations: they cost CPU/GPU time next to the audio
 animations { off; }
 
