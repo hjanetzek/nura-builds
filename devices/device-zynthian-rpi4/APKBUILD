@@ -10,7 +10,7 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=9
+pkgrel=10
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT AND GPL-3.0-or-later"
 arch="aarch64"
@@ -42,6 +42,7 @@ source="
 	zynthian-kit.txt
 	zynthian.txt
 	91-zynscreen-touch.rules
+	92-zynthian-backlight.rules
 	piscreen2r-notouch.dts
 	piscreen2r-backlight.dts
 	goodix_z2.dts
@@ -77,6 +78,8 @@ package() {
 	# The ZynScreen's ADS7846 touch is flipped on both axes (ZynthianOS has a calibration matrix
 	# in X): the same for libinput
 	install -Dm644 "$srcdir"/91-zynscreen-touch.rules -t "$pkgdir"/usr/lib/udev/rules.d/
+	# The panel's backlight on at boot (it came up powered down with fbtft), switchable by video
+	install -Dm644 "$srcdir"/92-zynthian-backlight.rules -t "$pkgdir"/usr/lib/udev/rules.d/
 	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
 	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
 	local o
@@ -111,6 +114,7 @@ e3515cf9f41807917eac1f7663e0131bd18783824facf15f2bb0381635bf6d9a0c334f3786b6fb76
 cebaad0a22b3cca9ecc18c9bad85418d2f0b4a8298af58d8d52014d03bc7afffd616e1131a21244501942d6384f4ba1daaf1cff717c6af17cdf4751bdc3e9193  zynthian-kit.txt
 da2bb2b174fb5f3d3984cd69cf6c5d2349fed6e657eec9db3b3137a9fe035ee4cab92f8d1bea197892ac7c607b58e7e924022e8dc89333c2fc8536449b630d24  zynthian.txt
 efd70b1d319caa1e9c7a7a57704ca1a793aeb075f2122f756984a01175c53efe238ee6d99367a0d836afd0e5ed941af028929078f992ab3a2885ea8220fe3ef3  91-zynscreen-touch.rules
+9665a0a13a700d03190d1f5bbf645f913d11b8fb1602ba1307bcf24c57ac94e511c27b368429d95e081f8e188f602d1890cd888e4e0cedb15ce36779439c4e28  92-zynthian-backlight.rules
 3d2e65b60e0a4fc20a51c27c881b25833b9a74847f2ab69df986279afa4129f3d27e7c2dfdcc68000976871ca18e79b88398c081c0c118f5456dadca16ac6ff1  piscreen2r-notouch.dts
 67293aac00e62cad118c02e06499ab2c6d1afafaa95f7a832dc43063997a644fd7c185867916565b04ac077758253253199424d214a25a5ab20a44b1cb31eb5c  piscreen2r-backlight.dts
 344bb1fbf6d48edf76b8ebacde6969f687e1ceefc9f016508180ce831b1cc1e4ec7450f84d56e143a1492e8aed8c2be253454d06543cf7f6e5064328de47a57f  goodix_z2.dts
