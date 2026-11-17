@@ -169,6 +169,14 @@ fi
 image_notes="$target images built by nura-builds ($run_url). Write to a USB stick or SD card:
 zstd -d < <file>.img.zst | sudo dd of=/dev/sdX bs=4M status=progress
 Packages for updates: release \"$repo_tag\" (see its notes)."
+# A guide for the image release (NURA_IMAGE_NOTES: a markdown file, e.g. docs/zynthian-rpi-testing.md
+# for the Pi images), followed by the build's line
+if [ -n "${NURA_IMAGE_NOTES:-}" ] && [ -f "$here/$NURA_IMAGE_NOTES" ]; then
+	image_notes="$(cat "$here/$NURA_IMAGE_NOTES")
+
+---
+Built by $run_url"
+fi
 gh release view "$image_tag" >/dev/null 2>&1 ||
 	gh release create "$image_tag" --title "$target (latest build)" --notes "$image_notes"
 gh release upload "$image_tag" "$@" --clobber

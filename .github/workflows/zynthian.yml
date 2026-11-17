@@ -71,6 +71,8 @@ jobs:
     env:
       NURA_ARCH: ${{ needs.arch.outputs.arch }}
       NURA_IMAGE_TAG: ${{ needs.arch.outputs.arch == 'armv7' && 'zynthian-armv7-latest' || 'zynthian-latest' }}
+      # the Pi images' guide for testers as the release's notes (aarch64)
+      NURA_IMAGE_NOTES: ${{ needs.arch.outputs.arch == 'aarch64' && 'docs/zynthian-rpi-testing.md' || '' }}
       GH_TOKEN: ${{ github.token }}
       NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
       NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
