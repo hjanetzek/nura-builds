@@ -16,7 +16,11 @@
 #   command runs while jalv frees the plugin and the world (a preset loaded right before SIGTERM
 #   crashed in lilv_world_free);
 # - gtk-hide-ui.patch: start the GTK frontend with the window hidden (-H) and show/hide it by
-#   command ("ui show", "ui hide"), so that zynthian opens a plugin's GUI on demand.
+#   command ("ui show", "ui hide"), so that zynthian opens a plugin's GUI on demand;
+# - fast-exit.patch: after SIGTERM stop audio, worker, UI and plugin, then _exit() without freeing
+#   the LV2 world (most of Helm's/Dexed's exit); a preset's file is parsed before the command lock,
+#   so a stop doesn't wait for it (Helm/Dexed: seconds on a Pi); the exit gives up after 2 s with
+#   status 3 if the plugin is stuck in run().
 # From a local checkout:
 #   pmbootstrap build --src=/path/to/jalv zynthian-jalv
 pkgname=zynthian-jalv
@@ -45,6 +49,7 @@ source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/jalv/archive/$_com
 	bundle-list.patch
 	exit-fixes.patch
 	gtk-hide-ui.patch
+	fast-exit.patch
 	"
 builddir="$srcdir/jalv-$_commit"
 
@@ -76,4 +81,5 @@ sha512sums="
 5dfccb1198ebc82600f4f819293d727c5e607228608a41587b52cbf314cfda418cf66ee39908c7a08d4e44df806e73f200a553e17a6fb5aa24e1d879ee6bdfb6  bundle-list.patch
 e4dc911a7123b1ec85dcb798dbb926b0466b9f06f8269ac4fe570adc7a3beddd7f0ff9255f155102a703d90b8fcf418ba9ea5f93438767ef204bac3fa2dc378f  exit-fixes.patch
 4575c313f2ffc63ecbc18c1bcbd177e78fc2315c5d0bea985dd54f739191244f02819b54c8d8247d197653d3be537fe7123676924491e526e662c4f3c7d402d7  gtk-hide-ui.patch
+aee60e129db9e6d4c12c2347b016cce0bd92a1e6b8276127a88854da034c06106c119e2885840af2de263e4ac6ed5012f94dd4f17188bd6fe17694cb4bc0aad6  fast-exit.patch
 "
