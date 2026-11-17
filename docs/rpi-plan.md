@@ -72,7 +72,9 @@ forum topic.
 ## Later
 
 - The RT kernel as a choice in the device package (as `device-odroid-n2-kernel-amlogic-rt`).
-- A Pi 5 device for the V5 (pmaports `raspberry-pi5`, kernel flavour `bcm2712`).
+- The V5.1 kit (Raspberry Pi 5; most V5 kits run on a Pi 4, see zynthian-rpi.md "Kits and
+  Raspberry Pi models"): Alpine's linux-rpi has the Pi 5's device trees and RP1 drivers, so the
+  Pi 4 image probably boots on a Pi 5; to test, then a `V5_pi5` image.
 - A zynthian image for the ODROID N2.
 
 ## Open decisions

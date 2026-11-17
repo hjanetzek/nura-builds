@@ -184,6 +184,38 @@ measurable): idle 1.07 MB/s, scrolling 1.98 MB/s, UI 26 %, cage 0.9 %. Without a
 flushes only the changed rectangles, and fbtft sends only those pages. (Not the same screens:
 C on the Add Chain menu, D on the mixer; Tk against Qt for A.)
 
+## Kits and Raspberry Pi models; the Pi 5 (checked 2026-11-17)
+
+Which Pi the kits use (zynthian wiki, blog, forum):
+- **V4**: Raspberry Pi 4.
+- **V5** (2023): Raspberry Pi 4. Moving a V5 to a Pi 5 needs changes to the aluminium case and the
+  main board: the wiki's "Upgrading V5 to Raspberry Pi 5" is marked experimental, work in progress,
+  and the core team called the upgrade longer and more complex than expected; no upgrade kit was
+  released.
+- **V5.1** (2024-09): Raspberry Pi 5, a case adapted to the Pi 5's connectors, a new main board
+  outline and thermal block; otherwise as the V5. The V5.1 case doesn't fit a Pi 4 (jofemodo
+  offered older V5 cases for Pi 4 owners). The wiki's hardware page: kit v5.1 "supports Raspberry
+  Pi 5"; Pi 4, 3 and 3B+ supported, Pi 4 or higher recommended.
+- zynthian-sys has `V5` and `V5_pi5` (and `Custom_pi5`); `V5` and `V5_pi5` differ only in
+  overclocking (Maximum vs None) and JACK's period (256 vs 128 frames): same wiring, display and
+  sound card.
+
+So most V5 kits run on a Pi 4, and the image `zynthian-zynthian-rpi4-V5` is for them. The V5.1
+(Pi 5) needs an image that boots on a Pi 5.
+
+**Does our Pi 4 image boot on a Pi 5?** Probably, not tested. Alpine's `linux-rpi` (6.18.63-r0,
+edge, the kernel of device-zynthian-rpi4) is one kernel for all 64-bit Pis: built from Raspberry
+Pi's `bcm2711_defconfig` (the kernel Raspberry Pi OS calls `kernel8.img`, 4K pages), and the package
+has the Pi 5's device trees (`bcm2712-rpi-5-b.dtb`, `bcm2712-d-rpi-5-b.dtb`, Pi 500, CM5), the
+`-pi5` overlays and the RP1 drivers (the Pi 5's I/O chip: `CONFIG_MFD_RP1=y`,
+`CONFIG_PINCTRL_RP1=y`). The Pi 5's firmware loads `kernel_2712.img` (16K pages) by default and falls
+back to `kernel8.img`; our usercfg.txt names the kernel (`kernel=vmlinuz-rpi`) for every model.
+`linux-rpi-rt` (aports/kernel) is the same kernel with PREEMPT_RT. To check on a Pi 5: boot,
+GPIO through the RP1 (wiringPi, zyncoder's interrupts), I2C, the HifiBerry overlay, the DSI panel
+(vc4-kms-v3d on the Pi 5). If it works, a V5.1 image is `IMAGE_KITS_zynthian_rpi4="V4 V5 V5_pi5"`
+(the device's name would then be misleading: `zynthian-rpi` for all Pis later); pmaports also has a
+`raspberry-pi5` device with the kernel flavour `bcm2712`.
+
 ## Order
 
 1. `zyncoder-hw` with the V4 layout, built in CI (wiringpi, musl).
