@@ -12,6 +12,9 @@ set=$1
 plan=$2
 setfile="$here/sets/$set.sh"
 [ -f "$setfile" ] || { echo "no set $set (sets/$set.sh)" >&2; exit 1; }
+# Only the set's ADD_ARCH_<arch>, not the target file's (common.sh sources it: recipes of other
+# repositories, not checked out for sets)
+unset "ADD_ARCH_$ARCH"
 KEEPGOING= ; eval "$(sed -n 's/^\(KEEPGOING\|ADD_ARCH_[a-z0-9_]*\)=/\1=/p' "$setfile")"
 eval "add_arch=\${ADD_ARCH_$ARCH:-}"
 for p in $add_arch; do
