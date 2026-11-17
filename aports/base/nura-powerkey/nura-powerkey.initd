@@ -1,0 +1,9 @@
+#!/sbin/openrc-run
+description="Power key switches the screen (nura-powerkey)"
+command=/usr/libexec/nura-powerkey
+command_background=true
+pidfile=/run/nura-powerkey.pid
+
+depend() {
+	need udev
+}

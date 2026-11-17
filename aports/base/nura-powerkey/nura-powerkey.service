@@ -1,0 +1,11 @@
+[Unit]
+Description=Power key switches the screen (nura-powerkey)
+After=systemd-udev-settle.service
+
+[Service]
+ExecStart=/usr/libexec/nura-powerkey
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
