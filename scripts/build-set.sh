@@ -37,6 +37,10 @@ while read -r pkg force; do
 		echo "::endgroup::"
 		echo "$pkg" >> "$failed"
 		echo "::warning::$set: $pkg failed on $ARCH"
+		# the build's output (the job doesn't fail with KEEPGOING, so the workflow's log step skips it)
+		echo "::group::$set: $pkg: the end of pmbootstrap's log"
+		sudo tail -n 80 "$NURA_WORK/log.txt" 2>/dev/null || tail -n 80 "$NURA_WORK/log.txt" || true
+		echo "::endgroup::"
 		[ -n "$KEEPGOING" ] || { status=1; break; }
 	fi
 done < "$NURA_OUT/todo-$set.txt"
