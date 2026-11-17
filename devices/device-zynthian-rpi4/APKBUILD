@@ -10,7 +10,7 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=14
+pkgrel=15
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT AND GPL-3.0-or-later"
 arch="aarch64"
@@ -102,6 +102,12 @@ package() {
 		install -Dm644 "$srcdir"/50-zynthian-no-quit.conf -t "$pkgdir"/usr/lib/systemd/system/$u.service.d/
 	done
 	install -Dm755 "$srcdir"/zynthian-plymouth-quit -t "$pkgdir"/usr/libexec/
+	# No firewall on the kits, as on ZynthianOS: they sit in a home or studio network, and
+	# zynthian's services are meant to be reachable there (OSC on UDP 1370, RTP-MIDI, QmidiNet,
+	# Ableton Link, mDNS, webconf); postmarketOS' nftables (policy drop) blocked all but SSH and
+	# webconf. Masked (it is a dependency of the UI packages, postmarketos-base-nftables)
+	mkdir -p "$pkgdir"/etc/systemd/system
+	ln -s /dev/null "$pkgdir"/etc/systemd/system/nftables.service
 	install -Dm644 "$srcdir"/zynthian-plymouth-quit.service -t "$pkgdir"/usr/lib/systemd/system/
 	mkdir -p "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants
 	ln -s ../zynthian-plymouth-quit.service "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/
