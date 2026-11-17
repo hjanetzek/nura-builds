@@ -25,7 +25,7 @@ partition (`zynthian-kit list` on the device shows the kits zynthian-sys knows).
 
 ## Logging in
 
-SSH is on: user `user`, password `147147` (change it with `passwd`). The host name is
+SSH is on: user `user`, password `raspberry` (as on ZynthianOS; change it with `passwd`). The host name is
 `nura-zynthian`; find the address in your router, or `ssh user@nura-zynthian.local` if your
 network resolves it. `sudo` works without a password for this user (zynthian needs root for some
 settings; a first step).

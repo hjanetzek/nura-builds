@@ -7,8 +7,8 @@
 # boot); written with mtools into the image file, without mounting it.
 #
 # Usage: image.sh DEVICE
-# Environment: NURA_PASSWORD (the user's password in the image, default "147147": change it on
-# the device with passwd).
+# Environment: NURA_PASSWORD (the user's password in the image; default IMAGE_PASSWORD of the
+# target file, else "147147": change it on the device with passwd).
 . "$(dirname "$0")/common.sh"
 
 device=$1
@@ -19,7 +19,7 @@ pmb config ui "$UI"
 eval "extra=\${EXTRA_PACKAGES_$(echo "$device" | tr - _):-}"
 # shellcheck disable=SC2154 # set by eval
 add=$(echo $IMAGE_PACKAGES $extra | tr ' ' ',')
-pmb install --password "${NURA_PASSWORD:-147147}" ${add:+--add "$add"}
+pmb install --password "${NURA_PASSWORD:-${IMAGE_PASSWORD:-147147}}" ${add:+--add "$add"}
 
 img="$NURA_WORK/chroot_native/home/pmos/rootfs/$device.img"
 [ -f "$img" ] || { echo "no image at $img" >&2; exit 1; }

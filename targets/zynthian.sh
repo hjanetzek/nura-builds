@@ -48,6 +48,9 @@ EXTRA_PACKAGES_zynthian_rpi4="zynthian-hw"
 # nothing to configure. The Duet's image by hand (zynthian.yml, input devices).
 IMAGE_DEVICES_aarch64="zynthian-rpi4"
 IMAGE_KITS_zynthian_rpi4="V4 V5"
+# The user's password in the images: ZynthianOS' ("raspberry"), so zynthian owners can log in as they
+# are used to (the secret NURA_IMAGE_PASSWORD overrides it)
+IMAGE_PASSWORD="raspberry"
 # amd64: the QEMU virtual machine (zynthian-ui's nura/tools/run_qemu.sh), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
 # raspberry-pi4 is in pmaports' "downstream" category; add it here once tested

@@ -129,7 +129,7 @@ gh run list -w plugin -L 1
 |---|---|
 | `NURA_ABUILD_KEY` | private key that signs the packages (PEM) |
 | `NURA_ABUILD_KEY_NAME` | its file name, e.g. `pmos@local-6ae1d406.rsa` |
-| `NURA_IMAGE_PASSWORD` | the user's password in images (default `147147`) |
+| `NURA_IMAGE_PASSWORD` | the user's password in images (default: the target's `IMAGE_PASSWORD`, zynthian `raspberry`, else `147147`) |
 
 Without a key, each run signs with a new one: packages of different runs don't trust each other
 and the published repository can't be merged into. Create a key once (`openssl genrsa -out nura-ci.rsa 4096`) and store

@@ -98,7 +98,7 @@ forum topic.
   listed, a line to uncomment), the ADS7846 calibration rule (`91-zynscreen-touch.rules`).
 - The Qt hardware input is in zynthian-ui main (the rebase of 2026-11-17 took qt-hw-input in).
 - Access for testers: SSH is on by default (postmarketos-base, sshd in the systemd preset), user
-  `user`, password `147147` (no NURA_IMAGE_PASSWORD secret set), host name `nura-zynthian`.
+  `user`, password `raspberry` as on ZynthianOS (IMAGE_PASSWORD in targets/zynthian.sh), host name `nura-zynthian`.
 - V5: the DSI panel's orientation comes from zynthian-sys' kernel option
   (`panel_orientation=upside_down`, written by zynthian-kit); cage rotates by it.
 - Tester guide and release notes of the images: [zynthian-rpi-testing.md](zynthian-rpi-testing.md)
