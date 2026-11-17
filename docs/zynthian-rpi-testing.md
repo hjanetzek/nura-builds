@@ -14,12 +14,13 @@ Pi 5: not supported yet.
 The first boot sets up the kit and reboots once. SSH: `user` / `raspberry`, host `nura-zynthian`.
 `zynthian-kit` shows or switches the kit; logs: `journalctl -b -u zynthian-kit-boot`, `-u tinydm`.
 
+Updates: `sudo apk upgrade` (Nura's package repository is set up in the image).
+
 No firewall (as on ZynthianOS): zynthian's network services (webconf on port 8080, OSC, network
 MIDI) are reachable on your network.
 
 Known gaps:
-- V4: the Qt UI runs on the SPI panel without a compositor (Qt linuxfb): no plugin windows; the
-  480x320 layout (Qt theme v4) is new, not yet tried on the kit.
+- V4: the Qt UI runs on the SPI panel without a compositor (Qt linuxfb): no plugin windows.
 - V5: not tested on hardware yet.
 - Not every engine/plugin of ZynthianOS is packaged. PREEMPT_RT kernel packaged, not the default.
 
