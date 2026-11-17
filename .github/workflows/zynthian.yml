@@ -12,6 +12,7 @@ on:
       zynthian-ui-ref: { description: "zynthian-ui branch", default: main }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
       images: { description: "build the device images", type: boolean, default: false }
+      devices: { description: "image devices as JSON (empty: IMAGE_DEVICES of the target, the Pi with V4 and V5)", default: "" }
       release: { description: "also as a dated release (zynthian-<date>-<run>)", type: boolean, default: false }
   schedule:
     - cron: "0 1 * * 0"   # Sunday 01:00 UTC: aarch64
@@ -52,6 +53,7 @@ jobs:
       arch: ${{ needs.arch.outputs.arch }}
       refs: ${{ needs.arch.outputs.refs }}
       images: ${{ inputs.images || false }}
+      devices: ${{ inputs.devices || '' }}
     secrets:
       NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
       NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}

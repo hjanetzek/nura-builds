@@ -43,6 +43,11 @@ DEVICES="google-kukui zynthian-rpi4"
 # docs/zynthian-rpi.md, docs/rpi-plan.md). Extra packages of a device's image:
 # EXTRA_PACKAGES_<device, "-" as "_">
 EXTRA_PACKAGES_zynthian_rpi4="zynthian-hw"
+# Images the workflow builds (IMAGE_DEVICES_<arch>; default DEVICES): aarch64 for now only the Pi, one image per
+# kit with the kit preset (IMAGE_KITS_<device>, scripts/image.sh): written to an SD card and booted,
+# nothing to configure. The Duet's image by hand (zynthian.yml, input devices).
+IMAGE_DEVICES_aarch64="zynthian-rpi4"
+IMAGE_KITS_zynthian_rpi4="V4 V5"
 # amd64: the QEMU virtual machine (zynthian-ui's nura/tools/run_qemu.sh), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
 # raspberry-pi4 is in pmaports' "downstream" category; add it here once tested

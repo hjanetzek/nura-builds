@@ -46,7 +46,9 @@ Conflicts expected in `targets/zynthian.sh`, `setup.sh`, `image.sh`, `zynthian.y
    lightest option measured: SPI traffic idle 0.03 MB/s, Tk on ZynthianOS 1.36 MB/s), as the
    S III Neo runs eglfs without a compositor; no native plugin windows in that mode. In zynthian-ui
    (`nura/postmarketos-ui-zynthian`), chosen by the kit setting.
-2. **Kit selection.** The tester enters the kit in a file on the SD card's FAT partition before the
+2. **Kit selection.** One image per kit with the kit preset (2026-11-17: `zynthian-zynthian-rpi4-V4`,
+   `-V5`; `IMAGE_KITS_zynthian_rpi4`, scripts/image.sh writes `kit=` into zynthian.txt on the boot
+   partition): write it to an SD card and boot, nothing to configure. Otherwise the tester enters the kit in a file on the SD card's FAT partition before the
    first boot (from any PC): `zynthian-kit.txt` with a ready block per kit (V4, V5, ...: sound
    card, display, wiring layout). Default without an entry: HDMI and onboard audio. `zynthian-kit
    V4` on the device stays as a second way.

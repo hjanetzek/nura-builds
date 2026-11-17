@@ -2,7 +2,8 @@
 # its repositories) for one architecture, on top of the published package repository (release
 # "<arch>": Qt, PySide, plugins, libraries come from there, docs/ci-plan.md); the new packages as
 # the artifact new-<target>-<arch>, for images and publishing. Optionally the device images
-# (DEVICES[_<arch>] of the target file, or the input), as artifacts <target>-<device>.
+# (IMAGE_DEVICES_<arch>, else DEVICES[_<arch>] of the target file, or the input), as artifacts
+# <target>-<device> (one image, or one per kit: IMAGE_KITS_<device>).
 name: build-target
 on:
   workflow_call:
@@ -82,7 +83,9 @@ jobs:
           d=$DEVICES_INPUT
           if [ -z "$d" ]; then
             # shellcheck disable=SC2046 # a list
-            d=$(printf '%s\n' $(scripts/target-var.sh DEVICES) | jq -R . | jq -sc 'map(select(. != ""))')
+            list=$(scripts/target-var.sh "IMAGE_DEVICES_$NURA_ARCH")
+            [ -n "$list" ] || list=$(scripts/target-var.sh DEVICES)
+            d=$(printf '%s\n' $list | jq -R . | jq -sc 'map(select(. != ""))')
           fi
           echo "devices=$d" >> "$GITHUB_OUTPUT"
       - name: Build log
@@ -124,6 +127,8 @@ jobs:
           sudo cp /home/runner/new/*.apk "$NURA_WORK/packages/edge/$NURA_ARCH/"
           sudo chown -R 12345:12345 "$NURA_WORK/packages"
           pmbootstrap -c "$HOME/.config/pmbootstrap-nura-$TARGET.cfg" -y index
+      - name: mtools (kit presets in images, scripts/image.sh)
+        run: sudo apt-get install -y -qq mtools >/dev/null
       - name: Image for ${{ matrix.device }}
         env:
           DEVICE: ${{ matrix.device }}
@@ -133,7 +138,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.target }}-${{ matrix.device }}
-          path: /home/runner/nura-out/${{ inputs.target }}-${{ matrix.device }}.img.zst
+          path: /home/runner/nura-out/${{ inputs.target }}-${{ matrix.device }}*.img.zst
           retention-days: 7
           compression-level: 0
       - name: Build log
