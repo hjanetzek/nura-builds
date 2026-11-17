@@ -5,13 +5,15 @@
 # Installed as /usr/lib/zynthian/bin/jalv, beside Alpine's jalv; zynthian's environment
 # (desktop/zynthian_desktop_env.sh) puts /usr/lib/zynthian/bin first on PATH.
 #
-# Only the JACK command line host (no GTK/Qt GUIs, no suil, no PortAudio). From a local
-# checkout:
+# Only the JACK command line host (no GTK/Qt GUIs, no suil, no PortAudio).
+# bundle-list.patch: -B DIRS loads only the given bundles instead of all of LV2_PATH (zynthian-ui
+# passes each plugin's bundles: ~0.8 s less per jalv start on a Pi 4); jalv-fork branch
+# bundle-list, for zynthian/jalv upstream. From a local checkout:
 #   pmbootstrap build --src=/path/to/jalv zynthian-jalv
 pkgname=zynthian-jalv
 _commit=e01b6d64651d451107640b1a502e06c9ec10e353
 pkgver=1.12.1_git20260330
-pkgrel=0
+pkgrel=1
 pkgdesc="zynthian's jalv: LV2 host with the asynchronous command line zynthian uses"
 url="https://github.com/zynthian/jalv"
 arch="aarch64 armv7 x86_64"
@@ -27,7 +29,9 @@ makedepends="
 	sratom-dev
 	zix-dev
 	"
-source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/jalv/archive/$_commit.tar.gz"
+source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/jalv/archive/$_commit.tar.gz
+	bundle-list.patch
+	"
 builddir="$srcdir/jalv-$_commit"
 
 build() {
@@ -49,4 +53,5 @@ package() {
 
 sha512sums="
 94d0935959fa86bcb06311e60446d07b170872c870a8d107e9ec1469e89f40c9fe63028f05e6199ce0fac3d1cf2ed19a18906faae14c234a2d72b4ffef515301  zynthian-jalv-e01b6d64651d451107640b1a502e06c9ec10e353.tar.gz
+14a3652b362a01b435191cb1e31f51f0bb721a75a7b91c7fa00733b40bb4a25d58d859762cc41a26617227177ab481c25218237d821419fceb5a704e4ac73e20  bundle-list.patch
 "

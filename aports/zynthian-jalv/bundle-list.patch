@@ -1,0 +1,145 @@
+From 7e18fff08b39188a740c57f6b67f7d05f2b52783 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Tue, 17 Nov 2026 16:34:24 +0100
+Subject: [PATCH] Add -B option: load only the given bundles instead of
+ LV2_PATH
+
+Loading the whole LV2 world (lilv_world_load_all) parses the manifest of
+every bundle on LV2_PATH: on a zynthian with ~550 bundles and ~4,200
+presets that's most of the ~1 s a jalv instance needs to start on a
+Raspberry Pi 4, repeated for every plugin of a snapshot.
+
+-B takes a ':'-separated list of bundle directories (like LV2_PATH, but
+the bundles themselves). jalv loads just these bundles, then the data of
+any specification bundles among them and the plugin classes. A host that
+already knows its LV2 world (zynthian's UI) passes the plugin's bundle,
+the bundles of its data, presets, banks and UIs, and the specifications.
+
+If the plugin isn't among the bundles, jalv loads the whole world as
+before, so a wrong or incomplete list never fails worse than today. Not
+used when loading a state directory (-l): the plugin isn't known before.
+
+The bundle URIs are made from the given paths like lilv_world_load_all
+makes them (no symlinks resolved), so preset URIs stay the same.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FXkgPvuShs23GDcEBASZCU
+---
+ src/jalv.c         | 48 +++++++++++++++++++++++++++++++++++++++++++---
+ src/jalv_console.c |  7 +++++++
+ src/options.h      |  1 +
+ 3 files changed, 53 insertions(+), 3 deletions(-)
+
+diff --git a/src/jalv.c b/src/jalv.c
+index 01e958f..86d354b 100644
+--- a/src/jalv.c
++++ b/src/jalv.c
+@@ -1202,6 +1202,37 @@ jalv_init_display(Jalv* const jalv)
+   jalv_log(JALV_LOG_INFO, "Scale factor: %.01f\n", jalv->ui_scale_factor);
+ }
+ 
++/// Load the bundles in a ':'-separated list of directories, return true if
++/// the plugin is among them
++static bool
++jalv_load_bundles(LilvWorld* world, const char* dirs, const char* plugin_uri)
++{
++  for (const char* d = dirs; *d;) {
++    const size_t len = strcspn(d, ":");
++    if (len) {
++      // A bundle URI ends with '/', like those lilv_world_load_all() makes
++      char* const path = (char*)calloc(len + 2, 1);
++      memcpy(path, d, len);
++      if (path[len - 1] != '/') {
++        path[len] = '/';
++      }
++      LilvNode* const bundle = lilv_new_file_uri(world, NULL, path);
++      lilv_world_load_bundle(world, bundle);
++      lilv_node_free(bundle);
++      free(path);
++    }
++    d += len + (d[len] == ':');
++  }
++  lilv_world_load_specifications(world);
++  lilv_world_load_plugin_classes(world);
++
++  LilvNode* const   uri    = lilv_new_uri(world, plugin_uri);
++  const LilvPlugin* plugin =
++    lilv_plugins_get_by_uri(lilv_world_get_all_plugins(world), uri);
++  lilv_node_free(uri);
++  return plugin != NULL;
++}
++
+ int
+ jalv_open(Jalv* const jalv, int* argc, char*** argv)
+ {
+@@ -1216,9 +1247,19 @@ jalv_open(Jalv* const jalv, int* argc, char*** argv)
+     return ret;
+   }
+ 
+-  // Load the LV2 world
+-  LilvWorld* const world = lilv_world_new();
+-  lilv_world_load_all(world);
++  // Load the LV2 world: only the given bundles if they have the plugin
++  LilvWorld* world = lilv_world_new();
++  if (jalv->opts.bundles && !jalv->opts.load && *argc > 1) {
++    const char* const uri = (*argv)[*argc - 1];
++    if (!jalv_load_bundles(world, jalv->opts.bundles, uri)) {
++      jalv_log(JALV_LOG_WARNING, "Plugin not in -B bundles, loading all\n");
++      lilv_world_free(world);
++      world = lilv_world_new();
++      lilv_world_load_all(world);
++    }
++  } else {
++    lilv_world_load_all(world);
++  }
+ 
+   jalv->world         = world;
+   jalv->env           = serd_env_new(NULL);
+@@ -1622,6 +1663,7 @@ jalv_close(Jalv* const jalv)
+ 
+   free(jalv->opts.name);
+   free(jalv->opts.load);
++  free(jalv->opts.bundles);
+   free(jalv->opts.controls);
+ 
+   return 0;
+diff --git a/src/jalv_console.c b/src/jalv_console.c
+index bcdef91..c7c478f 100644
+--- a/src/jalv_console.c
++++ b/src/jalv_console.c
+@@ -39,6 +39,7 @@ print_usage(const char* name, bool error)
+   fprintf(os, "Usage: %s [OPTION...] PLUGIN_URI\n", name);
+   fprintf(os,
+           "Run an LV2 plugin as a Jack application.\n"
++          "  -B DIRS      Load only these bundles (':'-separated), not LV2_PATH\n"
+           "  -b SIZE      Buffer size for plugin <=> UI communication\n"
+           "  -c SYM=VAL   Set control value (e.g. \"vol=1.4\")\n"
+           "  -d           Dump plugin <=> UI communication\n"
+@@ -121,6 +122,12 @@ jalv_frontend_init(int* argc, char*** argv, JalvOptions* opts)
+         return 1;
+       }
+       opts->load = jalv_strdup((*argv)[a]);
++    } else if ((*argv)[a][1] == 'B') {
++      if (++a == *argc) {
++        fprintf(stderr, "Missing argument for -B\n");
++        return 1;
++      }
++      opts->bundles = jalv_strdup((*argv)[a]);
+     } else if ((*argv)[a][1] == 'b') {
+       if (++a == *argc) {
+         fprintf(stderr, "Missing argument for -b\n");
+diff --git a/src/options.h b/src/options.h
+index 21101c0..b703e8b 100644
+--- a/src/options.h
++++ b/src/options.h
+@@ -16,6 +16,7 @@ typedef struct {
+   char*    load;            ///< Path for state to load
+   char*    preset;          ///< URI of preset to load
+   char*    preset_path;     ///< Default path to save presets (ZYNTHIAN)
++  char*    bundles;         ///< Bundle directories to load instead of LV2_PATH
+   char**   controls;        ///< Control values
+   uint32_t buffer_size;     ///< Plugin <=> UI communication buffer size
+   double   update_rate;     ///< UI update rate in Hz
+-- 
+2.56.0
+
