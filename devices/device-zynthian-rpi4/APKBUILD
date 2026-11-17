@@ -10,7 +10,7 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=10
+pkgrel=11
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT AND GPL-3.0-or-later"
 arch="aarch64"
@@ -46,7 +46,6 @@ source="
 	piscreen2r-notouch.dts
 	piscreen2r-backlight.dts
 	goodix_z2.dts
-	sainsmart18.dts
 	90-zynthian-hw.rules
 	zynscreen-drm-overlay.dts
 	50-zynthian-rpi4-drm.sh
@@ -61,9 +60,9 @@ build() {
 	dtc -@ -I dts -O dtb -o zynscreen-drm.dtbo "$srcdir"/zynscreen-drm-overlay.dts
 	# ZynthianOS' own overlays (zynthian-sys custom/display/*/boot/overlays, GPL-3.0, at 4913037),
 	# which the kits' configurations name (V4, V2: piscreen2r-notouch; the Z2's display: goodix_z2):
-	# they aren't in the kernel's overlays. Without them the V4's panel didn't appear at all.
+	# they aren't in the kernel's overlays (sainsmart18 is: linux-rpi's own, not ours). Without them the V4's panel didn't appear at all.
 	local o
-	for o in piscreen2r-notouch piscreen2r-backlight goodix_z2 sainsmart18; do
+	for o in piscreen2r-notouch piscreen2r-backlight goodix_z2; do
 		dtc -@ -I dts -O dtb -o $o.dtbo "$srcdir"/$o.dts
 	done
 }
@@ -83,7 +82,7 @@ package() {
 	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
 	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
 	local o
-	for o in piscreen2r-notouch piscreen2r-backlight goodix_z2 sainsmart18; do
+	for o in piscreen2r-notouch piscreen2r-backlight goodix_z2; do
 		install -Dm644 $o.dtbo "$pkgdir"/boot/overlays/$o.dtbo
 	done
 	install -Dm644 "$srcdir"/zynthian-hw-modules.conf "$pkgdir"/usr/lib/modules-load.d/zynthian-hw.conf
@@ -118,7 +117,6 @@ efd70b1d319caa1e9c7a7a57704ca1a793aeb075f2122f756984a01175c53efe238ee6d99367a0d8
 3d2e65b60e0a4fc20a51c27c881b25833b9a74847f2ab69df986279afa4129f3d27e7c2dfdcc68000976871ca18e79b88398c081c0c118f5456dadca16ac6ff1  piscreen2r-notouch.dts
 67293aac00e62cad118c02e06499ab2c6d1afafaa95f7a832dc43063997a644fd7c185867916565b04ac077758253253199424d214a25a5ab20a44b1cb31eb5c  piscreen2r-backlight.dts
 344bb1fbf6d48edf76b8ebacde6969f687e1ceefc9f016508180ce831b1cc1e4ec7450f84d56e143a1492e8aed8c2be253454d06543cf7f6e5064328de47a57f  goodix_z2.dts
-23288a2f1cca3e6586614ff087f6a14298d207db91ef4ec44aa73d217b8c56475f834990fe0306ef7c85ffa2f5b996faa5bbd88b78745c6699e01edc94471815  sainsmart18.dts
 9a7fcd1fe663312122e5f960d52bc88bf44741628de288061f326936d56ca031c57a0e63f1eddf45033192236d73c67cba6f25dd3a7eac078c99cd47f2644429  90-zynthian-hw.rules
 6ab909e43569e720e1e344b9e40bd4572556ccb788c7928093102f4e346dee3b013499b5c2a4890b05d7392b0b02d61e67f91fc7f2871fb5cb670e8e10200f8d  zynscreen-drm-overlay.dts
 f7d160f2290fc84be4b502520c697a81a1994ca8f3876faab48d05fb07e22ef6995f8fa011aa32ada125a935324d71aba6f450194812189c4c7146f123a79c9f  50-zynthian-rpi4-drm.sh

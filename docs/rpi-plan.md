@@ -104,3 +104,14 @@ forum topic.
 - Tester guide and release notes of the images: [zynthian-rpi-testing.md](zynthian-rpi-testing.md)
   (publish.sh: NURA_IMAGE_NOTES).
 - Open: everything on the hardware (part C); the 480x320 layout (zynthian-ui).
+- **TODO: nura-builds' package repository as an apk source in the images** (2026-11-17): the
+  images' /etc/apk/repositories has only Alpine and postmarketOS, so `apk upgrade` doesn't update
+  zynthian, the device package or the kernels, and they can't be installed afterwards (found on the
+  V4 kit). The key (keys/nura-builds-ci.rsa.pub) is in the images already. Add
+  https://github.com/hjanetzek/nura-builds/releases/download in the image build (pmbootstrap's
+  mirrors/extra repos, or a package that writes it, e.g. a nura-builds-repo package).
+- **TODO: the zynthian boot animation** (2026-11-17, in progress): postmarketos-bootsplash (Plymouth
+  in the initramfs) with ZynthianOS' theme zynloganim, the panel's modules (spi_bcm2835, fbtft,
+  fb_ili9486, gpio_backlight) in the initramfs so the panel appears early; the device package then
+  without postmarketos-base-nosplash. A first test with apk --force-broken-world removed the device
+  package (and /boot/usercfg.txt with it): test with a device package that drops the dependency.
