@@ -11,7 +11,7 @@ pkgname=distrho-ports-lv2
 _commit=d3b62da2e83c69b0866af5bb2e29ac78dc8014cf
 _juce5=d1a2d5908202f2529886e07c3e65118c821cba98
 pkgver=0_git20250914
-pkgrel=1
+pkgrel=2
 pkgdesc="DISTRHO-Ports JUCE plugins as on ZynthianOS (LV2, no GUIs)"
 url="https://github.com/DISTRHO/DISTRHO-Ports"
 arch="all"
@@ -19,15 +19,20 @@ license="GPL-2.0-or-later AND GPL-3.0-or-later"
 # bash: scripts/generate-lv2.sh (run during the build)
 makedepends="alsa-lib-dev bash fftw-dev lv2-dev meson"
 source="$pkgname-$_commit.tar.gz::https://github.com/DISTRHO/DISTRHO-Ports/archive/$_commit.tar.gz
-	juce5-$_juce5.tar.gz::https://github.com/DISTRHO/JUCE/archive/$_juce5.tar.gz"
+	juce5-$_juce5.tar.gz::https://github.com/DISTRHO/JUCE/archive/$_juce5.tar.gz
+	juce5-lv2-message-thread-exit.patch
+	"
 builddir="$srcdir/DISTRHO-Ports-$_commit"
 options="!check" # no tests
 
 prepare() {
-	default_prepare
-	# JUCE 5 (DISTRHO's fork, with its patches) is a git submodule
+	# JUCE 5 (DISTRHO's fork, with its patches) is a git submodule; moved in before the patches
+	# (juce5-lv2-message-thread-exit.patch: the LV2 wrapper's message thread deleted JUCE's
+	# message queue while the last instance's cleanup still posted its quit message to it,
+	# SIGSEGV in cleanup when jalv exits, often on a Pi)
 	rmdir libs/juce5/source
 	mv "$srcdir"/JUCE-$_juce5 libs/juce5/source
+	default_prepare
 	# musl has no execinfo.h/backtrace(): getStackBacktrace() (crash reports only) returns ""
 	local m=libs/juce5/source/modules/juce_core
 	sed -i '/#include <execinfo.h>/{x;s/.*/  #if defined (__GLIBC__)/;p;x;s/$/\n  #endif/}' $m/juce_core.cpp
@@ -62,4 +67,5 @@ package() {
 sha512sums="
 a6edf6804c573f746f1b9e82aa117d22c85a37d798d074be38f0d38d06d1bf2858d46f78a9fb6a3f9bf695465fbdb8d9d5886325b520cd75b973354ab857e45c  distrho-ports-lv2-d3b62da2e83c69b0866af5bb2e29ac78dc8014cf.tar.gz
 562b46317d567c1d4768dff373064f4bad3f874fd928db93aef330fdc04ac4ea321208517f9a4643b8b92a335c4d6b5b91e60b1962cd69bde5075a1bd7dcb964  juce5-d1a2d5908202f2529886e07c3e65118c821cba98.tar.gz
+ecdb89c29af881286ddc58b713e51a90a050245f170a27fecef43317470c7f583a1457327648fc03555fa34eff1eb47e63d9a1b434d9319c14019c0f70abdec5  juce5-lv2-message-thread-exit.patch
 "

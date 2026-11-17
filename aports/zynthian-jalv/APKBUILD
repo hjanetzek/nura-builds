@@ -5,6 +5,10 @@
 # Installed as /usr/lib/zynthian/bin/jalv, beside Alpine's jalv; zynthian's environment
 # (desktop/zynthian_desktop_env.sh) puts /usr/lib/zynthian/bin first on PATH.
 #
+# exit-fixes.patch (fork branch exit-fixes): at exit, JACK is deactivated before the worker
+# stops, and no command line command runs while jalv frees the plugin and the world (a preset
+# loaded right before SIGTERM crashed in lilv_world_free).
+#
 # Only the JACK command line host (no GTK/Qt GUIs, no suil, no PortAudio).
 # bundle-list.patch: -B DIRS loads only the given bundles instead of all of LV2_PATH (zynthian-ui
 # passes each plugin's bundles: ~0.8 s less per jalv start on a Pi 4); jalv-fork branch
@@ -13,7 +17,7 @@
 pkgname=zynthian-jalv
 _commit=e01b6d64651d451107640b1a502e06c9ec10e353
 pkgver=1.12.1_git20260330
-pkgrel=1
+pkgrel=2
 pkgdesc="zynthian's jalv: LV2 host with the asynchronous command line zynthian uses"
 url="https://github.com/zynthian/jalv"
 arch="aarch64 armv7 x86_64"
@@ -31,6 +35,7 @@ makedepends="
 	"
 source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/jalv/archive/$_commit.tar.gz
 	bundle-list.patch
+	exit-fixes.patch
 	"
 builddir="$srcdir/jalv-$_commit"
 
@@ -54,4 +59,5 @@ package() {
 sha512sums="
 94d0935959fa86bcb06311e60446d07b170872c870a8d107e9ec1469e89f40c9fe63028f05e6199ce0fac3d1cf2ed19a18906faae14c234a2d72b4ffef515301  zynthian-jalv-e01b6d64651d451107640b1a502e06c9ec10e353.tar.gz
 14a3652b362a01b435191cb1e31f51f0bb721a75a7b91c7fa00733b40bb4a25d58d859762cc41a26617227177ab481c25218237d821419fceb5a704e4ac73e20  bundle-list.patch
+e4dc911a7123b1ec85dcb798dbb926b0466b9f06f8269ac4fe570adc7a3beddd7f0ff9255f155102a703d90b8fcf418ba9ea5f93438767ef204bac3fa2dc378f  exit-fixes.patch
 "
