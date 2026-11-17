@@ -1,0 +1,2 @@
+# nura-powerkey: the power key switches the screen (postmarketOS' apk trigger presets new units)
+enable nura-powerkey.service

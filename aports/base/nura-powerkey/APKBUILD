@@ -5,7 +5,7 @@
 # /etc/default/nura-powerkey (POWERKEY_NAME, TOUCH_NAMES, BACKLIGHT).
 pkgname=nura-powerkey
 pkgver=1
-pkgrel=0
+pkgrel=1
 pkgdesc="Power key switches the screen (backlight and touchscreen)"
 url="https://github.com/hjanetzek/nura-builds"
 arch="noarch"
@@ -13,12 +13,13 @@ license="MIT"
 options="!check"
 depends="busybox"
 subpackages="$pkgname-systemd:_systemd $pkgname-openrc:_openrc"
-install="$pkgname-systemd.post-install $pkgname-openrc.post-install"
+install="$pkgname-openrc.post-install"
 source="
 	nura-powerkey.sh
 	nura-powerkey.service
 	nura-powerkey.initd
 	50-nura-powerkey.conf
+	80-nura-powerkey.preset
 	"
 
 package() {
@@ -31,6 +32,8 @@ _systemd() {
 	install_if="$pkgname=$pkgver-r$pkgrel systemd"
 	install -Dm644 "$srcdir"/nura-powerkey.service -t "$subpkgdir"/usr/lib/systemd/system/
 	install -Dm644 "$srcdir"/50-nura-powerkey.conf -t "$subpkgdir"/usr/lib/systemd/logind.conf.d/
+	# enabled by postmarketOS' systemd preset trigger (an enable in post-install didn't take)
+	install -Dm644 "$srcdir"/80-nura-powerkey.preset -t "$subpkgdir"/usr/lib/systemd/system-preset/
 }
 
 _openrc() {
