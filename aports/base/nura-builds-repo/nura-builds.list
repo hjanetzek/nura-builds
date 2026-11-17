@@ -1,0 +1,4 @@
+# nura-builds' package repository (zynthian, device packages, kernels, plugins): the release of
+# your architecture at https://github.com/hjanetzek/nura-builds/releases, signed with
+# /etc/apk/keys/nura-builds-ci.rsa.pub (put there by the image build)
+https://github.com/hjanetzek/nura-builds/releases/download

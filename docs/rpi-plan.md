@@ -104,12 +104,11 @@ forum topic.
 - Tester guide and release notes of the images: [zynthian-rpi-testing.md](zynthian-rpi-testing.md)
   (publish.sh: NURA_IMAGE_NOTES).
 - Open: everything on the hardware (part C); the 480x320 layout (zynthian-ui).
-- **TODO: nura-builds' package repository as an apk source in the images** (2026-11-17): the
-  images' /etc/apk/repositories has only Alpine and postmarketOS, so `apk upgrade` doesn't update
-  zynthian, the device package or the kernels, and they can't be installed afterwards (found on the
-  V4 kit). The key (keys/nura-builds-ci.rsa.pub) is in the images already. Add
-  https://github.com/hjanetzek/nura-builds/releases/download in the image build (pmbootstrap's
-  mirrors/extra repos, or a package that writes it, e.g. a nura-builds-repo package).
+- **nura-builds' package repository as an apk source in the images** (done 2026-11-17): package
+  nura-builds-repo (aports/base, set devices, all architectures) writes
+  /etc/apk/repositories.d/nura-builds.list (apk-tools 3); scripts/image.sh installs it into every
+  image. The signing key was in the images already (pmbootstrap). Before, `apk upgrade` didn't
+  update zynthian, the device package or the kernels (found on the V4 kit).
 - **The zynthian boot animation** (done 2026-11-17, device-zynthian-rpi4 r12-r14, zynthian-ui
   4c93c92a): postmarketos-bootsplash with ZynthianOS' Plymouth theme zynloganim, the panel's modules
   in the initramfs, the backlight on by an initramfs hook. DeviceTimeout=0.1 (plymouth waited 5 s

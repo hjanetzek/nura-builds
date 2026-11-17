@@ -24,7 +24,8 @@ pmb config kernel "$kernel"
 # "-" as "_"> (e.g. zynthian-hw for zynthian-rpi4): packages installed besides the UI's
 eval "extra=\${EXTRA_PACKAGES_$(echo "$device" | tr - _):-}"
 # shellcheck disable=SC2154 # set by eval
-add=$(echo $IMAGE_PACKAGES $extra | tr ' ' ',')
+# nura-builds-repo in every image: nura-builds' package repository as an apk source (updates)
+add=$(echo nura-builds-repo $IMAGE_PACKAGES $extra | tr ' ' ',')
 pmb install --password "${NURA_PASSWORD:-${IMAGE_PASSWORD:-147147}}" ${add:+--add "$add"}
 
 img="$NURA_WORK/chroot_native/home/pmos/rootfs/$device.img"
