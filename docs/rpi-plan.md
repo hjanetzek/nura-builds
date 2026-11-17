@@ -110,8 +110,12 @@ forum topic.
   V4 kit). The key (keys/nura-builds-ci.rsa.pub) is in the images already. Add
   https://github.com/hjanetzek/nura-builds/releases/download in the image build (pmbootstrap's
   mirrors/extra repos, or a package that writes it, e.g. a nura-builds-repo package).
-- **TODO: the zynthian boot animation** (2026-11-17, in progress): postmarketos-bootsplash (Plymouth
-  in the initramfs) with ZynthianOS' theme zynloganim, the panel's modules (spi_bcm2835, fbtft,
-  fb_ili9486, gpio_backlight) in the initramfs so the panel appears early; the device package then
-  without postmarketos-base-nosplash. A first test with apk --force-broken-world removed the device
-  package (and /boot/usercfg.txt with it): test with a device package that drops the dependency.
+- **The zynthian boot animation** (done 2026-11-17, device-zynthian-rpi4 r12-r14, zynthian-ui
+  4c93c92a): postmarketos-bootsplash with ZynthianOS' Plymouth theme zynloganim, the panel's modules
+  in the initramfs, the backlight on by an initramfs hook. DeviceTimeout=0.1 (plymouth waited 5 s
+  for vc4's HDMI, which has nothing connected, before taking the SPI panel; 0 makes plymouthd
+  abort). The animation runs until zynthian's first frame: plymouth-quit and plymouth-quit-wait do
+  nothing at boot, zynthian-plymouth-quit ends plymouthd (SIGKILL: "plymouth quit" and "deactivate"
+  crashed plymouthd once zynthian's Qt held the console) when zynthian-ui writes its first-frame
+  marker, and zynthian then draws its whole window once more (Qt linuxfb draws only changed areas:
+  the splash's last frame stayed). Tested on the V4 kit.

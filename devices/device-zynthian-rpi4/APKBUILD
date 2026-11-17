@@ -10,7 +10,7 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=13
+pkgrel=14
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT AND GPL-3.0-or-later"
 arch="aarch64"
@@ -49,7 +49,9 @@ source="
 	91-zynscreen-touch.rules
 	92-zynthian-backlight.rules
 	90-zynthian-backlight.sh
-	50-zynthian-retain-splash.conf
+	50-zynthian-no-quit.conf
+	zynthian-plymouth-quit
+	zynthian-plymouth-quit.service
 	piscreen2r-notouch.dts
 	piscreen2r-backlight.dts
 	goodix_z2.dts
@@ -93,8 +95,16 @@ package() {
 	printf "%s\n" spi_bcm2835 backlight gpio_backlight fbtft fb_ili9486 |
 		install -Dm644 /dev/stdin "$pkgdir"/usr/share/mkinitfs/modules/90-$pkgname.modules
 	install -Dm755 "$srcdir"/90-zynthian-backlight.sh -t "$pkgdir"/usr/share/mkinitfs/hooks/
-	install -Dm644 "$srcdir"/50-zynthian-retain-splash.conf \
-		-t "$pkgdir"/usr/lib/systemd/system/plymouth-quit.service.d/
+	# The animation until zynthian's first frame (its Qt UI writes a marker): no Plymouth quit at
+	# the boot target (tinydm is ordered after plymouth-quit-wait), zynthian-plymouth-quit ends it
+	local u
+	for u in plymouth-quit plymouth-quit-wait; do
+		install -Dm644 "$srcdir"/50-zynthian-no-quit.conf -t "$pkgdir"/usr/lib/systemd/system/$u.service.d/
+	done
+	install -Dm755 "$srcdir"/zynthian-plymouth-quit -t "$pkgdir"/usr/libexec/
+	install -Dm644 "$srcdir"/zynthian-plymouth-quit.service -t "$pkgdir"/usr/lib/systemd/system/
+	mkdir -p "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants
+	ln -s ../zynthian-plymouth-quit.service "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/
 	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
 	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
 	local o
@@ -132,7 +142,9 @@ da2bb2b174fb5f3d3984cd69cf6c5d2349fed6e657eec9db3b3137a9fe035ee4cab92f8d1bea1978
 efd70b1d319caa1e9c7a7a57704ca1a793aeb075f2122f756984a01175c53efe238ee6d99367a0d836afd0e5ed941af028929078f992ab3a2885ea8220fe3ef3  91-zynscreen-touch.rules
 9665a0a13a700d03190d1f5bbf645f913d11b8fb1602ba1307bcf24c57ac94e511c27b368429d95e081f8e188f602d1890cd888e4e0cedb15ce36779439c4e28  92-zynthian-backlight.rules
 7b886647e778bc23ece3100630bf1636585d1eabf33a4bc53f81d58609ce7799b43480b64827ee2583800cf5f9c1c70a313fb2b946797b78460b1b976f8fb21c  90-zynthian-backlight.sh
-398ac29f2d65db5ce8861ba7b5fa60960060d2863752abb77c888d586d5178fcb555cc2ad0de15554e703d6d96645e32d5223e322c74698275756f56e1bf83b4  50-zynthian-retain-splash.conf
+a04342735ca32dfa86607251db19a6f01f3b0f0345ef2c78ef21ce33815cd4a8274feef3a2787a66320e219dc8e4c1aaccf226afc7c29181336176889a8dae80  50-zynthian-no-quit.conf
+3d56bdafc27ed45f165ceae49aca4731eadabfe9004e92f36a8ca2629b2fd3577165055e451fc1c9843dffb83fa0bd9212f0265e97b0d31b51fe9c8ca2b86d1f  zynthian-plymouth-quit
+9bf2f5c549323141897e55d227bd281c6d6db14acff6970fdd3f375e9b0790ceafd07cbd7dc605c9f426b40fe69c7611c358dfb3acbb1c325f270867a750b8fa  zynthian-plymouth-quit.service
 3d2e65b60e0a4fc20a51c27c881b25833b9a74847f2ab69df986279afa4129f3d27e7c2dfdcc68000976871ca18e79b88398c081c0c118f5456dadca16ac6ff1  piscreen2r-notouch.dts
 67293aac00e62cad118c02e06499ab2c6d1afafaa95f7a832dc43063997a644fd7c185867916565b04ac077758253253199424d214a25a5ab20a44b1cb31eb5c  piscreen2r-backlight.dts
 344bb1fbf6d48edf76b8ebacde6969f687e1ceefc9f016508180ce831b1cc1e4ec7450f84d56e143a1492e8aed8c2be253454d06543cf7f6e5064328de47a57f  goodix_z2.dts

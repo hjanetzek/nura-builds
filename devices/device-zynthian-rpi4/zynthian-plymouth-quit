@@ -1,0 +1,24 @@
+#!/bin/sh
+# The boot animation until zynthian is visible: wait for zynthian's first frame (its Qt UI writes
+# $XDG_RUNTIME_DIR/zynthian-first-frame), then end Plymouth; zynthian then draws its whole window
+# once more (over the splash's last frame). Ended with SIGKILL, not "plymouth quit": with zynthian's
+# Qt (linuxfb) already holding the console, plymouthd crashed on quit and on deactivate (SIGSEGV,
+# tested on the V4 kit); killed, it leaves the framebuffer and the console to zynthian as they are.
+# Without a first frame within TIMEOUT seconds (zynthian not starting, the Tk UI): plymouth quit.
+# zynthian-plymouth-quit.service, instead of plymouth-quit at the boot target.
+TIMEOUT=${1:-120}
+i=0
+while [ $i -lt $((TIMEOUT * 4)) ]; do
+	pgrep -x plymouthd >/dev/null || exit 0
+	for f in /run/user/*/zynthian-first-frame; do
+		[ -e "$f" ] && break 2
+	done
+	sleep 0.25
+	i=$((i + 1))
+done
+if [ -n "$f" ] && [ -e "$f" ]; then
+	pkill -KILL -x plymouthd
+	rm -f /run/plymouth/pid
+else
+	plymouth quit --retain-splash
+fi
