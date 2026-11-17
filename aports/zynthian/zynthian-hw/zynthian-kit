@@ -12,9 +12,11 @@
 # - the kit's hardware settings (ZYNTHIAN_KIT_VERSION, ZYNTHIAN_WIRING_*, SOUNDCARD_*, DISPLAY_*,
 #   the UI settings that depend on the display) into the user's zynthian_envars.sh, keeping the
 #   other settings; zyncore.py then loads the layout's build of zyncoder-hw;
-# - the sound card and display overlays to /boot/zynthian-kit.txt (included by usercfg.txt), and
+# - the sound card and display overlays to /boot/zynthian-kit.txt (included by usercfg.txt), with
+#   the additions of ZynthianOS' update_zynthian_sys.sh (the ZynScreen's backlight, the V5/Z2 RTC), and
 #   the onboard audio (headphone jack) unless the user's ZYNTHIAN_DISABLE_RBPI_AUDIO is 1;
-#   the display's kernel options to /etc/kernel-cmdline.d/90-zynthian-kit.conf;
+#   the display's kernel options to /etc/kernel-cmdline.d/90-zynthian-kit.conf (with ZynthianOS'
+#   fbcon=map:22 vt.global_cursor_default=0: no text console on the kit's display);
 # - the user into the groups gpio, i2c, spi (the kit's interfaces), audio, video and input;
 # - the kiosk session for the kit's display: zynthian-fb (Qt on a framebuffer, no compositor) for
 #   fbtft SPI panels, zynthian (cage) for HDMI and DSI;
@@ -91,6 +93,22 @@ soundcard=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${SOUNDCARD_CONFIG:-}"' 
 display=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_CONFIG:-}"' sh "$kit_file")
 cmdline=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_KERNEL_OPTIONS:-}"' sh "$kit_file")
 rbpi_audio_off=$(sed -n 's/^export ZYNTHIAN_DISABLE_RBPI_AUDIO="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$envars" | tail -n 1)
+# As ZynthianOS' update_zynthian_sys.sh adds to the kit's settings:
+# - the ZynScreen's backlight (GPIO 22, overlay piscreen2r-backlight): piscreen2r-notouch leaves it
+#   off, so the panel stayed dark;
+# - the V5 and Z2 main boards' RTC (RV3028 on I2C instead of the Pi's);
+# - the text console off the panel: ZynthianOS boots with "fbcon=map:22 vt.global_cursor_default=0"
+#   (no framebuffer console on the kit's display, no blinking cursor over the UI).
+case $display in
+	*piscreen2r-notouch*)
+		case $display in *piscreen2r-backlight*) ;; *) display="$display\ndtoverlay=piscreen2r-backlight" ;; esac ;;
+esac
+custom=
+case $kit in
+	V5*|Z2*) custom="dtparam=rtc=off\ndtoverlay=i2c-rtc,rv3028" ;;
+esac
+cmdline=$(printf '%s' "$cmdline fbcon=map:22 vt.global_cursor_default=0" | sed 's/^ //')
+
 # The kiosk session for the display: SPI panels driven by fbtft (piscreen2r: the ZynScreen 3.5 of
 # the V4 kits; other fbtft overlays) are framebuffers without DRM, so zynthian's Qt UI runs on them
 # without a compositor (zynthian-fb, Qt's linuxfb); HDMI and DSI panels are DRM (zynthian: cage).
@@ -122,6 +140,10 @@ qt_theme=${ZYNTHIAN_KIT_QT_THEME:-$qt_theme}
 	echo "# Display"
 	printf '%b\n' "$display"
 	# As ZynthianOS (update_zynthian_sys.sh): a user setting (webconf), not the kit's
+	if [ -n "$custom" ]; then
+		echo "# Main board"
+		printf '%b\n' "$custom"
+	fi
 	echo "# Onboard audio"
 	if [ "$rbpi_audio_off" = 1 ]; then
 		echo "dtparam=audio=off"
