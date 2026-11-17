@@ -10,7 +10,7 @@
 pkgname=device-zynthian-rpi4
 pkgdesc="zynthian (Raspberry Pi 4)"
 pkgver=1
-pkgrel=7
+pkgrel=8
 url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
 license="MIT"
 arch="aarch64"
@@ -40,6 +40,8 @@ source="
 	modules-initfs
 	usercfg.txt
 	zynthian-kit.txt
+	zynthian.txt
+	91-zynscreen-touch.rules
 	90-zynthian-hw.rules
 	zynscreen-drm-overlay.dts
 	50-zynthian-rpi4-drm.sh
@@ -58,6 +60,12 @@ package() {
 	devicepkg_package $startdir $pkgname
 	install -Dm644 "$srcdir"/usercfg.txt "$pkgdir"/boot/usercfg.txt
 	install -Dm644 "$srcdir"/zynthian-kit.txt "$pkgdir"/usr/share/$pkgname/zynthian-kit.txt
+	# The kit choice on the FAT partition (zynthian-hw's zynthian-kit-boot reads it): the
+	# post-install script copies it to /boot once, the user edits it there
+	install -Dm644 "$srcdir"/zynthian.txt "$pkgdir"/usr/share/$pkgname/zynthian.txt
+	# The ZynScreen's ADS7846 touch is flipped on both axes (ZynthianOS has a calibration matrix
+	# in X): the same for libinput
+	install -Dm644 "$srcdir"/91-zynscreen-touch.rules -t "$pkgdir"/usr/lib/udev/rules.d/
 	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
 	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
 	install -Dm644 "$srcdir"/zynthian-hw-modules.conf "$pkgdir"/usr/lib/modules-load.d/zynthian-hw.conf
@@ -86,6 +94,8 @@ sha512sums="
 e3515cf9f41807917eac1f7663e0131bd18783824facf15f2bb0381635bf6d9a0c334f3786b6fb76d01469de6449878c871f8b747f45e9e3cee77699905cf319  modules-initfs
 673b33b43744690ab8f3fcaa37090c65e886a32bd7911d7a5abab90be293deeaa900c0cd4fddc789549eb93261963d9d4b69b5f52c666d70a881cc0a48b2929f  usercfg.txt
 cebaad0a22b3cca9ecc18c9bad85418d2f0b4a8298af58d8d52014d03bc7afffd616e1131a21244501942d6384f4ba1daaf1cff717c6af17cdf4751bdc3e9193  zynthian-kit.txt
+da2bb2b174fb5f3d3984cd69cf6c5d2349fed6e657eec9db3b3137a9fe035ee4cab92f8d1bea197892ac7c607b58e7e924022e8dc89333c2fc8536449b630d24  zynthian.txt
+efd70b1d319caa1e9c7a7a57704ca1a793aeb075f2122f756984a01175c53efe238ee6d99367a0d836afd0e5ed941af028929078f992ab3a2885ea8220fe3ef3  91-zynscreen-touch.rules
 9a7fcd1fe663312122e5f960d52bc88bf44741628de288061f326936d56ca031c57a0e63f1eddf45033192236d73c67cba6f25dd3a7eac078c99cd47f2644429  90-zynthian-hw.rules
 6ab909e43569e720e1e344b9e40bd4572556ccb788c7928093102f4e346dee3b013499b5c2a4890b05d7392b0b02d61e67f91fc7f2871fb5cb670e8e10200f8d  zynscreen-drm-overlay.dts
 f7d160f2290fc84be4b502520c697a81a1994ca8f3876faab48d05fb07e22ef6995f8fa011aa32ada125a935324d71aba6f450194812189c4c7146f123a79c9f  50-zynthian-rpi4-drm.sh

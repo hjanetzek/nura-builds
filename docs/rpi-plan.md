@@ -38,7 +38,7 @@ All three are about 30 commits behind main and predate the CI restructuring
 Conflicts expected in `targets/zynthian.sh`, `setup.sh`, `image.sh`, `zynthian.yml`,
 `packages.yml` (all rewritten by the restructuring): carry the commits over by hand, not rebase.
 
-## B. Testable on a kit
+## B. Testable on a kit — 1, 2, 4 prepared 2026-11-17 (zynthian-ui 154b95e0, device-zynthian-rpi4 r8; not pushed yet)
 
 1. **Display.** HDMI and the V5's DSI panel are DRM: the kiosk (cage/niri) works. The V4's SPI
    panel: the DRM driver ili9486 binds but the panel stays white (its init sequence doesn't suit
@@ -51,7 +51,8 @@ Conflicts expected in `targets/zynthian.sh`, `setup.sh`, `image.sh`, `zynthian.y
    card, display, wiring layout). Default without an entry: HDMI and onboard audio. `zynthian-kit
    V4` on the device stays as a second way.
 3. **Encoders and switches:** `zyncoder-hw` and the Qt hardware input (prototype), enabled by the
-   kit setting.
+   kit setting. The Qt hardware input is on zynthian-ui's branch `qt-hw-input` (10 commits), not
+   in main yet: without it the encoders do nothing in the Qt UI.
 4. **Touch:** the ADS7846 calibration rule (`LIBINPUT_CALIBRATION_MATRIX="-1 0 1 0 -1 1"`) in the
    device package.
 5. **Audio:** HifiBerry DAC+ADC through the overlay; check PipeWire/JACK in the kiosk on the kit.
@@ -80,3 +81,17 @@ forum topic.
    first boot?
 3. ODROID: packages only for now (kernel, U-Boot, device), the zynthian image later?
 4. RT kernel in the Pi image by default, or linux-rpi first?
+
+## State of part B (2026-11-17)
+
+- zynthian-ui (commit 154b95e0, local): session `zynthian-fb` in postmarketos-ui-zynthian r23 (Qt's
+  linuxfb on the first fbtft framebuffer, no compositor); zynthian-hw r3: zynthian-kit keeps fbtft
+  for the ZynScreen 3.5 (DRM overlay only with `ZYNTHIAN_KIT_DRM=1`), picks the kiosk session for
+  the display (checked dry: V4, V1 -> zynthian-fb; V5, Z2, MINI_V2 -> zynthian), adds the groups
+  video and input; `zynthian-kit-boot` (service before tinydm) applies the kit named in
+  `/boot/zynthian.txt` and reboots once if the boot settings changed.
+- device-zynthian-rpi4 r8: `/boot/zynthian.txt` (copied once by the post-install script; the kits
+  listed, a line to uncomment), the ADS7846 calibration rule (`91-zynscreen-touch.rules`).
+- Open: the Qt hardware input into zynthian-ui main (branch `qt-hw-input`); access for testers
+  (password: the image's default or the secret NURA_IMAGE_PASSWORD, SSH, hostname) checked on the
+  first image; the 480x320 layout.

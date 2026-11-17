@@ -1,0 +1,4 @@
+# The zynthian V4 kit's ZynScreen 3.5 (ADS7846 resistive touch, overlay with swapxy): flipped on
+# both axes, as ZynthianOS corrects in X with a calibration matrix; the same for libinput (Qt's
+# linuxfb and the Wayland compositors read it). Measured on the V4 kit (docs/zynthian-rpi.md).
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="ADS7846 Touchscreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="-1 0 1 0 -1 1"

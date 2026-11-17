@@ -1,0 +1,13 @@
+# zynthian on a Raspberry Pi 4: your zynthian kit
+#
+# Enter your kit below (remove the "#" in front of one "kit=" line) before the first boot, on any
+# computer: this file is on the SD card's FAT partition. At the next boot zynthian-kit-boot sets
+# the kit up (sound card, display, encoders and switches) and reboots once.
+# Without an entry: HDMI and the Pi's onboard audio.
+#
+# The kits (zynthian-sys): Custom_pi5 Custom MINI_V2 V1 V2 V4 V5_pi5 V5 Z2 
+#
+# kit=V4      zynthian V4: ZynScreen 3.5" SPI panel, HifiBerry DAC+ADC Pro, MCP23017 encoders
+# kit=V5      zynthian V5 (on a Pi 4: the V5_pi5 kit is for the Pi 5, not supported yet)
+#
+# Changing the kit later: edit this line again, or run "zynthian-kit <KIT>" on the device.

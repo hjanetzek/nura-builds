@@ -5,4 +5,6 @@ for g in gpio i2c spi; do
 done
 # The kit's overlays: written by the kit setup, so not a file of this package
 [ -e /boot/zynthian-kit.txt ] || cp /usr/share/device-zynthian-rpi4/zynthian-kit.txt /boot/zynthian-kit.txt
+# The kit choice for zynthian-kit-boot (zynthian-hw), edited by the user on the FAT partition
+[ -e /boot/zynthian.txt ] || cp /usr/share/device-zynthian-rpi4/zynthian.txt /boot/zynthian.txt
 exit 0
