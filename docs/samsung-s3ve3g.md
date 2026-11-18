@@ -515,11 +515,12 @@ s3ve3g-zynthian - waited for that probe at every boot, so it is blacklisted
 |---|---|---|---|---|
 | before (zynthian after s3ve3g-screen-off "after local", plymouth waited for) | 15.2-20.5 s | 15.4-20.7 s | 18.6-23.8 s | 35 / 40 s |
 | zynthian before the network services, plymouth told to quit | 17.6-17.9 s | 18.3-18.6 s | 20.2-20.7 s | 37 s |
-| plus qcom_smgr blacklisted | 12.9-13.2 s | 13.6-13.9 s | 15.5-15.9 s | **32-33 s** |
+| plus qcom_smgr blacklisted | 12.9-13.2 s | 13.6-13.9 s | 15.5-15.9 s | 32-33 s |
+| plus zynthian-ui main 4f33b58c (lazy imports, deferred QML) | 12.9-13.1 s | 13.5-13.7 s | 15.5-15.6 s | **26-27 s** |
 
 The rest: the initramfs until the switch root ~7.7 s (stage 1 -> 2 ~2.9 s, a kernel warning banner
-at ~4 s, ~2.3 s before the e2fsck), and zynthian's own cold start (~16.5 s from the process start
-to the first frame after a boot vs ~9 s on a service restart: cold page cache). The first-frame
+at ~4 s, ~2.3 s before the e2fsck), and zynthian's own cold start (from the process start to the first frame after a boot: ~16.5 s
+before, ~10.5-11 s with 4f33b58c; on a service restart ~9 s before: cold page cache). The first-frame
 marker (`/tmp/runtime-<user>/zynthian-first-frame`) survives a reboot here (/tmp isn't a tmpfs):
 compare its mtime with the boot time.
 
