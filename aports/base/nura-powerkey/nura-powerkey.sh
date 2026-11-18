@@ -54,16 +54,25 @@ bl=${BACKLIGHT:-$(ls -d /sys/class/backlight/* 2>/dev/null | head -n 1)}
 ev=/dev/input/$(basename "$key"/event*)
 logger -t nura-powerkey "key $(cat "$key/name") ($ev), backlight $bl, touch: $(for t in $touch; do cat "$t/name"; done | tr '\n' ',')"
 
-screen() {	# on|off
+screen() {	# on|off (the loop variable isn't t: that's the event offset below)
 	if [ "$1" = off ]; then
-		for t in $touch; do echo 1 > "$t/inhibited"; done
+		for d in $touch; do echo 1 > "$d/inhibited"; done
 		echo 4 > "$bl/bl_power"
 	else
 		echo 0 > "$bl/bl_power"
-		for t in $touch; do echo 0 > "$t/inhibited"; done
+		for d in $touch; do echo 0 > "$d/inhibited"; done
 	fi
 	logger -t nura-powerkey "screen $1"
 }
+
+# Screen on at start (a restart of this handler, or the compositor or a session restart switched
+# the backlight on behind it): the touchscreen must not stay inhibited from an earlier "off"
+if [ "$(cat "$bl/bl_power")" = 0 ]; then
+	for d in $touch; do
+		[ "$(cat "$d/inhibited" 2>/dev/null)" = 1 ] && echo 0 > "$d/inhibited" &&
+			logger -t nura-powerkey "screen on at start: $(cat "$d/name") no longer inhibited"
+	done
+fi
 
 # struct input_event: struct timeval (2 longs), u16 type, u16 code, s32 value: 24 bytes on 64-bit,
 # 16 on 32-bit; read as u16 words: type, code and the low half of value follow the time

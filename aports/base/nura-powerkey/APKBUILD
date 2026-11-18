@@ -5,7 +5,7 @@
 # /etc/default/nura-powerkey (POWERKEY_NAME, TOUCH_NAMES, BACKLIGHT).
 pkgname=nura-powerkey
 pkgver=1
-pkgrel=1
+pkgrel=2
 pkgdesc="Power key switches the screen (backlight and touchscreen)"
 url="https://github.com/hjanetzek/nura-builds"
 arch="noarch"
@@ -44,7 +44,7 @@ _openrc() {
 	install -Dm644 "$srcdir"/50-nura-powerkey.conf -t "$subpkgdir"/etc/elogind/logind.conf.d/
 }
 sha512sums="
-cb8394681042f1171b6621561070501ef68fd7447c3149791c188ca4928442bddd8194e3bd93c18a0db3128970d610312cc65ce26632cb20ee334c42b8897ced  nura-powerkey.sh
+fa6aa82e38b2776abdff5cef9c400b4b009c2be2b6cf89f1534bba3adde9ae811c323d38f93a7d135f5a4888d5ae772c7645146e4a35750cbf63bad018a3e4f3  nura-powerkey.sh
 11b3237e8c5ec19c46336daa98c5aff6eccc8ab06f550dec9c6534291248a2fe0847ea755573d83f5fc1699edbbb3aea6b8101099a9ee9a8c42b32f3ba74df32  nura-powerkey.service
 c5edaa74c351c9bd563bc1777dce5af737a8cdc65f1e9c09761e1caf4b7f95feecf99753aaabb45747af734f31b0d9daa657bcd97a2ff6f7840b5c97c9f21db5  nura-powerkey.initd
 5b7f1d31bf849a6bfec5c630b253c09bae2a67d5ac31ba7ab1aabe97493da8991b6a1d05db1b0272f66bc2dd333f5a3634a967b9711f883025b89e89cb5f0af3  50-nura-powerkey.conf
