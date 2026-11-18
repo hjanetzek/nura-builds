@@ -11,7 +11,8 @@ KEEPGOING=1
 # 2026-11-18: also the plugins under 10 MB (aarch64) whose recipes allow armv7 and that aren't JUCE
 # builds (JUCE ones take long on armv7 and are too heavy for the S III): mod-mda, geonkick,
 # mod-utilities, guitarix, pd-cyclone, mod-pitchshifter, and zynaddsubfx (one of zynthian's own
-# engines).
+# engines). Also Helm and DISTRHO's ports (OB-Xd, TAL, ...), JUCE builds but used by many factory
+# snapshots (a try: heavy on the S III's CPU).
 PACKAGES_armv7="zynthian-jalv drivenbymoss zynaddsubfx aeolus sooperlooper libgig puredata fluid-soundfont linuxsampler setbfree
 	abgate-lv2 aether-lv2 aida-x-lv2 ams-lv2 artyfx-lv2 avldrums-lv2 bolliedelay-lv2 chow-centaur-lv2
 	dexed-lv2 dpf-plugins-lv2 dragonfly-reverb-lv2 eq10q-lv2 fabla-lv2 foo-yc20-lv2 granulator-lv2
@@ -21,5 +22,5 @@ PACKAGES_armv7="zynthian-jalv drivenbymoss zynaddsubfx aeolus sooperlooper libgi
 	synthv1-lv2 talentedhack-lv2 triceratops-lv2 ykchorus-lv2 zynmi-lv2 pd-abl-link pd-clocker
 	pd-freeverb pd-ggee pd-grids pd-hcs pd-iemlib pd-midifile pd-osc pd-plaits pd-tb-peakcomp
 	pd-unauthorized pd-cyclone mod-mda-lv2 geonkick-lv2 mod-utilities-lv2 guitarix-lv2
-	mod-pitchshifter-lv2"
-ADD_ARCH_armv7="aports/lv2/aida-x-lv2 aports/lv2/chow-centaur-lv2 aports/lv2/neural-amp-modeler-lv2 aports/lv2/ratatouille-lv2"
+	mod-pitchshifter-lv2 helm-lv2 distrho-ports-lv2"
+ADD_ARCH_armv7="aports/lv2/helm-lv2 aports/lv2/aida-x-lv2 aports/lv2/chow-centaur-lv2 aports/lv2/neural-amp-modeler-lv2 aports/lv2/ratatouille-lv2"
