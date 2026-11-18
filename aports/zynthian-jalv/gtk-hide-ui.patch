@@ -1,4 +1,4 @@
-From 8b3bd08bd852f49079ecd45da8524da16639cf9b Mon Sep 17 00:00:00 2001
+From 2a64e20cad51f54317fd7034ab48bc28d0065d97 Mon Sep 17 00:00:00 2001
 From: Hannes Janetzek <hannes.janetzek@gmail.com>
 Date: Sat, 7 Nov 2026 12:45:25 +0100
 Subject: [PATCH] GTK: start with the UI window hidden, show/hide it by command
@@ -39,10 +39,10 @@ index 6202fee..8a36825 100644
  void update_ui_title(Jalv* jalv);
  void update_ui_presets(Jalv* jalv);
 diff --git a/src/jalv.c b/src/jalv.c
-index 6197f43..366ffa1 100644
+index e6a4809..9d56cd0 100644
 --- a/src/jalv.c
 +++ b/src/jalv.c
-@@ -1828,6 +1828,12 @@ jalv_process_command(Jalv* jalv, const char* cmd)
+@@ -1836,6 +1836,12 @@ jalv_process_command(Jalv* jalv, const char* cmd)
    } else if (strncmp(cmd, "bypass ", 7) == 0) {
    		matches = sscanf(cmd + 7,"%n%f", &index, &value);
        jalv->bypass = value ? 2 : 3;
@@ -55,7 +55,7 @@ index 6197f43..366ffa1 100644
      } else if (strcmp(cmd, "help\n") == 0) {
  		fprintf(stdout,
  		        "Commands:\n"
-@@ -1842,6 +1848,8 @@ jalv_process_command(Jalv* jalv, const char* cmd)
+@@ -1850,6 +1856,8 @@ jalv_process_command(Jalv* jalv, const char* cmd)
  		        "                    Save preset (BANK_URI is optional)\n"
  		        "  set INDEX VALUE   Set control value by port index\n"
  		        "  set SYMBOL VALUE  Set control value by symbol\n"
@@ -65,10 +65,10 @@ index 6197f43..366ffa1 100644
  	} else if (strcmp(cmd, "\n") == 0) {
  		// Prompt again if just pressed enter
 diff --git a/src/jalv_console.c b/src/jalv_console.c
-index c7c478f..5e98530 100644
+index 029c6aa..619da9c 100644
 --- a/src/jalv_console.c
 +++ b/src/jalv_console.c
-@@ -271,6 +271,12 @@ jalv_frontend_close(Jalv* jalv)
+@@ -279,6 +279,12 @@ jalv_frontend_close(Jalv* jalv)
    return 0;
  }
  
