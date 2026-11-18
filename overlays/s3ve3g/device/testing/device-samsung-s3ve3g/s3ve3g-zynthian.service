@@ -8,7 +8,10 @@ ConditionPathExists=/usr/sbin/zynthian
 [Service]
 User=10000
 PAMName=login
-Environment=XDG_RUNTIME_DIR=/tmp/runtime-10000
+Environment=XDG_RUNTIME_DIR=/run/zynthian-runtime
+# zynthian writes its first-frame marker there
+RuntimeDirectory=zynthian-runtime
+RuntimeDirectoryMode=0700
 LimitRTPRIO=95
 LimitMEMLOCK=infinity
 # s3ve3g-screen-off blanked the screen after boot

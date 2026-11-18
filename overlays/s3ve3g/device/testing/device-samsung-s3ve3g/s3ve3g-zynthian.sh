@@ -85,6 +85,22 @@ if pgrep -x jackd >/dev/null && jack_failed; then
 	sleep 2
 fi
 
+# Until the new jackd serves clients (its socket in /dev/shm and, with the ALSA driver, the driver
+# configured: "ALSA: use N periods for playback" in its log) or its driver failed, at most 5 s;
+# instead of a fixed 3 s (Alpine's jack has no jack_wait: no example clients)
+jack_wait_ready() {
+	local i=0 sock="/dev/shm/jack_default_$(id -u)_0"
+	while [ $i -lt 50 ]; do
+		jack_failed && return
+		if [ -S "$sock" ] && pgrep -x jackd >/dev/null; then
+			grep -q "ALSA: use .* periods for playback" /tmp/jackd.log 2>/dev/null && return
+			grep -q "creating alsa driver" /tmp/jackd.log 2>/dev/null || return   # the dummy driver
+		fi
+		sleep 0.1
+		i=$((i + 1))
+	done
+}
+
 try=0
 while ! pgrep -x jackd >/dev/null; do
 	try=$((try + 1))
@@ -98,7 +114,7 @@ while ! pgrep -x jackd >/dev/null; do
 	else
 		jackd -R -d dummy -r48000 "-p$period" > /tmp/jackd.log 2>&1 &
 	fi
-	sleep 3   # (no jack_wait: Alpine's jack has no example clients)
+	jack_wait_ready
 	if jack_failed; then
 		echo "jackd's driver didn't start (try $try), starting it again" >&2
 		for p in $(pgrep -x jackd); do kill "$p"; done

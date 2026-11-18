@@ -31,6 +31,8 @@ start_pre() {
 	home=$(getent passwd "$ZYNTHIAN_USER" | cut -d: -f6)
 	export HOME="$home" USER="$ZYNTHIAN_USER" LOGNAME="$ZYNTHIAN_USER"
 	export XDG_RUNTIME_DIR="/tmp/runtime-$ZYNTHIAN_USER"
+	# zynthian writes its first-frame marker there (and Qt complains without it)
+	checkpath -d -m 0700 -o "$ZYNTHIAN_USER" "$XDG_RUNTIME_DIR"
 	# s3ve3g-screen-off blanked it after boot (burn-in protection while nothing is shown)
 	/usr/bin/s3ve3g-screen on || true
 }
