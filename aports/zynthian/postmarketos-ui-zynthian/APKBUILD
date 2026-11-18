@@ -1,7 +1,7 @@
 # Kiosk UI for postmarketOS/Nura: boots straight into zynthian (cage, XWayland, PipeWire).
 pkgname=postmarketos-ui-zynthian
 pkgver=1
-pkgrel=27
+pkgrel=28
 pkgdesc="zynthian synthesizer platform as a kiosk (Wayland, cage)"
 arch="noarch"
 url="https://github.com/zynthian/zynthian-ui"
@@ -57,6 +57,7 @@ source="
 	zynthian-fb
 	zynthian-fb.desktop
 	50-zynthian-realtime.conf
+	zynthian-user-realtime.conf
 	zynthian-xwayland.sh
 	xwayland-noglamor
 	kiosk-session
@@ -72,6 +73,10 @@ package() {
 	install -Dm644 "$srcdir"/zynthian-session.sh -t "$pkgdir"/usr/libexec/zynthian/
 	install -Dm644 "$srcdir"/50-zynthian-realtime.conf \
 		-t "$pkgdir"/usr/lib/systemd/system/tinydm.service.d/
+	# PipeWire and WirePlumber run under the user manager: its real-time limits (55-: beside the
+	# Pi's device package's 50-zynthian-realtime.conf, same content)
+	install -Dm644 "$srcdir"/zynthian-user-realtime.conf \
+		"$pkgdir"/usr/lib/systemd/system/user@.service.d/55-zynthian-realtime.conf
 	# XWayland without glamor on Panfrost (set before cage starts, see zynthian-xwayland.sh)
 	install -Dm644 "$srcdir"/zynthian-xwayland.sh \
 		"$pkgdir"/usr/share/tinydm/env-wayland.d/60-zynthian-xwayland.sh
@@ -112,6 +117,7 @@ da7d4a21071584653c39352c0d6065587ee311a108347afea002e8b7480a87d79a8e9c111f5e16c5
 8e17a090fe5f98455e0e67e301668a2767aca9aae652eab7e78c3d79be0c8bfc303c0d2ec1b34c713754358f768aa295a12550b697c0b88218a74ebe397a11a7  zynthian-fb
 7f821125cc05ecf02308609b7dd0ce38efe7c0e833823168bfd3d3225f71269995ff3228d9a12ec9e2cef489b7e248ca447b3cf04ac57f917ed18f3da48ffc9d  zynthian-fb.desktop
 af9d55c4a9f2e4db40effe75dc6b01811a22778865e7792c00a30f5ba2e737c2930c688f6ede9e5751ea05f4a4c8e0354811b214cc0394bfc41b35be785a4449  50-zynthian-realtime.conf
+e248ad2601d36a0e6f32ace63fdc071057ec83a8307fb6fb69d35ec410161c65a89107cd213104c27c5d4b070370122ea21160aa8c547b26315c0a58059dcd97  zynthian-user-realtime.conf
 9429e540ad1d01dc4eb04db3ee626323f5e9fa0992ca2d515908732d57d6aca38f60475efd9e0057b4e7aa900dfbcb93f054798b4b66600ba1a081442cf6e025  zynthian-xwayland.sh
 c87b65ee5b9a3154fcdcb0e4004b439e1c1b13c98aefc144e149a51d5d6f08aae23cbd76ae455008d0cb3c18a9fb015feedd34cb2a53e39bd775ad232686957a  xwayland-noglamor
 54b81ed0de1eed3956e63ed961d035b4e018cae5df82d0851bd25bb32cf3e27d5e49bacdcf7179d4068c35ab5cb06b70f52f459d4ef011a797a5cdcc5dc0018f  kiosk-session
