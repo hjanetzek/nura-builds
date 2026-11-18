@@ -9,12 +9,29 @@ set -eu
 
 conf=/boot/zynthian.txt
 state=/var/lib/zynthian-kit/applied
-[ -f "$conf" ] || exit 0
+
+# The first boot of an image grows the root partition (device-zynthian-rpi4 puts
+# pmos.force-partition-resize in this file at install); once it has, the option goes, or the
+# initramfs checks and resizes at every boot. cmdline.txt is written again by mkinitfs below (by
+# zynthian-kit's when the kit changes boot settings, else here)
+first_boot=/etc/kernel-cmdline.d/10-zynthian-first-boot.conf
+regen=0
+if [ -e "$first_boot" ]; then
+	rm -f "$first_boot"
+	regen=1
+fi
+regen_cmdline() {
+	[ $regen = 1 ] || return 0
+	echo "zynthian-kit-boot: first boot done, partition resize removed from the kernel command line"
+	mkinitfs >/dev/null
+}
+
+[ -f "$conf" ] || { regen_cmdline; exit 0; }
 kit=$(sed -n 's/^[[:space:]]*kit[[:space:]]*=[[:space:]]*\([A-Za-z0-9_.-]*\).*/\1/p' "$conf" | tail -n 1)
-[ -n "$kit" ] || exit 0
+[ -n "$kit" ] || { regen_cmdline; exit 0; }
 # Applied again when the kit or zynthian-kit changed (an update that sets more, e.g. the Qt theme)
 applied="$kit $(md5sum /usr/bin/zynthian-kit 2>/dev/null | cut -d' ' -f1)"
-[ "$(cat "$state" 2>/dev/null)" != "$applied" ] || exit 0
+[ "$(cat "$state" 2>/dev/null)" != "$applied" ] || { regen_cmdline; exit 0; }
 
 user=$(getent passwd 10000 | cut -d: -f1)
 [ -n "$user" ] || { echo "zynthian-kit-boot: no device user (uid 10000)" >&2; exit 1; }
@@ -22,6 +39,7 @@ home=$(getent passwd "$user" | cut -d: -f6)
 echo "zynthian-kit-boot: kit $kit for $user (from $conf)"
 out=$(runuser -u "$user" -- env HOME="$home" USER="$user" LOGNAME="$user" zynthian-kit "$kit" 2>&1) || {
 	printf '%s\n' "$out" >&2
+	regen_cmdline
 	exit 1
 }
 printf '%s\n' "$out"
@@ -29,6 +47,9 @@ mkdir -p "${state%/*}"
 echo "$applied" > "$state"
 case $out in
 	*"boot settings changed"*)
+		# zynthian-kit's mkinitfs wrote cmdline.txt without the resize option too
 		echo "zynthian-kit-boot: rebooting for the kit's boot settings"
 		systemctl --no-block reboot ;;
+	*)
+		regen_cmdline ;;
 esac

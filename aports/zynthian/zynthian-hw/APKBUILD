@@ -6,7 +6,7 @@
 # what zynthian does as root on ZynthianOS (a first step). Plan: nura-builds docs/zynthian-rpi.md.
 pkgname=zynthian-hw
 pkgver=1
-pkgrel=6
+pkgrel=7
 pkgdesc="zynthian hardware support: kit selection, zyncoder for the kits"
 url="https://github.com/hjanetzek/zynthian-ui"
 arch="aarch64"
@@ -36,7 +36,7 @@ package() {
 }
 sha512sums="
 6ddb8246556f75eab2bf88b19c1f2c35c8e6ac41512e933be66c98fba6bc7a0283ea51465a8ba8988ef7263f329d5d20a8cd9c19a2aa83d6f750786a8abb7eff  zynthian-kit
-08f8f40b664ef065482d5b422c4251176a5d8cbcd0f87887630d937abdfee8ecf76bddf6d6ccffa8e38ef7d40252f53641000069031b84ffe0f1f322581327c8  zynthian-kit-boot
+eabce5dacbcbe758063aa6b3d93f47b9dffeb981f23999457db3cbad89c8b77014a864589b3b1347123448c20c1c0b48a1922e55f6f0b292cf1e51a4fd039afc  zynthian-kit-boot
 97e0c1a845d6a0b5eac1d3ed52b94c9b27c38381e179c86f6585eff45de0ef6a522c4ac3674afb9accba865122e67208d6e455dfd6aaa2c5318cab5c80eb5805  zynthian-kit-boot.service
 f7e3144d4366d2f0805a69b61803e44d42176b34970af57961a7c1b031aa94584f8e0bafc3ba9fff76f13cc3633a20ba61a3030622ff861265b5e70f66662b5c  sudoers
 "
