@@ -20,13 +20,17 @@
 # - fast-exit.patch: after SIGTERM stop audio, worker, UI and plugin, then _exit() without freeing
 #   the LV2 world (most of Helm's/Dexed's exit); a preset's file is parsed before the command lock,
 #   so a stop doesn't wait for it (Helm/Dexed: seconds on a Pi); the exit gives up after 2 s with
-#   status 3 if the plugin is stuck in run().
+#   status 3 if the plugin is stuck in run();
+# - gtk-lazy-ui.patch: with -H, the plugin UI is instantiated when the window is shown and freed
+#   when it is hidden, and the UI update timer runs only while it is shown: hidden JUCE UIs kept
+#   their timers and repaints going (8 hidden KR-106 GUIs: ~2.5 cores on the Duet, against ~0.6
+#   core of DSP); SIGTERM is handled in the GTK main loop.
 # From a local checkout:
 #   pmbootstrap build --src=/path/to/jalv zynthian-jalv
 pkgname=zynthian-jalv
 _commit=e01b6d64651d451107640b1a502e06c9ec10e353
 pkgver=1.12.1_git20260330
-pkgrel=4
+pkgrel=5
 pkgdesc="zynthian's jalv: LV2 host with the asynchronous command line zynthian uses"
 url="https://github.com/zynthian/jalv"
 arch="aarch64 armv7 x86_64"
@@ -50,6 +54,7 @@ source="$pkgname-$_commit.tar.gz::https://github.com/zynthian/jalv/archive/$_com
 	exit-fixes.patch
 	gtk-hide-ui.patch
 	fast-exit.patch
+	gtk-lazy-ui.patch
 	"
 builddir="$srcdir/jalv-$_commit"
 
@@ -80,6 +85,7 @@ sha512sums="
 94d0935959fa86bcb06311e60446d07b170872c870a8d107e9ec1469e89f40c9fe63028f05e6199ce0fac3d1cf2ed19a18906faae14c234a2d72b4ffef515301  zynthian-jalv-e01b6d64651d451107640b1a502e06c9ec10e353.tar.gz
 5dfccb1198ebc82600f4f819293d727c5e607228608a41587b52cbf314cfda418cf66ee39908c7a08d4e44df806e73f200a553e17a6fb5aa24e1d879ee6bdfb6  bundle-list.patch
 e4dc911a7123b1ec85dcb798dbb926b0466b9f06f8269ac4fe570adc7a3beddd7f0ff9255f155102a703d90b8fcf418ba9ea5f93438767ef204bac3fa2dc378f  exit-fixes.patch
-4575c313f2ffc63ecbc18c1bcbd177e78fc2315c5d0bea985dd54f739191244f02819b54c8d8247d197653d3be537fe7123676924491e526e662c4f3c7d402d7  gtk-hide-ui.patch
-aee60e129db9e6d4c12c2347b016cce0bd92a1e6b8276127a88854da034c06106c119e2885840af2de263e4ac6ed5012f94dd4f17188bd6fe17694cb4bc0aad6  fast-exit.patch
+e0237e62784fe07498398da6fb77739b7e5060d92ef7f370542b9d6d3ce59a269b1e12886ff9dc0afe1fc078b96e7571c5063419cb2489fcfe6a6bd0e47902bf  gtk-hide-ui.patch
+4ad669b4cc48417a32e22e9241d3443d64e95f840659b232828df977d036fe1c7c30bf2a8d8af2c85dbcef301ec97f177e00c3c57a3870d93f87fd213d46da53  fast-exit.patch
+a80c8040b589758ae0fe655e68925b25a2b43be9d34d639de9ef68a487f9fc89689911a8ab040f19494cc28c83bf5fba35b7635b6af8dc43c79541b774824847  gtk-lazy-ui.patch
 "
