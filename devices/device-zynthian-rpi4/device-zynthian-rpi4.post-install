@@ -16,4 +16,12 @@ mkdir -p /etc/plymouth
 # back to the SPI panel only after plymouth had been told to quit (0 itself makes plymouthd abort)
 grep -q '^\[Daemon\]' "$conf" 2>/dev/null || printf '[Daemon]\n' >> "$conf"
 sed -i '/^Theme=/d; /^DeviceTimeout=/d; /^\[Daemon\]/a Theme=zynloganim\nDeviceTimeout=0.1' "$conf"
+# The first boot grows the root partition to the whole SD card: postmarketOS' initramfs does that only
+# with pmos.force-partition-resize on the kernel command line, and then at every boot (resize2fs
+# "Nothing to do!", ~1 s on a Pi 4). Only on a fresh install (the image build): zynthian-kit-boot
+# (zynthian-hw) removes the file on the first boot, before its mkinitfs writes cmdline.txt again
+mkdir -p /etc/kernel-cmdline.d
+[ -e /var/lib/zynthian-kit/applied ] ||
+	printf '%s\n' "# zynthian: the first boot grows the root partition; removed by zynthian-kit-boot" \
+		pmos.force-partition-resize > /etc/kernel-cmdline.d/10-zynthian-first-boot.conf
 exit 0
