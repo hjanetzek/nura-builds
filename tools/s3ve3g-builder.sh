@@ -16,8 +16,8 @@
 # PHONE (default jeff@172.16.42.1), KNOWN_HOSTS (the phone's ssh known_hosts file).
 # The VM (agents: own directory and ports, headless, see zynthian-ui's docs/qemu-testing.md):
 #   cd ~/bastel/github/zynthian-ui
-#   nura/tools/run_qemu.sh -d ~/.cache/nura-builds-builder -s 32G -m 8G -c 16 -D none -A none \
-#           -p 2240 -w 8100 < /dev/null > ~/.cache/nura-builds-builder/run.log 2>&1 &
+#   nura/tools/run_qemu.sh -d /mnt/ssd860/qemu/nura-builds-builder -s 32G -m 8G -c 16 -D none -A none \
+#           -p 2240 -w 8100 < /dev/null > /mnt/ssd860/qemu/nura-builds-builder/run.log 2>&1 &
 #   nura/tools/qemu_setup.sh -p 2240
 set -eu
 
