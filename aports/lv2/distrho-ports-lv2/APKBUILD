@@ -11,7 +11,7 @@ pkgname=distrho-ports-lv2
 _commit=d3b62da2e83c69b0866af5bb2e29ac78dc8014cf
 _juce5=d1a2d5908202f2529886e07c3e65118c821cba98
 pkgver=0_git20250914
-pkgrel=2
+pkgrel=3
 pkgdesc="DISTRHO-Ports JUCE plugins as on ZynthianOS (LV2, no GUIs)"
 url="https://github.com/DISTRHO/DISTRHO-Ports"
 arch="all"
@@ -40,6 +40,11 @@ prepare() {
 		$m/system/juce_SystemStats.cpp
 	# static_cast<char>(NULL): NULL is nullptr in C++ on musl
 	sed -i 's/static_cast<char>(NULL)/static_cast<char>(0)/' libs/juced/source/audio/osc/*.cpp
+	# scripts/generate-lv2.sh runs each plugin to write its TTL, through qemu-arm-static unless
+	# uname -m is arm or armv7l: an armv7 build on an aarch64 kernel (the CI's arm64 runners)
+	# reports armv8l or aarch64 and runs 32-bit ARM binaries itself
+	sed -i 's/\[ "$(uname -m)" != "armv7l" \]/& \&\& [ "$(uname -m)" != "armv8l" ] \&\& [ "$(uname -m)" != "aarch64" ]/' \
+		scripts/generate-lv2.sh
 }
 
 _plugins="arctican-function,arctican-pilgrim,drowaudio-distortion,drowaudio-distortionshaper,drowaudio-flanger,drowaudio-reverb,drowaudio-tremolo,easySSP,eqinox,LUFSMeter,LUFSMeter-Multi,luftikus,obxd,pitchedDelay,refine,stereosourceseparation,tal-dub-3,tal-filter,tal-filter-2,tal-noisemaker,tal-reverb,tal-reverb-2,tal-reverb-3,tal-vocoder-2,temper,vex,wolpertinger"
