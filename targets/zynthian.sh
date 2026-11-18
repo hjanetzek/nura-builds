@@ -5,14 +5,13 @@
 REPOS="
 zynthian-ui https://github.com/hjanetzek/zynthian-ui main nura
 zyncoder    https://github.com/hjanetzek/zyncoder    nura -
-drivenbymoss-rust https://github.com/hjanetzek/drivenbymoss-rust main nura
 zynthian-packages https://github.com/hjanetzek/zynthian-packages nura nura
 zynthian-webconf https://github.com/hjanetzek/zynthian-webconf nura nura
 "
 
 # Stages, built in this order; each one a list of pmbootstrap build arguments, separated by ";".
 # @<repo> stands for the checkout of a repository (for --src builds). Only the target's own
-# packages: Qt, PySide, the plugins and engines, zynthian-jalv and Mesa are package sets (sets/,
+# packages: Qt, PySide, the plugins and engines, zynthian-jalv, drivenbymoss and Mesa are package sets (sets/,
 # workflow sets.yml), published to the package repository, which every target build starts from
 # (scripts/fetch-released.sh, docs/ci-plan.md). The kiosk package depends on the plugin meta
 # packages (zynthian-lv2-plugins, zynthian-puredata) from there. The instruments with large data
@@ -25,7 +24,7 @@ STAGES="zynthian upstream"
 # the distfiles cache first. DrivenByMoss (its zynthian controller drivers, the NI Maschine Mk2/JAM
 # support in zynthian's process included) from its checkout too, first (no dependency on the others;
 # the Rust build fails early); its recipe fetches the Rust crates itself. The kiosk package depends on it.
-STAGE_zynthian="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
+STAGE_zynthian="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
 SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
 # aarch64: also the zynthian kits' hardware (Raspberry Pi 4, docs/zynthian-rpi.md): zyncoder-hw (the
 # kits' builds of zyncore, from the zyncoder checkout) and zynthian-hw (zynthian-kit, the kit setup)
@@ -64,7 +63,7 @@ DEVICES_x86_64="qemu-amd64"
 # zynthian-ui installed, for bringing up the device.
 # Overrides: <VAR>_<arch> (common.sh: STAGES, UI, IMAGE_PACKAGES; STAGE_<stage>_<arch>).
 STAGES_armv7="zynthian"
-STAGE_zynthian_armv7="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
+STAGE_zynthian_armv7="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none
 IMAGE_PACKAGES_armv7="zynthian-ui"
 # Device: the generic mainline MSM8226 port (pmaports device/testing, linux-postmarketos-qcom-msm8226
@@ -73,4 +72,4 @@ IMAGE_PACKAGES_armv7="zynthian-ui"
 DEVICES_armv7="qcom-msm8226"
 # Recipes of the other repositories whose arch= lacks armv7 (aarch64 x86_64): setup.sh adds it in
 # the checkouts until the recipes list armv7 themselves
-ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder @drivenbymoss-rust/nura/drivenbymoss"
+ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder"

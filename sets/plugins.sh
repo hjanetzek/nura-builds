@@ -8,7 +8,7 @@ KEEPGOING=1
 # package is smaller than 2 MB (the release "aarch64", 2026-11-13), not the meta packages
 # zynthian-lv2-plugins and zynthian-puredata, which depend on all of them. Not chow-kick-lv2:
 # xsimd's NEON code doesn't build for 32-bit ARM.
-PACKAGES_armv7="zynthian-jalv aeolus sooperlooper libgig puredata fluid-soundfont linuxsampler setbfree
+PACKAGES_armv7="zynthian-jalv drivenbymoss aeolus sooperlooper libgig puredata fluid-soundfont linuxsampler setbfree
 	abgate-lv2 aether-lv2 aida-x-lv2 ams-lv2 artyfx-lv2 avldrums-lv2 bolliedelay-lv2 chow-centaur-lv2
 	dexed-lv2 dpf-plugins-lv2 dragonfly-reverb-lv2 eq10q-lv2 fabla-lv2 foo-yc20-lv2 granulator-lv2
 	gula-plugins-lv2 gxplugins-lv2 infamous-lv2 invada-lv2 lv2-examples mimid-lv2 miniopl3-lv2

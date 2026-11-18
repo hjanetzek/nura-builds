@@ -7,7 +7,7 @@ Targets so far:
 
 | Target | What | Devices |
 |---|---|---|
-| `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, DrivenByMoss (drivenbymoss), zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 with a zynthian kit (`zynthian-rpi4`, to test: [docs/zynthian-rpi.md](docs/zynthian-rpi.md), [docs/rpi-plan.md](docs/rpi-plan.md)); QEMU (`qemu-amd64`); Samsung Galaxy S III Neo (`qcom-msm8226`, armv7) |
+| `zynthian` | zynthian with the Qt Quick UI: Qt 6.12, PySide6, zyncoder, zynthian-data, zynthian-ui, zynthian-packages (the content pack catalogue), zynthian-webconf, the kiosk package | Lenovo IdeaPad Duet (`google-kukui`); Raspberry Pi 4 with a zynthian kit (`zynthian-rpi4`, to test: [docs/zynthian-rpi.md](docs/zynthian-rpi.md), [docs/rpi-plan.md](docs/rpi-plan.md)); QEMU (`qemu-amd64`); Samsung Galaxy S III Neo (`qcom-msm8226`, armv7) |
 | `zrythm` | Zrythm (the DAW) in a labwc kiosk session: its libraries, zrythm from the checkout of `hjanetzek/zrythm` (`nura`), `postmarketos-ui-zrythm`; recipes in Zrythm's `tools/nura/` | Lenovo IdeaPad Duet (`google-kukui`), QEMU (`qemu-amd64`) |
 | (in `zynthian`) | zynthian-ui from upstream (`zynthian-ui-vangelis`, `zynthian-ui-tomita`): the Tk UI with the port patches, packages only, see [docs/zynthian-upstream.md](docs/zynthian-upstream.md) | as above |
 
