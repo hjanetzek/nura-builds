@@ -488,6 +488,41 @@ log. The screenshot reads the scanned-out buffer through DRM as root (GETFB2, ex
 and mapped; msm's GEM_INFO mmap offset is refused for another client's buffer on 7.3.4), so the
 application keeps DRM master. `--once` captures without the key. Started by hand, not a service.
 
+## Sensor hub and boot time to zynthian (2026-11-18)
+
+**Sensor hub (open):** the ADSP's sensor hub (Qualcomm Sensor Manager: on the S III Neo typically
+magnetometer, proximity and ambient light) doesn't work. `qcom_sns_reg` finds no registry
+(`Direct firmware load for qcom/sensors/sns.reg failed`), and `qcom_smgr`, which udev loads when
+the ADSP announces its sensor service (`qrtr:100:1`), waits ~6 s for the sensor list and fails
+(`Failed to get available sensors: -ETIMEDOUT`). `udev-settle` - and with it seatd and
+s3ve3g-zynthian - waited for that probe at every boot, so it is blacklisted
+(`/etc/modprobe.d/s3ve3g-no-smgr.conf`). Accelerometer and gyroscope don't need it
+(`inv_mpu6050` on I2C).
+- `sns.reg` is a per-device calibration/configuration registry: Android's sensors daemon builds it
+  from `/system/etc/sensors/sensor_def*.conf` at first start and keeps it in `/persist/sensors/`
+  or `/data/misc/sensors/`. This phone's `persist` partition has only `sensors/sensors_settings`
+  ("1"), `userdata` and `system` are gone (no file system); the boot.img and the TWRP image
+  (twrp-3.7.0_9-1-s3ve3g) have no sensor files either.
+- The way to try: the stock firmware (GT-I9301I) `system.img` -> `sensor_def*.conf`, then generate
+  the registry from it (replicate the sensors daemon's conversion, or run it once); then remove
+  the blacklist file.
+- Worth it for zynthian? Little (compass, proximity; maybe automatic brightness from the light
+  sensor).
+
+**Boot to zynthian** (first frame of zynthian after a reboot; 4 boots each, kernel r100 7.3.4):
+
+| | seatd | s3ve3g-zynthian | zynthian process | first frame |
+|---|---|---|---|---|
+| before (zynthian after s3ve3g-screen-off "after local", plymouth waited for) | 15.2-20.5 s | 15.4-20.7 s | 18.6-23.8 s | 35 / 40 s |
+| zynthian before the network services, plymouth told to quit | 17.6-17.9 s | 18.3-18.6 s | 20.2-20.7 s | 37 s |
+| plus qcom_smgr blacklisted | 12.9-13.2 s | 13.6-13.9 s | 15.5-15.9 s | **32-33 s** |
+
+The rest: the initramfs until the switch root ~7.7 s (stage 1 -> 2 ~2.9 s, a kernel warning banner
+at ~4 s, ~2.3 s before the e2fsck), and zynthian's own cold start (~16.5 s from the process start
+to the first frame after a boot vs ~9 s on a service restart: cold page cache). The first-frame
+marker (`/tmp/runtime-<user>/zynthian-first-frame`) survives a reboot here (/tmp isn't a tmpfs):
+compare its mtime with the boot time.
+
 ## Network over USB (2026-11-12)
 
 The phone's Wi-Fi gives about 550 KiB/s; the USB network (172.16.42.1 phone, 172.16.42.2 host)

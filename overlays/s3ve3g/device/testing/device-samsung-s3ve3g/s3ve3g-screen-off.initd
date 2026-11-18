@@ -4,8 +4,11 @@
 
 description="Screen off after boot"
 
+# Early, not "after local": s3ve3g-zynthian is ordered after this service (so this doesn't blank
+# zynthian), and with "after local" zynthian started only at the end of the boot runlevel (after
+# NetworkManager, wpa_supplicant, elogind, ...: 14 s after the kernel start)
 depend() {
-	after local
+	after udev
 }
 
 start() {

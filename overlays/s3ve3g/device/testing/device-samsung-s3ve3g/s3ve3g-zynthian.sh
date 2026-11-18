@@ -35,10 +35,15 @@
 # Logs: /tmp/zyn-eglfs.log, /tmp/jackd.log
 period=${JACK_PERIOD:-480}
 
-# The boot splash first: plymouthd keeps DRM master until it quits (up to 60 s)
+# The boot splash first: plymouthd keeps DRM master until it quits. Told to quit (keeping its last
+# picture until zynthian draws) instead of waiting for OpenRC to quit it at the end of the boot
+# (1.6 s on a boot); then waited for, at most 60 s
+if pgrep -x plymouthd >/dev/null; then
+	sudo -n plymouth quit --retain-splash >/dev/null 2>&1 || true
+fi
 i=0
-while pgrep -x plymouthd >/dev/null && [ $i -lt 120 ]; do
-	sleep 0.5; i=$((i + 1))
+while pgrep -x plymouthd >/dev/null && [ $i -lt 600 ]; do
+	sleep 0.1; i=$((i + 1))
 done
 
 # A running zynthian: the launchers first (process name zynthian_deskto), then zynthian itself

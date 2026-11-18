@@ -16,6 +16,11 @@ command_user="$ZYNTHIAN_USER"
 depend() {
 	need seatd
 	after s3ve3g-screen-off s3ve3g-audio s3ve3g-powerkey udev-settle
+	# OpenRC starts the runlevel one service at a time: zynthian first, the services it doesn't
+	# need (network, time, ssh, ...) after it, while zynthian loads (it started 14 s after the
+	# kernel start, after NetworkManager, wpa_supplicant, routewrangler, ...)
+	before networkmanager wpa_supplicant unudhcpd unudhcpd.usb0 routewrangler chronyd sshd haveged rfkill
+	before sleep-inhibitor postmarketos-zram-swap swapfile zynthian-webconf
 }
 
 start_pre() {
