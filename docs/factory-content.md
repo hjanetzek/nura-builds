@@ -83,8 +83,8 @@ engine, plugin and referenced file):
 Tested 2026-11-08 on the Duet: all 15 factory snapshots load completely after
 `zynthian-factory-content` (every processor of the file there with its engine running and its
 preset loaded; 003, in the old layers format, with its 16 FluidR3 GM chains). The test is
-zynthian-ui's `nura/tools/test_factory_snapshots.py`, run in the running zynthian with
-`nura/tools/zyninject.sh -t 1500 test_factory_snapshots.py` (it restores the state afterwards).
+zynthian-ui's `tools/test_factory_snapshots.py`, run in the running zynthian with
+`tools/zyninject.sh -t 1500 test_factory_snapshots.py` (it restores the state afterwards).
 It needed two fixes of LinuxSampler's thread handling on musl (upstream-candidates.md).
 
 ## Maintenance

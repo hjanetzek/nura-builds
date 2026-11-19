@@ -57,7 +57,7 @@ IMAGE_KERNEL_zynthian_rpi4="rpi"
 # The user's password in the images: ZynthianOS' ("raspberry"), so zynthian owners can log in as they
 # are used to (the secret NURA_IMAGE_PASSWORD overrides it)
 IMAGE_PASSWORD="raspberry"
-# amd64: the QEMU virtual machine (zynthian-ui's run_qemu.sh, nura/tools/ or tools/), for testing on a desktop
+# amd64: the QEMU virtual machine (zynthian-ui's tools/run_qemu.sh), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
 # raspberry-pi4 is in pmaports' "downstream" category; add it here once tested
 
