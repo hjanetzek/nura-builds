@@ -582,7 +582,7 @@ KNOWN_HOSTS=... tools/s3ve3g-deploy.sh            # default packages: kernel, de
 ```
 
 Without sudo here: `tools/s3ve3g-builder.sh` runs pmbootstrap in a QEMU VM (zynthian-ui's
-`nura/tools/run_qemu.sh` and `qemu_setup.sh`, see the script's header: own directory, SSH port 2240,
+zynthian-ui's `tools/run_qemu.sh` and `qemu_setup.sh`, see the script's header: own directory, SSH port 2240,
 headless), with its own work dir and pmaports there, the overlays synced into it; sources already
 downloaded here are copied over (GitHub rate-limits tarball downloads from the VM):
 

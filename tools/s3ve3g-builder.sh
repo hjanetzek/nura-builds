@@ -1,6 +1,6 @@
 #!/bin/sh
-# Build the Samsung Galaxy S III Neo's packages in a QEMU VM (zynthian-ui's nura/tools/run_qemu.sh
-# with the Nura amd64 image, set up with nura/tools/qemu_setup.sh: key login, passwordless sudo),
+# Build the Samsung Galaxy S III Neo's packages in a QEMU VM (zynthian-ui's tools/run_qemu.sh
+# with the Nura amd64 image, set up with tools/qemu_setup.sh: key login, passwordless sudo),
 # so that builds need no sudo on this machine: pmbootstrap runs in the VM, with its own work dir
 # and the pmaports checkout at its default path, the overlays copied into it.
 #
@@ -16,9 +16,9 @@
 # PHONE (default jeff@172.16.42.1), KNOWN_HOSTS (the phone's ssh known_hosts file).
 # The VM (agents: own directory and ports, headless, see zynthian-ui's docs/qemu-testing.md):
 #   cd ~/bastel/github/zynthian-ui
-#   nura/tools/run_qemu.sh -d /mnt/ssd860/qemu/nura-builds-builder -s 32G -m 8G -c 16 -D none -A none \
+#   tools/run_qemu.sh -d /mnt/ssd860/qemu/nura-builds-builder -s 32G -m 8G -c 16 -D none -A none \
 #           -p 2240 -w 8100 < /dev/null > /mnt/ssd860/qemu/nura-builds-builder/run.log 2>&1 &
-#   nura/tools/qemu_setup.sh -p 2240
+#   tools/qemu_setup.sh -p 2240
 set -eu
 
 here=$(cd "$(dirname "$0")/.." && pwd)
