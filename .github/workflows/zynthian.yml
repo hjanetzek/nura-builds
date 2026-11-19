@@ -20,7 +20,7 @@ on:
     - cron: "0 9 * * 0"   # Sunday 09:00 UTC: armv7 (the S III Neo)
   push:
     branches: [main]
-    paths: ["targets/zynthian.sh", "aports/zynthian-upstream/**", ".github/workflows/zynthian.yml", ".github/workflows/build-target.yml"]
+    paths: ["targets/zynthian.sh", "aports/zynthian/**", "aports/zynthian-upstream/**", ".github/workflows/zynthian.yml", ".github/workflows/build-target.yml"]
 
 concurrency:
   group: zynthian-${{ github.ref }}-${{ inputs.arch || (github.event.schedule == '0 5 * * 0' && 'x86_64') || (github.event.schedule == '0 9 * * 0' && 'armv7') || 'aarch64' }}

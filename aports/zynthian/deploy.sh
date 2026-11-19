@@ -1,18 +1,20 @@
 #!/bin/sh
 # Build Nura packages and install them on a running device over SSH.
 #
-# Usage: deploy.sh [-c CONFIG] [-H HOST] [-P PORT] [-u USER] [-a ARCH] [-z ZYNCODER] [-j JALV] [-m DBM] [-W WEBCONF] [-k] [-n] [-S] [-r] [-d] PACKAGE...
+# Usage: deploy.sh [-c CONFIG] [-H HOST] [-P PORT] [-u USER] [-a ARCH] [-U ZYNTHIAN_UI] [-z ZYNCODER] [-j JALV] [-m DBM] [-W WEBCONF] [-k] [-n] [-S] [-r] [-d] PACKAGE...
 #   -c CONFIG    pmbootstrap config (default: ~/.config/pmbootstrap-zynthian.cfg)
 #   -H HOST      device address (default: <hostname from the config>.local, via avahi)
 #   -P PORT      SSH port on the device (default 22; the QEMU VM: -H 127.0.0.1 -P 2222 -a x86_64)
 #   -u USER      SSH user on the device (default: user from the config)
 #   -a ARCH      package architecture (default: aarch64)
+#   -U ZYNTHIAN_UI  zynthian-ui checkout for the zynthian-ui package (default: ../zynthian-ui next
+#                to this nura-builds checkout)
 #   -z ZYNCODER  zyncoder checkout for the zyncoder package (default: ../zyncoder next to
-#                this zynthian-ui checkout)
+#                this nura-builds checkout)
 #   -j JALV      zynthian's jalv checkout for the zynthian-jalv package (default: ../jalv next
-#                to this zynthian-ui checkout; without it, the APKBUILD's pinned tarball)
+#                to this nura-builds checkout; without it, the APKBUILD's pinned tarball)
 #   -m DBM       drivenbymoss-rust checkout for the drivenbymoss and dbm-nihost packages
-#                (default: ../drivenbymoss-rust next to this zynthian-ui checkout; its recipe
+#                (default: ../drivenbymoss-rust next to this nura-builds checkout; its recipe
 #                directory nura/ must be linked into pmaports, see README.md)
 #   -W WEBCONF   zynthian-webconf checkout (nura branch) for the zynthian-webconf package
 #                (default: ../zynthian-webconf-nura, else ../zynthian-webconf; its nura/ linked
@@ -27,14 +29,14 @@
 #   -d           dry run: print the commands instead of running them
 #
 # Examples:
-#   deploy.sh -r zynthian-ui                 # build zynthian-ui from this checkout, install, restart
+#   deploy.sh -r zynthian-ui                 # build zynthian-ui from its checkout, install, restart
 #   deploy.sh zyncoder zynthian-ui           # both checkouts
 #   deploy.sh postmarketos-ui-zynthian       # the kiosk package
 #   deploy.sh zyncoder-hw zynthian-hw        # zynthian kit support (Raspberry Pi), from ../zyncoder
 #   deploy.sh drivenbymoss dbm-nihost        # DrivenByMoss's zynthian drivers and the Maschine host
 #   deploy.sh zynthian-webconf               # the web configuration (http://<device>.local:8080)
 #
-# zynthian-ui is built from this checkout, zyncoder, zynthian-jalv, drivenbymoss and dbm-nihost from
+# zynthian-ui, zyncoder, zynthian-jalv, drivenbymoss and dbm-nihost from
 # their checkouts
 # (pmbootstrap build --src); other packages from their APKBUILDs. With zynthian-ui, its
 # dependencies zynthian-jalv and aeolus are built and installed too when no package of them exists
@@ -44,12 +46,15 @@
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
-checkout=$(cd "$here/.." && pwd)
-zyncoder=$(cd "$checkout/.." && pwd)/zyncoder
-jalv=$(cd "$checkout/.." && pwd)/jalv
-dbm=$(cd "$checkout/.." && pwd)/drivenbymoss-rust
-webconf=$(cd "$checkout/.." && pwd)/zynthian-webconf-nura
-[ -d "$webconf" ] || webconf=$(cd "$checkout/.." && pwd)/zynthian-webconf
+# aports/zynthian/ of nura-builds (the recipes moved here from zynthian-ui's nura/ on 2026-11-19);
+# the source checkouts are expected next to the nura-builds checkout
+siblings=$(cd "$here/../../.." && pwd)
+checkout=$siblings/zynthian-ui
+zyncoder=$siblings/zyncoder
+jalv=$siblings/jalv
+dbm=$siblings/drivenbymoss-rust
+webconf=$siblings/zynthian-webconf-nura
+[ -d "$webconf" ] || webconf=$siblings/zynthian-webconf
 cfg=$HOME/.config/pmbootstrap-zynthian.cfg
 host=
 port=22
@@ -63,13 +68,14 @@ installkey=
 
 usage() { sed -n '2,/^set -eu/{/^set -eu/d;s/^# \{0,1\}//;p}' "$0"; exit "${1:-0}"; }
 
-while getopts c:H:P:u:a:z:j:m:W:knSrdh opt; do
+while getopts c:H:P:u:a:U:z:j:m:W:knSrdh opt; do
 	case $opt in
 		c) cfg=$OPTARG ;;
 		H) host=$OPTARG ;;
 		P) port=$OPTARG ;;
 		u) user=$OPTARG ;;
 		a) arch=$OPTARG ;;
+		U) checkout=$OPTARG ;;
 		z) zyncoder=$OPTARG ;;
 		j) jalv=$OPTARG ;;
 		m) dbm=$OPTARG ;;

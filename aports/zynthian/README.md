@@ -1,5 +1,9 @@
 # zynthian on postmarketOS / Nura
 
+> These recipes and scripts lived in zynthian-ui's `nura/` until 2026-11-19 (history imported into
+> nura-builds' `aports/zynthian/`). The commands below still run from the zynthian-ui checkout, with
+> nura-builds next to it; `deploy.sh -U` takes another zynthian-ui checkout.
+
 Packages for building Nura (formerly postmarketOS) images that boot straight into zynthian,
 running as an application on PipeWire (`ZYNTHIAN_DESKTOP=1`, see `desktop/`), without
 ZynthianOS's system management. Same approach as the Kick port
@@ -57,7 +61,7 @@ Without it the help screen is disabled.
 `$SRCDEST` (the distfiles cache). Seed it once per work dir:
 
 ```sh
-nura/seed-distfiles.sh ~/.config/pmbootstrap-zynthian.cfg
+../nura-builds/aports/zynthian/seed-distfiles.sh ~/.config/pmbootstrap-zynthian.cfg
 ```
 
 (It needs sudo: the cache is owned by root.)
@@ -96,11 +100,11 @@ checkout (Zrythm's `tools/nura`) already provides Qt 6.12:
 
 ```sh
 pmbootstrap -c ~/.config/pmbootstrap-zynthian.cfg init
-ln -sfn "$PWD/nura" ~/.local/var/pmbootstrap/cache_git/pmaports/zynthian
+ln -sfn "$PWD/../nura-builds/aports/zynthian" ~/.local/var/pmbootstrap/cache_git/pmaports/zynthian
 for d in lv2 pd engines zynthian-jalv pyside6; do ln -sfn "$PWD/../nura-builds/aports/$d" ~/.local/var/pmbootstrap/cache_git/pmaports/nura-builds-$d; done
 ln -sfn "$PWD/../drivenbymoss-rust/nura" ~/.local/var/pmbootstrap/cache_git/pmaports/drivenbymoss   # optional: DrivenByMoss
 ln -sfn "$PWD/../zynthian-webconf-nura/nura" ~/.local/var/pmbootstrap/cache_git/pmaports/zynthian-webconf   # optional: webconf (nura branch)
-nura/seed-distfiles.sh ~/.config/pmbootstrap-zynthian.cfg
+../nura-builds/aports/zynthian/seed-distfiles.sh ~/.config/pmbootstrap-zynthian.cfg
 ```
 
 ## Build and install
@@ -119,7 +123,7 @@ With `--src`, pmbootstrap doesn't build missing dependencies ("Additional packag
 building"), and zynthian-ui depends on zyncoder and zynthian-data, hence the order. Build the
 `--src` packages before `install`, and the noarch packages with `--arch aarch64` (see the Kick
 README for why). DrivenByMoss's packages (its zynthian controller drivers and the Maschine host)
-come from a drivenbymoss-rust checkout: `nura/deploy.sh drivenbymoss dbm-nihost`. `--src` builds get the version `<pkgver base>_p<timestamp>`, so pmbootstrap
+come from a drivenbymoss-rust checkout: `../nura-builds/aports/zynthian/deploy.sh drivenbymoss dbm-nihost`. `--src` builds get the version `<pkgver base>_p<timestamp>`, so pmbootstrap
 warns that the local pmaports have another version; that is expected.
 
 Write the image. Replace `/dev/sdX` with the SD card or USB stick first (check with `lsblk`):
@@ -132,8 +136,8 @@ Update a running device (rebuilds from the checkouts, installs over SSH; `-r` re
 session):
 
 ```sh
-nura/deploy.sh -r zynthian-ui
-nura/deploy.sh -r zyncoder zynthian-ui
+../nura-builds/aports/zynthian/deploy.sh -r zynthian-ui
+../nura-builds/aports/zynthian/deploy.sh -r zyncoder zynthian-ui
 ```
 
 A device whose image was built with another pmbootstrap work dir (e.g. the Kick image) rejects
@@ -141,7 +145,7 @@ the packages with "UNTRUSTED signature": each work dir signs with its own key. A
 install this work dir's key on the device:
 
 ```sh
-nura/deploy.sh -k -n zyncoder zynthian-data zynthian-ui
+../nura-builds/aports/zynthian/deploy.sh -k -n zyncoder zynthian-data zynthian-ui
 ```
 
 ## Known issues

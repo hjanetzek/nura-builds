@@ -3,11 +3,15 @@
 # Source repositories: name, URL, branch (override with <NAME>_REF in the environment, e.g.
 # ZYNTHIAN_UI_REF=my-branch), recipe directory linked into pmaports ("-": none, sources only)
 REPOS="
-zynthian-ui https://github.com/hjanetzek/zynthian-ui main nura
+zynthian-ui https://github.com/hjanetzek/zynthian-ui main -
 zyncoder    https://github.com/hjanetzek/zyncoder    nura -
 zynthian-packages https://github.com/hjanetzek/zynthian-packages nura nura
 zynthian-webconf https://github.com/hjanetzek/zynthian-webconf nura nura
 "
+
+# The recipes of zynthian-ui, zyncoder(-hw), zynthian-data, zynthian-hw and the kiosk package
+# (postmarketos-ui-zynthian) are nura-builds' own (aports/zynthian/, from zynthian-ui's nura/ with
+# its history, 2026-11-19); zynthian-ui and zyncoder are still built from their checkouts (--src).
 
 # Stages, built in this order; each one a list of pmbootstrap build arguments, separated by ";".
 # @<repo> stands for the checkout of a repository (for --src builds). Only the target's own
@@ -25,7 +29,7 @@ STAGES="zynthian upstream"
 # support in zynthian's process included) from its checkout too, first (no dependency on the others;
 # the Rust build fails early); its recipe fetches the Rust crates itself. The kiosk package depends on it.
 STAGE_zynthian="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
-SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
+SEED_zynthian="aports/zynthian/seed-distfiles.sh"
 # aarch64: also the zynthian kits' hardware (Raspberry Pi 4, docs/zynthian-rpi.md): zyncoder-hw (the
 # kits' builds of zyncore, from the zyncoder checkout) and zynthian-hw (zynthian-kit, the kit setup)
 STAGE_zynthian_aarch64="$STAGE_zynthian; --src=@zyncoder zyncoder-hw; zynthian-hw"
@@ -53,7 +57,7 @@ IMAGE_KERNEL_zynthian_rpi4="rpi"
 # The user's password in the images: ZynthianOS' ("raspberry"), so zynthian owners can log in as they
 # are used to (the secret NURA_IMAGE_PASSWORD overrides it)
 IMAGE_PASSWORD="raspberry"
-# amd64: the QEMU virtual machine (zynthian-ui's nura/tools/run_qemu.sh), for testing on a desktop
+# amd64: the QEMU virtual machine (zynthian-ui's run_qemu.sh, nura/tools/ or tools/), for testing on a desktop
 DEVICES_x86_64="qemu-amd64"
 # raspberry-pi4 is in pmaports' "downstream" category; add it here once tested
 
@@ -70,6 +74,3 @@ IMAGE_PACKAGES_armv7="zynthian-ui"
 # with the s3ve3g's device tree; booted by lk2nd, flashed once with heimdall). The S III Neo's own
 # device package (samsung-s3ve3g) is archived, with the downstream 3.4 kernel: too old for systemd.
 DEVICES_armv7="qcom-msm8226"
-# Recipes of the other repositories whose arch= lacks armv7 (aarch64 x86_64): setup.sh adds it in
-# the checkouts until the recipes list armv7 themselves
-ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder"

@@ -23,7 +23,9 @@ device status, USB OTG (missing on all SDM845 phones; patches on the kernel list
   LV2 plugins (`aports/lv2`, with the meta package `zynthian-lv2-plugins`), Pure Data and its
   externals (`aports/pd`), engines (`aports/engines`: ZynAddSubFX, setBfree, SooperLooper) and
   zynthian's jalv (`aports/zynthian-jalv`). These came from zynthian-ui's `nura/` with their
-  history (2026-11-06). How to package more: [docs/packaging-guide.md](docs/packaging-guide.md);
+  history (2026-11-06); zynthian's own recipes (zynthian-ui, zyncoder, zyncoder-hw, zynthian-data,
+  zynthian-hw, the kiosk package postmarketos-ui-zynthian) and deploy.sh followed on 2026-11-19
+  (`aports/zynthian`, [its README](aports/zynthian/README.md)). How to package more: [docs/packaging-guide.md](docs/packaging-guide.md);
   zynthian's plugins on Nura: [docs/lv2-plugins.md](docs/lv2-plugins.md); upstream updates:
   `scripts/check-updates.py` (weekly in `update-check.yml`).
 - `scripts/setup.sh` installs pmbootstrap, writes its config (edge, systemd, PipeWire), initialises
@@ -134,7 +136,7 @@ gh run list -w plugin -L 1
 Without a key, each run signs with a new one: packages of different runs don't trust each other
 and the published repository can't be merged into. Create a key once (`openssl genrsa -out nura-ci.rsa 4096`) and store
 it as the secret; a device installed from another image needs its public key in `/etc/apk/keys`
-to install packages from these builds (as `nura/deploy.sh -k` does for the local work dir).
+to install packages from these builds (as `aports/zynthian/deploy.sh -k` does for the local work dir).
 
 ## Running it locally
 

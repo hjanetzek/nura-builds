@@ -134,7 +134,7 @@ Nura on the user's V4-type kit (Pi 4 2 GB, HifiBerry DAC+ ADC non-Pro, ZynScreen
 Setup: stock pmbootstrap image (`~/.config/pmbootstrap-zynthian-rpi4.cfg`: device raspberry-pi4,
 UI console, hostname zynthian-rpi4, user jeff), the nura-builds repository and key added, the kiosk
 (postmarketos-ui-zynthian) from it; device-zynthian-rpi4, zyncoder-hw, zynthian-hw built locally
-(`nura/deploy.sh -c ~/.config/pmbootstrap-zynthian-rpi4.cfg -H zynthian-rpi4.local -u jeff ...`;
+(`aports/zynthian/deploy.sh -c ~/.config/pmbootstrap-zynthian-rpi4.cfg -H zynthian-rpi4.local -u jeff ...`;
 the device recipe from the branch `merge-device`, linked into the local pmaports as
 `device/nura-builds`). The device swap: `apk add device-zynthian-rpi4.apk '!device-raspberry-pi4'
 '!device-raspberry-pi4-udev'` (one transaction: linux-rpi and the firmware stay).
@@ -148,7 +148,7 @@ needs another theme for 480x320.
 Problems found and fixed:
 - zyncoder-hw had no wiringPi: a `case $CARCH` added wiringpi-dev to makedepends, which
   pmbootstrap reads statically: the kit builds used zyncoder's stand-in (no GPIO/I2C). Now its own
-  recipe (zynthian-ui `nura/zyncoder-hw`), failing if a build lacks libwiringPi.
+  recipe (`aports/zynthian/zyncoder-hw`), failing if a build lacks libwiringPi.
 - No /dev/i2c-1: i2c-dev wasn't loaded. The device package loads it now (modules-load.d, r3). With
   the real wiringPi a missing I2C device *exits* zynthian (the stand-in only failed).
 - zynthian-kit created zynthian_envars.sh before the first start: the launcher's setup was skipped

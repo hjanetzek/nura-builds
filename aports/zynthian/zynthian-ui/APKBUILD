@@ -3,7 +3,7 @@
 # Built from a local checkout of zynthian-ui (nura branch):
 #   pmbootstrap build --src=/path/to/zynthian-ui zynthian-ui
 # --src skips $source, so put the Python packages listed there into pmbootstrap's
-# distfiles cache first (nura/seed-distfiles.sh). The build then needs no network.
+# distfiles cache first (aports/zynthian/seed-distfiles.sh in nura-builds). The build then needs no network.
 #
 # Python packages that Alpine doesn't package are bundled in
 # /usr/share/zynthian/python (/usr/bin/zynthian adds it to PYTHONPATH):
@@ -15,7 +15,7 @@ pkgver=2610_git20261102
 pkgrel=4
 pkgdesc="zynthian synthesizer platform: user interface and engine manager"
 url="https://github.com/zynthian/zynthian-ui"
-arch="aarch64 x86_64"
+arch="aarch64 x86_64 armv7"
 license="GPL-3.0-or-later"
 options="!check"
 depends="
@@ -123,7 +123,7 @@ build() {
 	# With --src, abuild doesn't fetch $source: the files must be in the distfiles cache
 	local f
 	for f in $_pywheels $_pysdists; do
-		[ -e "$(_srcfile $f)" ] || die "$f missing from $SRCDEST: run nura/seed-distfiles.sh"
+		[ -e "$(_srcfile $f)" ] || die "$f missing from $SRCDEST: run nura-builds' aports/zynthian/seed-distfiles.sh"
 	done
 
 	# Native libraries, without RPATH: they go to /usr/lib/zynthian and only use system libraries
