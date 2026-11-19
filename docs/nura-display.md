@@ -87,7 +87,7 @@ sudo ln -sf /usr/share/wayland-sessions/cage-ui.desktop /var/lib/tinydm/default-
 
 ## Cost of XWayland without glamor
 
-Measured on the Duet, cage session, 2026-11-04. Screen switches with `nura/tools/screen_timing.py`
+Measured on the Duet, cage session, 2026-11-04. Screen switches with `tools/screen_timing.py`
 (4 rounds; mean of rounds 2–4, round 1 includes one-time work), total until the X server has
 processed everything (round trip); CPU of one core over 20 s on the mixer screen:
 

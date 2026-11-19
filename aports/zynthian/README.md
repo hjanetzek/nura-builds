@@ -157,7 +157,7 @@ install this work dir's key on the device:
 
 ## Tools
 
-`nura/tools/` has helpers for a running device (address from the pmbootstrap config, as
+zynthian-ui's `tools/` has helpers for a running device (address from the pmbootstrap config, as
 `deploy.sh`): `screenshot.sh`, `zyninject.sh` (run Python inside the running Tk zynthian:
 profiling, screen timing), `perf_profile.sh`, `thread_cpu.sh` (CPU per thread of zynthian, the
 compositor and the engines) and `qt_switch_timing.sh` (screen switch times of the Qt UI). How the

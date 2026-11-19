@@ -27,7 +27,7 @@ sudo systemctl restart tinydm
 
 and back the same way (`apk del zynthian-ui-tomita`, `apk add zynthian-ui`). Not
 `apk add zynthian-ui-tomita '!zynthian-ui'`: the `!` excludes the providers of the name too. From a
-host, zynthian-ui's `nura/tools/switch_ui.sh qt|vangelis|tomita` does it (checked on the Duet:
+host, zynthian-ui's `tools/switch_ui.sh qt|vangelis|tomita` does it (checked on the Duet:
 Qt -> tomita -> vangelis -> Qt). The kiosk session starts the Tk UI when the installed zynthian-ui
 has no Qt UI (postmarketos-ui-zynthian r16; the patched launcher falls back as well).
 

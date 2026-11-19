@@ -103,7 +103,7 @@ still render through its render node; only the copy to the panel's buffer is the
 
 **Measured, option A** (2026-11-10, ZynthianOS as installed on the user's V4-type kit: Raspbian 10,
 32-bit kernel 5.15.70-v7l, fbtft at 64 MHz with deferred I/O at 33 fps, Xorg fbdev, the Tk UI;
-zynthian-ui's `nura/tools/display_bench.sh`, which counts the bytes the SPI controller sends to the
+zynthian-ui's `tools/display_bench.sh`, which counts the bytes the SPI controller sends to the
 panel):
 
 | | Panel traffic | Full frames/s | CPU (one core) |
@@ -118,7 +118,7 @@ rectangles: options B to D should send much less at idle.
 
 Measure per option: frames per second of the panel at a full redraw and while scrolling a list
 (the UI's switch timing tools), CPU load of the UI and the display server/compositor
-(`nura/tools/thread_cpu.sh`), input latency of the touch panel, and xruns under audio load.
+(`tools/thread_cpu.sh`), input latency of the touch panel, and xruns under audio load.
 
 ### 6. Image
 

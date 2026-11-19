@@ -15,13 +15,13 @@ rest.
 
 ## How it was measured
 
-zynthian-ui's `nura/tools/lv2_coverage.py` compares the enabled plugin URIs of zynthian's default
+zynthian-ui's `tools/lv2_coverage.py` compares the enabled plugin URIs of zynthian's default
 `engine_config.json` with the plugins lilv finds on the device; `--missing` lists the missing ones by
 project, `--load` dlopens every LV2 library (unresolved symbols) and instantiates the enabled
 plugins that need no host features:
 
 ```sh
-ssh jeff@kick-duet.local python3 - --missing --load < ../zynthian-ui/nura/tools/lv2_coverage.py
+ssh jeff@kick-duet.local python3 - --missing --load < ../zynthian-ui/tools/lv2_coverage.py
 ```
 
 Plugins that need host features (`urid:map`, `options`, ...) only show they load; start them in
@@ -142,7 +142,7 @@ from `setup_plugins_rbpi.sh`, a recipe in `zynthian-sys/scripts/recipes/`, or a 
 ## Wanted by shared snapshots (TODO)
 
 366 snapshots collected from the forum, issue tracker, Patchstorage and one GitHub project, loaded in
-the QEMU VM on 2026-11-08 with zynthian-ui's `nura/tools/test_factory_snapshots.py` (snapshots not in
+the QEMU VM on 2026-11-08 with zynthian-ui's `tools/test_factory_snapshots.py` (snapshots not in
 this repository: see zynthian-ui's docs/upstream-candidates.md for the converter errors). Engines and
 plugins they use that Nura doesn't have, by number of snapshot chains; most are disabled in zynthian's
 default configuration, so they are wanted by users, not by the defaults:
@@ -195,7 +195,7 @@ puredata engine doesn't start without the patch) and SF2/SFZ/GIG/LV2 presets fro
   depends on the meta package. Data in subpackages (see the packaging guide): `<pkg>-data` (needed)
   comes with the plugin by `install_if`, `<pkg>-data-<what>` is optional; plugins whose data is too
   big for images (FluidPlug, AVL drums) stay out of the meta package.
-- zynthian-ui's `nura/tools/lv2_coverage.py`: the measurement above as a tool (counts, missing by project), to
+- zynthian-ui's `tools/lv2_coverage.py`: the measurement above as a tool (counts, missing by project), to
   run after each batch.
 
 ### Phases
@@ -211,7 +211,7 @@ puredata engine doesn't start without the patch) and SF2/SFZ/GIG/LV2 presets fro
 | 7. Neural and the rest (nearly done) | done: gula, Punk Console, TalentedHack, Ratatouille, Roboverb, Regrader, Aether, MOD Arpeggiator, Triceratops, Granulator, AMS Bitgrinder, NAM, AIDA-X, Helm, Fabla, Foo YC20, Vaporizer2, zynMI (and Dusk Audio); left: see Missing | | case by case, on `plugin-*` branches |
 
 After each phase: build, install on the Duet, rescan, measure coverage, and load each new plugin
-once (`nura/tools/lv2_coverage.py --load`, and jalv for the ones that need host features) to catch
+once (`tools/lv2_coverage.py --load`, and jalv for the ones that need host features) to catch
 missing symbols and crashes; `lv2lint` for the TTL.
 
 ### Phase 1: lessons
