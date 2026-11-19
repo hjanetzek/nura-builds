@@ -14,10 +14,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/zyngine/zynthian_audio_recorder.py b/zyngine/zynthian_audio_recorder.py
-index cd0395a4..5a4afdb1 100644
+index 4cf9a5766..bded29305 100644
 --- a/zyngine/zynthian_audio_recorder.py
 +++ b/zyngine/zynthian_audio_recorder.py
-@@ -27,6 +27,7 @@
+@@ -25,6 +25,7 @@
  from zynconf import zynthian_paths
  import os
  import logging
@@ -25,7 +25,7 @@ index cd0395a4..5a4afdb1 100644
  from subprocess import Popen
  from datetime import datetime
  
-@@ -68,7 +69,9 @@ class zynthian_audio_recorder:
+@@ -66,7 +67,9 @@ class zynthian_audio_recorder:
              # Already recording
              return False
  

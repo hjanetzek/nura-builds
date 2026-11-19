@@ -13,7 +13,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  3 files changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/zynlibs/zynaudioplayer/player.c b/zynlibs/zynaudioplayer/player.c
-index f03bc969..4e90f0e2 100644
+index 18d960e74..d24b1a7c9 100644
 --- a/zynlibs/zynaudioplayer/player.c
 +++ b/zynlibs/zynaudioplayer/player.c
 @@ -417,9 +417,9 @@ void* file_thread_fn(void* param) {
@@ -29,10 +29,10 @@ index f03bc969..4e90f0e2 100644
                                  nUnusedFrames = nTotalValid - srcData.input_frames_used;
                                  nFramesRead   = srcData.output_frames_gen;
 diff --git a/zynlibs/zynseq/zynseq.cpp b/zynlibs/zynseq/zynseq.cpp
-index 2c478876..1f16071c 100644
+index 21dc62f63..1451f8e1b 100644
 --- a/zynlibs/zynseq/zynseq.cpp
 +++ b/zynlibs/zynseq/zynseq.cpp
-@@ -699,7 +699,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
+@@ -707,7 +707,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
                  nNextBeatTime = nTickTime + PPQN_INTERNAL;
                  nMetronomeFrame = nFrame;
                  bBeat = true;
@@ -41,7 +41,7 @@ index 2c478876..1f16071c 100644
                  if (++g_nBeat > nBeatsPerBar) {
                      // Bar
                      g_nBeat = 1;
-@@ -737,7 +737,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
+@@ -745,7 +745,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
                  if (g_nPlayingSequences != nPlayingSequences) {
                      g_nPlayingSequences = nPlayingSequences;
                      if (!g_nPlayingSequences) {
@@ -50,7 +50,7 @@ index 2c478876..1f16071c 100644
                          transportStop(TRANSPORT_CLIENT_ZYNSEQ);
                      }
                  }
-@@ -839,7 +839,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
+@@ -847,7 +847,7 @@ int onJackProcess(jack_nframes_t nFrames, void* /*pArgs*/) {
                      pBuffer[1] = it->second.msg.value1;
                  if (nSize > 2)
                      pBuffer[2] = it->second.msg.value2;
@@ -60,7 +60,7 @@ index 2c478876..1f16071c 100644
              ++it;
          }
 diff --git a/zynlibs/zynsmf/zynsmf.cpp b/zynlibs/zynsmf/zynsmf.cpp
-index 2a1e004c..5f79e51e 100644
+index 2a1e004cf..5f79e51e2 100644
 --- a/zynlibs/zynsmf/zynsmf.cpp
 +++ b/zynlibs/zynsmf/zynsmf.cpp
 @@ -614,7 +614,7 @@ double getTempo(Smf* pSmf, uint32_t nTime) {

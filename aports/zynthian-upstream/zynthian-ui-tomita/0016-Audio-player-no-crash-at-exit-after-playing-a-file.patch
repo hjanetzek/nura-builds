@@ -27,10 +27,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  3 files changed, 13 insertions(+), 1 deletion(-)
 
 diff --git a/zyngine/zynthian_chain_manager.py b/zyngine/zynthian_chain_manager.py
-index 2434cd95..989e848c 100644
+index fe758b4ea..2da08b303 100644
 --- a/zyngine/zynthian_chain_manager.py
 +++ b/zyngine/zynthian_chain_manager.py
-@@ -1270,6 +1270,11 @@ class zynthian_chain_manager:
+@@ -1404,6 +1404,11 @@ class zynthian_chain_manager:
                  break
  
          if chain_id is None:
@@ -43,10 +43,10 @@ index 2434cd95..989e848c 100644
          else:
              success = self.chains[chain_id].remove_processor(processor)
 diff --git a/zyngine/zynthian_engine_audioplayer.py b/zyngine/zynthian_engine_audioplayer.py
-index 0007b736..80922073 100644
+index 6f65f9217..9a2f2b597 100644
 --- a/zyngine/zynthian_engine_audioplayer.py
 +++ b/zyngine/zynthian_engine_audioplayer.py
-@@ -94,6 +94,8 @@ class zynthian_engine_audioplayer(zynthian_engine):
+@@ -93,6 +93,8 @@ class zynthian_engine_audioplayer(zynthian_engine):
      # ---------------------------------------------------------------------------
  
      def start(self):
@@ -56,10 +56,10 @@ index 0007b736..80922073 100644
          zynsigman.register_queued(zynsigman.S_AUDIO_RECORDER, zynsigman.SS_AUDIO_RECORDER_STATE, self.update_rec)
          zynsigman.register_queued(zynsigman.S_AUDIO_PLAYER, zynsigman.SS_AUDIO_PLAYER_STATE, self.update_play)
 diff --git a/zynlibs/zynaudioplayer/zynaudioplayer.py b/zynlibs/zynaudioplayer/zynaudioplayer.py
-index 2392b8f2..4f0f6201 100644
+index 1bfe2610b..7d2a4480f 100644
 --- a/zynlibs/zynaudioplayer/zynaudioplayer.py
 +++ b/zynlibs/zynaudioplayer/zynaudioplayer.py
-@@ -78,8 +78,13 @@ except Exception as e:
+@@ -76,8 +76,13 @@ except Exception as e:
      libaudioplayer = None
      logging.error(f"Can't initialise zynaudioplayer library: {e}")
  

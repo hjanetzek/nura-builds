@@ -1,7 +1,7 @@
-From 99ed9130a2eddb1bd8673171e00e78f091970f84 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Hannes Janetzek <hannes.janetzek@gmail.com>
 Date: Thu, 5 Nov 2026 17:20:43 +0100
-Subject: [PATCH 25/26] zynseq: read uint8_t results as unsigned
+Subject: [PATCH] zynseq: read uint8_t results as unsigned
 
 Functions returning uint8_t had no restype, so ctypes read an int whose upper bits
 are undefined. getControlValue() returned -1 for steps without a CC event (255), so
@@ -16,12 +16,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 15 insertions(+)
 
 diff --git a/zynlibs/zynseq/zynseq.py b/zynlibs/zynseq/zynseq.py
-index da2c6fe1..b85d15bf 100644
+index 27e8dd2ea..ca7d2f681 100644
 --- a/zynlibs/zynseq/zynseq.py
 +++ b/zynlibs/zynseq/zynseq.py
-@@ -255,6 +255,21 @@ class zynseq(zynthian_engine):
-             self.libseq.convertPattern.argtypes = [ctypes.c_char_p]
+@@ -254,6 +254,21 @@ class zynseq(zynthian_engine):
              self.libseq.convertPattern.restype = ctypes.c_char_p
+             self.libseq.addLearnMapping.argtypes = [ctypes.c_uint32, ctypes.c_uint8]
  
 +            # Functions returning uint8_t: without restype ctypes reads an int, whose upper bits
 +            # aren't defined; "no value" (255) came back as -1, so getControlValue() <= 127 was
@@ -41,6 +41,3 @@ index da2c6fe1..b85d15bf 100644
              # Sequence functions
              self.libseq.setSequenceTempo.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_float]
              self.libseq.getSequenceTempo.argtypes = [ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint8]
--- 
-2.56.0
-

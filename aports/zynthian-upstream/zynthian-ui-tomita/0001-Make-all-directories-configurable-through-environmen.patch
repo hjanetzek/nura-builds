@@ -36,7 +36,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  zyngine/zynthian_engine_puredata.py           |  3 +-
  zyngine/zynthian_engine_sooperlooper.py       |  3 +-
  zyngine/zynthian_engine_tempo.py              |  3 +-
- zyngine/zynthian_lv2.py                       | 15 ++++--
+ zyngine/zynthian_lv2.py                       | 17 +++---
  zyngine/zynthian_midi_filter.py               |  3 +-
  zyngine/zynthian_processor.py                 |  7 +--
  zyngine/zynthian_state_manager.py             | 15 +++---
@@ -61,14 +61,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  zynlibs/zynmixer/zynmixer.py                  |  5 +-
  zynlibs/zynseq/zynseq.py                      |  3 +-
  zynthian_headless.py                          |  3 +-
- 41 files changed, 173 insertions(+), 78 deletions(-)
+ 41 files changed, 174 insertions(+), 79 deletions(-)
  create mode 100644 zynconf/zynthian_paths.py
 
 diff --git a/zynconf/zynthian_config.py b/zynconf/zynthian_config.py
-index 21c9fe83..7001d94a 100755
+index 467ee8759..c266c061b 100644
 --- a/zynconf/zynthian_config.py
 +++ b/zynconf/zynthian_config.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ********************************************************************
  
@@ -93,14 +93,14 @@ index 21c9fe83..7001d94a 100755
  def update_sys():
      try:
          os.environ['ZYNTHIAN_FLAG_MASTER'] = "NONE"
--        check_output(os.environ.get('ZYNTHIAN_SYS_DIR') + "/scripts/update_zynthian_sys.sh", shell=True)
+-        check_output([os.environ.get('ZYNTHIAN_SYS_DIR') + "/scripts/update_zynthian_sys.sh"])
 +        check_output(zynthian_paths.sys_dir + "/scripts/update_zynthian_sys.sh", shell=True)
      except Exception as e:
          logging.error("Updating Sytem Config: %s" % e)
  
 diff --git a/zynconf/zynthian_paths.py b/zynconf/zynthian_paths.py
 new file mode 100644
-index 00000000..432db653
+index 000000000..432db653d
 --- /dev/null
 +++ b/zynconf/zynthian_paths.py
 @@ -0,0 +1,54 @@
@@ -159,10 +159,10 @@ index 00000000..432db653
 +# Writable LV2 directory where zynthian installs plugins and presets
 +lv2_dir = _env("ZYNTHIAN_LV2_DIR", f"{plugins_dir}/lv2")
 diff --git a/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py b/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py
-index 2fcf36e3..db7136e8 100644
+index ad8b8d521..9ad4efcc8 100644
 --- a/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py
 +++ b/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py
-@@ -24,6 +24,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -170,7 +170,7 @@ index 2fcf36e3..db7136e8 100644
  import logging
  import time
  import random
-@@ -792,7 +793,7 @@ class looper_handler(
+@@ -790,7 +791,7 @@ class looper_handler(
      # OSC_SL_PORT = ServerPort["sooperlooper_osc"] # 9951
      # OSC_SL_HOST = "127.0.0.1"; # Unnecessary
  
@@ -180,10 +180,10 @@ index 2fcf36e3..db7136e8 100644
      def __init__(self, state_manager, leds: FeedbackLEDs, idev_in=None, idev_out=None, parent=None):
          """Initialize the controller with required parameters"""
 diff --git a/zyngine/zynthian_audio_recorder.py b/zyngine/zynthian_audio_recorder.py
-index 5e84523f..cd0395a4 100644
+index 694197b3b..4cf9a5766 100644
 --- a/zyngine/zynthian_audio_recorder.py
 +++ b/zyngine/zynthian_audio_recorder.py
-@@ -24,6 +24,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -191,7 +191,7 @@ index 5e84523f..cd0395a4 100644
  import os
  import logging
  from subprocess import Popen
-@@ -40,8 +41,8 @@ from zyngui import zynthian_gui_config
+@@ -38,8 +39,8 @@ from zyngui import zynthian_gui_config
  
  class zynthian_audio_recorder:
  
@@ -203,10 +203,10 @@ index 5e84523f..cd0395a4 100644
      def __init__(self, state_manager):
          self.rec_proc = None
 diff --git a/zyngine/zynthian_ctrldev_manager.py b/zyngine/zynthian_ctrldev_manager.py
-index 0a14c9c2..60d5aa02 100644
+index 4c87cf571..a99976421 100644
 --- a/zyngine/zynthian_ctrldev_manager.py
 +++ b/zyngine/zynthian_ctrldev_manager.py
-@@ -24,6 +24,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -214,7 +214,7 @@ index 0a14c9c2..60d5aa02 100644
  import os
  import glob
  import logging
-@@ -47,7 +48,7 @@ DRIVER_DEVELOPMENT = False
+@@ -45,7 +46,7 @@ DRIVER_DEVELOPMENT = False
  
  class zynthian_ctrldev_manager():
  
@@ -224,17 +224,17 @@ index 0a14c9c2..60d5aa02 100644
  
      # Function to initialise class
 diff --git a/zyngine/zynthian_engine.py b/zyngine/zynthian_engine.py
-index 42159cd8..88b6ec62 100644
+index 248f708d7..4501df4be 100644
 --- a/zyngine/zynthian_engine.py
 +++ b/zyngine/zynthian_engine.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
 +from zynconf import zynthian_paths
  import os
+ import subprocess
  import re
- import json
 @@ -48,11 +49,11 @@ class zynthian_basic_engine:
      # Data dirs
      # ---------------------------------------------------------------------------
@@ -253,10 +253,10 @@ index 42159cd8..88b6ec62 100644
      # ---------------------------------------------------------------------------
      # Initialization
 diff --git a/zyngine/zynthian_engine_aeolus.py b/zyngine/zynthian_engine_aeolus.py
-index 246a07fb..efa1a660 100644
+index 62a135b3d..4050c957e 100644
 --- a/zyngine/zynthian_engine_aeolus.py
 +++ b/zyngine/zynthian_engine_aeolus.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -264,7 +264,7 @@ index 246a07fb..efa1a660 100644
  import copy
  import json
  import logging
-@@ -243,9 +244,9 @@ class zynthian_engine_aeolus(zynthian_engine):
+@@ -242,9 +243,9 @@ class zynthian_engine_aeolus(zynthian_engine):
      # ----------------------------------------------------------------------------
  
      # TODO: Use paths from global config
@@ -278,10 +278,10 @@ index 246a07fb..efa1a660 100644
      stop_cc_num = 98
  
 diff --git a/zyngine/zynthian_engine_alsa_mixer.py b/zyngine/zynthian_engine_alsa_mixer.py
-index f6622c72..79443bb2 100644
+index d593cdf3b..db92900e3 100644
 --- a/zyngine/zynthian_engine_alsa_mixer.py
 +++ b/zyngine/zynthian_engine_alsa_mixer.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -289,7 +289,7 @@ index f6622c72..79443bb2 100644
  import os
  import re
  import copy
-@@ -41,7 +42,7 @@ from zyngine.zynthian_controller import zynthian_controller
+@@ -40,7 +41,7 @@ from zyngine.zynthian_controller import zynthian_controller
  
  class zynthian_engine_alsa_mixer(zynthian_engine):
  
@@ -299,10 +299,10 @@ index f6622c72..79443bb2 100644
  
      # ---------------------------------------------------------------------------
 diff --git a/zyngine/zynthian_engine_audioplayer.py b/zyngine/zynthian_engine_audioplayer.py
-index 50a3db6e..0007b736 100644
+index 325f1657e..6f65f9217 100644
 --- a/zyngine/zynthian_engine_audioplayer.py
 +++ b/zyngine/zynthian_engine_audioplayer.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -310,7 +310,7 @@ index 50a3db6e..0007b736 100644
  import os
  import copy
  import shutil
-@@ -75,7 +76,7 @@ class zynthian_engine_audioplayer(zynthian_engine):
+@@ -74,7 +75,7 @@ class zynthian_engine_audioplayer(zynthian_engine):
          self.dur = 0.0
          self.zoom = 1.0
  
@@ -320,10 +320,10 @@ index 50a3db6e..0007b736 100644
          self.allow_preset_preload = False
  
 diff --git a/zyngine/zynthian_engine_clippy.py b/zyngine/zynthian_engine_clippy.py
-index 4e727ae6..e3cd7eda 100644
+index e2fa15965..f3ab1572a 100644
 --- a/zyngine/zynthian_engine_clippy.py
 +++ b/zyngine/zynthian_engine_clippy.py
-@@ -23,6 +23,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -331,7 +331,7 @@ index 4e727ae6..e3cd7eda 100644
  import os
  import re
  import ctypes
-@@ -79,7 +80,7 @@ class zynthian_engine_clippy(zynthian_engine):
+@@ -78,7 +79,7 @@ class zynthian_engine_clippy(zynthian_engine):
          self.samplerate = zynautoconnect.get_jackd_samplerate()
  
          self.monitors_dict = {}
@@ -340,7 +340,7 @@ index 4e727ae6..e3cd7eda 100644
  
          self.libclippy =  None
          self.start()
-@@ -89,7 +90,7 @@ class zynthian_engine_clippy(zynthian_engine):
+@@ -88,7 +89,7 @@ class zynthian_engine_clippy(zynthian_engine):
      # ---------------------------------------------------------------------------
  
      def start(self):
@@ -350,10 +350,10 @@ index 4e727ae6..e3cd7eda 100644
          self.libclippy.getGain.restype = ctypes.c_float
          self.libclippy.getJackname.restype = ctypes.c_char_p
 diff --git a/zyngine/zynthian_engine_inet_radio.py b/zyngine/zynthian_engine_inet_radio.py
-index 409e0a6f..0b776b59 100644
+index 759323682..f4d28b898 100644
 --- a/zyngine/zynthian_engine_inet_radio.py
 +++ b/zyngine/zynthian_engine_inet_radio.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -361,7 +361,7 @@ index 409e0a6f..0b776b59 100644
  import copy
  import json
  import socket
-@@ -557,7 +558,7 @@ class zynthian_engine_inet_radio(zynthian_engine):
+@@ -556,7 +557,7 @@ class zynthian_engine_inet_radio(zynthian_engine):
              "artwork": "",
              'reset': False
          }
@@ -371,10 +371,10 @@ index 409e0a6f..0b776b59 100644
  
          self.command = ["vlc",
 diff --git a/zyngine/zynthian_engine_jalv.py b/zyngine/zynthian_engine_jalv.py
-index 62443fca..86e33724 100644
+index 364111f45..65233dedc 100644
 --- a/zyngine/zynthian_engine_jalv.py
 +++ b/zyngine/zynthian_engine_jalv.py
-@@ -23,6 +23,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -382,7 +382,7 @@ index 62443fca..86e33724 100644
  import os
  import re
  import sys
-@@ -683,9 +684,9 @@ class zynthian_engine_jalv(zynthian_engine_jalv_base):
+@@ -668,9 +669,9 @@ class zynthian_engine_jalv(zynthian_engine_jalv_base):
      }
  
      plugin2native_presets_dir = {
@@ -396,10 +396,10 @@ index 62443fca..86e33724 100644
  
      # ---------------------------------------------------------------------------
 diff --git a/zyngine/zynthian_engine_pianoteq.py b/zyngine/zynthian_engine_pianoteq.py
-index 7e78fa44..a408a3ea 100644
+index 673520491..5b5ff390f 100644
 --- a/zyngine/zynthian_engine_pianoteq.py
 +++ b/zyngine/zynthian_engine_pianoteq.py
-@@ -24,6 +24,7 @@
+@@ -23,6 +23,7 @@
  #
  # ******************************************************************************
  
@@ -407,7 +407,7 @@ index 7e78fa44..a408a3ea 100644
  import os
  import re
  import shutil
-@@ -297,7 +298,7 @@ def create_pianoteq_config():
+@@ -296,7 +297,7 @@ def create_pianoteq_config():
                                                             info['version'][0], info['version'][1]),
                              PIANOTEQ_CONFIG_FILE)
              except:
@@ -416,7 +416,7 @@ index 7e78fa44..a408a3ea 100644
                              "/pianoteq/Pianoteq.prefs", PIANOTEQ_CONFIG_FILE)
  
  
-@@ -521,7 +522,7 @@ def save_midi_mapping(file):
+@@ -520,7 +521,7 @@ def save_midi_mapping(file):
  # Pianoteq module constants & parameter configuration/initialization
  # ------------------------------------------------------------------------------
  
@@ -426,10 +426,10 @@ index 7e78fa44..a408a3ea 100644
  PIANOTEQ_CONFIG_DIR = os.path.expanduser('~') + '/.config/Modartt'
  PIANOTEQ_DATA_DIR = os.path.expanduser('~') + '/.local/share/Modartt/Pianoteq'
 diff --git a/zyngine/zynthian_engine_puredata.py b/zyngine/zynthian_engine_puredata.py
-index 2ea978ef..22bf0633 100644
+index 37c758693..d55ba6390 100644
 --- a/zyngine/zynthian_engine_puredata.py
 +++ b/zyngine/zynthian_engine_puredata.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -437,7 +437,7 @@ index 2ea978ef..22bf0633 100644
  import os
  import queue
  import shutil
-@@ -227,7 +228,7 @@ class zynthian_engine_puredata(zynthian_engine):
+@@ -226,7 +227,7 @@ class zynthian_engine_puredata(zynthian_engine):
                  self.zctrl_config = self.default_organelle_zctrl_config
          elif self.preset_config and self.preset_config.get('use_euclidseq_widget', False):
              # Use EuclidSeq widget when flag is set
@@ -447,10 +447,10 @@ index 2ea978ef..22bf0633 100644
              # Don't use custom widget for other pd patches
              self.custom_gui_fpath = None
 diff --git a/zyngine/zynthian_engine_sooperlooper.py b/zyngine/zynthian_engine_sooperlooper.py
-index 742d7bde..0a336770 100644
+index 27cf5e72a..a8a9cbe05 100644
 --- a/zyngine/zynthian_engine_sooperlooper.py
 +++ b/zyngine/zynthian_engine_sooperlooper.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -458,7 +458,7 @@ index 742d7bde..0a336770 100644
  import os
  import logging
  from glob import glob
-@@ -367,7 +368,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
+@@ -366,7 +367,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
          self.channels = 2
          self.selected_loop_cc_binding = True # True for MIDI CC to control selected loop. False to target all loops
  
@@ -468,10 +468,10 @@ index 742d7bde..0a336770 100644
          self.monitors_dict = {
              "state": 0,
 diff --git a/zyngine/zynthian_engine_tempo.py b/zyngine/zynthian_engine_tempo.py
-index 35de44d6..25d2742b 100644
+index ef963b99c..5bfb36ae4 100644
 --- a/zyngine/zynthian_engine_tempo.py
 +++ b/zyngine/zynthian_engine_tempo.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -479,7 +479,7 @@ index 35de44d6..25d2742b 100644
  import logging
  from time import monotonic
  from collections import deque
-@@ -62,7 +63,7 @@ class zynthian_engine_tempo(zynthian_engine):
+@@ -61,7 +62,7 @@ class zynthian_engine_tempo(zynthian_engine):
          self.type = "Tempo"
          self.name = "Tempo"
          self.nickname = "TP"
@@ -489,10 +489,10 @@ index 35de44d6..25d2742b 100644
  
          self.audio_out = []
 diff --git a/zyngine/zynthian_lv2.py b/zyngine/zynthian_lv2.py
-index 26f5f77f..0f65981b 100755
+index a84ca844d..2afab8173 100755
 --- a/zyngine/zynthian_lv2.py
 +++ b/zyngine/zynthian_lv2.py
-@@ -26,6 +26,11 @@
+@@ -25,6 +25,11 @@
  import os
  import re
  import sys
@@ -504,22 +504,26 @@ index 26f5f77f..0f65981b 100755
  import json
  import lilv
  import copy
-@@ -191,10 +196,10 @@ try:
+@@ -190,13 +195,13 @@ try:
  except:
      rbpi_version_number = 4
  
 -ENGINE_DEFAULT_CONFIG_FILE = "{}/config/engine_config.json".format(os.environ.get('ZYNTHIAN_SYS_DIR'))
 -ENGINE_CONFIG_FILE = "{}/engine_config.json".format(os.environ.get('ZYNTHIAN_CONFIG_DIR'))
 -JALV_LV2_CONFIG_FILE = "{}/jalv/plugins.json".format(os.environ.get('ZYNTHIAN_CONFIG_DIR'))
--LV2_DIR = "/zynthian/zynthian-plugins/lv2"
 +ENGINE_DEFAULT_CONFIG_FILE = "{}/config/engine_config.json".format(zynthian_paths.sys_dir)
 +ENGINE_CONFIG_FILE = "{}/engine_config.json".format(zynthian_paths.config_dir)
 +JALV_LV2_CONFIG_FILE = "{}/jalv/plugins.json".format(zynthian_paths.config_dir)
 +LV2_DIR = zynthian_paths.lv2_dir
+ # Touch this file after updating files inside an existing LV2 bundle (e.g. a widget's manifest),
+ # so the UI reloads the LV2 data. Adding or removing bundles is detected without it.
+-LV2_STAMP_FILE = "{}/lv2.stamp".format(os.environ.get('ZYNTHIAN_CONFIG_DIR'))
+-LV2_DIR = "/zynthian/zynthian-plugins/lv2"
++LV2_STAMP_FILE = "{}/lv2.stamp".format(zynthian_paths.config_dir)
  
  engines = None
  engines_by_type = None
-@@ -783,7 +788,7 @@ def generate_plugin_presets_cache(plugin_url, refresh=True):
+@@ -913,7 +918,7 @@ def generate_plugin_presets_cache(plugin_url, refresh=True):
  
  
  def _get_plugin_preset_cache_fpath(plugin_name):
@@ -529,10 +533,10 @@ index 26f5f77f..0f65981b 100755
  
  def _generate_plugin_presets_cache(plugin):
 diff --git a/zyngine/zynthian_midi_filter.py b/zyngine/zynthian_midi_filter.py
-index 16f8f3ed..932d5f7d 100644
+index 85ac6208b..961323bb1 100644
 --- a/zyngine/zynthian_midi_filter.py
 +++ b/zyngine/zynthian_midi_filter.py
-@@ -52,8 +52,9 @@ import logging
+@@ -50,8 +50,9 @@ import logging
  
  import unittest
  from zyncoder.zyncore import lib_zyncore
@@ -544,10 +548,10 @@ index 16f8f3ed..932d5f7d 100644
  # Zynthian specific modules
  
 diff --git a/zyngine/zynthian_processor.py b/zyngine/zynthian_processor.py
-index 32670f25..b3a9c95b 100644
+index e4811cbf4..1a8712701 100644
 --- a/zyngine/zynthian_processor.py
 +++ b/zyngine/zynthian_processor.py
-@@ -23,6 +23,7 @@
+@@ -22,6 +22,7 @@
  #
  # *****************************************************************************
  
@@ -555,7 +559,7 @@ index 32670f25..b3a9c95b 100644
  import os
  import re
  import copy
-@@ -39,9 +40,9 @@ class zynthian_processor:
+@@ -38,9 +39,9 @@ class zynthian_processor:
      # Data dirs
      # ---------------------------------------------------------------------------
  
@@ -569,10 +573,10 @@ index 32670f25..b3a9c95b 100644
      # ------------------------------------------------------------------------
      # Initialization
 diff --git a/zyngine/zynthian_state_manager.py b/zyngine/zynthian_state_manager.py
-index aa924117..f4443b8f 100644
+index 4266f5a4f..9782c6480 100644
 --- a/zyngine/zynthian_state_manager.py
 +++ b/zyngine/zynthian_state_manager.py
-@@ -24,6 +24,7 @@
+@@ -23,6 +23,7 @@
  # ****************************************************************************
  
  import os
@@ -580,7 +584,7 @@ index aa924117..f4443b8f 100644
  import ctypes
  import logging
  import traceback
-@@ -64,10 +65,10 @@ from zyngui import zynthian_gui_config
+@@ -63,10 +64,10 @@ from zyngui import zynthian_gui_config
  # ----------------------------------------------------------------------------
  
  
@@ -595,7 +599,7 @@ index aa924117..f4443b8f 100644
  capture_dir_sdc = my_data_dir + "/capture"
  
  MAIN_MIXBUS_ID = -1
-@@ -96,7 +97,7 @@ class zynthian_state_manager:
+@@ -95,7 +96,7 @@ class zynthian_state_manager:
          self.busy_ts = None
          self.start_busy("zynthian_state_manager")
  
@@ -604,7 +608,7 @@ index aa924117..f4443b8f 100644
          self.default_snapshot_fpath = join(self.snapshot_dir, "default.zss")
          self.last_state_snapshot_fpath = join(self.snapshot_dir, "last_state.zss")
          # Increments each time a snapshot is loaded - modules may use to update if required
-@@ -2997,7 +2998,7 @@ class zynthian_state_manager:
+@@ -2970,7 +2971,7 @@ class zynthian_state_manager:
                  if os.environ.get('ZYNTHIAN_STABLE_TAG', "") == "last":
                      stable_branch = os.environ.get('ZYNTHIAN_STABLE_BRANCH', "oram")
                      for repo in repos:
@@ -613,7 +617,7 @@ index aa924117..f4443b8f 100644
                          branch = get_repo_branch(path)
                          # Get last tag release
                          check_output(["git", "-C", path, "remote", "update", "origin", "--prune"],
-@@ -3013,7 +3014,7 @@ class zynthian_state_manager:
+@@ -2986,7 +2987,7 @@ class zynthian_state_manager:
                  # else => Check for commits to pull
                  else:
                      for repo in repos:
@@ -623,10 +627,10 @@ index aa924117..f4443b8f 100644
                          local_hash = check_output(["git", "-C", path, "rev-parse", "HEAD"],
                                                    encoding="utf-8", stderr=STDOUT).strip()
 diff --git a/zyngine/zynthian_tts.py b/zyngine/zynthian_tts.py
-index 012639bc..fec92610 100644
+index 53b2ff0f3..f70b539da 100644
 --- a/zyngine/zynthian_tts.py
 +++ b/zyngine/zynthian_tts.py
-@@ -23,6 +23,7 @@
+@@ -22,6 +22,7 @@
  #
  # ****************************************************************************
  
@@ -634,7 +638,7 @@ index 012639bc..fec92610 100644
  import os
  import re
  import math
-@@ -39,7 +40,7 @@ import zynconf
+@@ -38,7 +39,7 @@ import zynconf
  import zynautoconnect
  from zyngui import zynthian_gui_config
  
@@ -644,18 +648,18 @@ index 012639bc..fec92610 100644
  TTS_FLITE_VOICES_PATH = f"{TTS_DATA_PATH}/voices"
  TTS_DICT = {
 diff --git a/zyngui/zynthian_gui.py b/zyngui/zynthian_gui.py
-index 7e6faeca..668a24bf 100644
+index 4b0aee05a..dddd2a432 100644
 --- a/zyngui/zynthian_gui.py
 +++ b/zyngui/zynthian_gui.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
 +from zynconf import zynthian_paths
  import os
- import ffmpeg
- import logging
-@@ -138,8 +139,8 @@ class zynthian_gui:
+ import sys
+ import json
+@@ -168,8 +169,8 @@ class zynthian_gui:
      SCREEN_HMODE_RESET = 3
  
      def __init__(self):
@@ -667,10 +671,10 @@ index 7e6faeca..668a24bf 100644
          self.ignore_next_touch_release = False
  
 diff --git a/zyngui/zynthian_gui_admin.py b/zyngui/zynthian_gui_admin.py
-index f50df129..632dafdf 100644
+index 797f07eb4..b791942d4 100644
 --- a/zyngui/zynthian_gui_admin.py
 +++ b/zyngui/zynthian_gui_admin.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -678,7 +682,7 @@ index f50df129..632dafdf 100644
  import os
  import re
  import signal
-@@ -46,8 +47,8 @@ from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
+@@ -45,8 +46,8 @@ from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
  
  class zynthian_gui_admin(zynthian_gui_selector_info):
  
@@ -690,10 +694,10 @@ index f50df129..632dafdf 100644
      def __init__(self):
          self.commands = None
 diff --git a/zyngui/zynthian_gui_arranger.py b/zyngui/zynthian_gui_arranger.py
-index 641437c2..c9205c99 100644
+index f004d4178..28754a9cb 100644
 --- a/zyngui/zynthian_gui_arranger.py
 +++ b/zyngui/zynthian_gui_arranger.py
-@@ -24,6 +24,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -701,7 +705,7 @@ index 641437c2..c9205c99 100644
  import tkinter
  import logging
  import tkinter.font as tkfont
-@@ -343,8 +344,7 @@ class zynthian_gui_arranger(zynthian_gui_base.zynthian_gui_base):
+@@ -341,8 +342,7 @@ class zynthian_gui_arranger(zynthian_gui_base.zynthian_gui_base):
  
      # Function to import SMF
      def select_smf(self, params=None):
@@ -712,10 +716,10 @@ index 641437c2..c9205c99 100644
          for i in file_list:
              options[i[4]] = i[0]
 diff --git a/zyngui/zynthian_gui_base.py b/zyngui/zynthian_gui_base.py
-index babdf2bb..6ba95de3 100644
+index 2b7a80ed2..5f05ba373 100644
 --- a/zyngui/zynthian_gui_base.py
 +++ b/zyngui/zynthian_gui_base.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -723,7 +727,7 @@ index babdf2bb..6ba95de3 100644
  import os
  import time
  import logging
-@@ -42,7 +43,7 @@ from zyngui.zynthian_gui_dpm import zynthian_gui_dpm
+@@ -40,7 +41,7 @@ from zyngui.zynthian_gui_dpm import zynthian_gui_dpm, run_script
  
  class zynthian_gui_base(tkinter.Frame):
  
@@ -733,10 +737,10 @@ index babdf2bb..6ba95de3 100644
      def __init__(self, parent=None, topbar=None):
          if parent:
 diff --git a/zyngui/zynthian_gui_config.py b/zyngui/zynthian_gui_config.py
-index ab3b5c0f..3c722836 100644
+index 656140e48..d5853fe61 100644
 --- a/zyngui/zynthian_gui_config.py
 +++ b/zyngui/zynthian_gui_config.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -744,7 +748,7 @@ index ab3b5c0f..3c722836 100644
  import os
  import sys
  import logging
-@@ -579,7 +580,7 @@ if touch_navigation:
+@@ -600,7 +601,7 @@ if touch_navigation:
      wiring_layout_custom_profile = os.environ.get("ZYNTHIAN_WIRING_LAYOUT_CUSTOM_PROFILE", "")
      if len(zynswitches_pins) < 24:
          #not wiring_layout_custom_profile.lower().startswith("v5") and not wiring_layout_custom_profile.lower().endswith("v5"):
@@ -754,31 +758,31 @@ index ab3b5c0f..3c722836 100644
          # Modify zynswitches wiring configuration to work with V5 keypad
          if len(zynswitches_pins) >= 4:
 diff --git a/zyngui/zynthian_gui_control.py b/zyngui/zynthian_gui_control.py
-index 3d580564..318530c5 100644
+index eb01d8aaa..52db7a200 100644
 --- a/zyngui/zynthian_gui_control.py
 +++ b/zyngui/zynthian_gui_control.py
-@@ -23,6 +23,7 @@
- #
+@@ -22,6 +22,7 @@
  # ******************************************************************************
  
+ import os
 +from zynconf import zynthian_paths
  import logging
  import importlib
  from pathlib import Path
-@@ -267,7 +268,7 @@ class zynthian_gui_control(zynthian_gui_selector):
+@@ -319,7 +320,7 @@ class zynthian_gui_control(zynthian_gui_selector):
          self.purge_widgets()
  
          if self.screen_type:
 -            module_path = f"/zynthian/zynthian-ui/zyngui/zynthian_widget_{self.screen_type}.py"
 +            module_path = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_{self.screen_type}.py"
-         elif processor.engine.custom_gui_fpath:
-             module_path = processor.engine.custom_gui_fpath
          else:
+             # Widget files can be added, removed or updated while running
+             processor.engine.refresh_custom_gui()
 diff --git a/zyngui/zynthian_gui_help.py b/zyngui/zynthian_gui_help.py
-index 23a26807..3e61a264 100644
+index 662c458b6..ac5ac9d81 100644
 --- a/zyngui/zynthian_gui_help.py
 +++ b/zyngui/zynthian_gui_help.py
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -786,7 +790,7 @@ index 23a26807..3e61a264 100644
  import os
  import logging
  import tkinter
-@@ -40,7 +41,7 @@ from zyngui import zynthian_gui_config
+@@ -77,7 +78,7 @@ def is_in_dir(fpath, dpath):
  
  class zynthian_gui_help(HtmlFrame):
  
@@ -796,10 +800,10 @@ index 23a26807..3e61a264 100644
      # Scale for touch swipe action after-roll
      touch_swipe_roll_scale = [1, 0, 1, 1, 2, 2, 2, 4, 4, 4, 4, 4]  # 1, 0, 1, 0, 1, 0, 1, 0,
 diff --git a/zyngui/zynthian_gui_keybinding.py b/zyngui/zynthian_gui_keybinding.py
-index 3fc589e9..f487b8e0 100644
+index 43a768cea..ec781e2bc 100644
 --- a/zyngui/zynthian_gui_keybinding.py
 +++ b/zyngui/zynthian_gui_keybinding.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -807,7 +811,7 @@ index 3fc589e9..f487b8e0 100644
  import json
  import logging
  from subprocess import run, PIPE
-@@ -227,7 +228,7 @@ def load(config="keybinding"):
+@@ -225,7 +226,7 @@ def load(config="keybinding"):
      Returns : True on success
      """
  
@@ -816,7 +820,7 @@ index 3fc589e9..f487b8e0 100644
      try:
          with open(config_fpath, "r") as fh:
              j = fh.read()
-@@ -281,7 +282,7 @@ def save(config="keybinding"):
+@@ -279,7 +280,7 @@ def save(config="keybinding"):
      Returns : True on success
      """
  
@@ -826,10 +830,10 @@ index 3fc589e9..f487b8e0 100644
          with open(config_fpath, "w") as fh:
              fh.write(json.dumps(get_html_map(), indent=4))
 diff --git a/zyngui/zynthian_gui_midi_config.py b/zyngui/zynthian_gui_midi_config.py
-index 036d0cc3..db415027 100644
+index 4bf50676e..a6ab4e133 100644
 --- a/zyngui/zynthian_gui_midi_config.py
 +++ b/zyngui/zynthian_gui_midi_config.py
-@@ -24,6 +24,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -837,7 +841,7 @@ index 036d0cc3..db415027 100644
  import os
  import re
  import logging
-@@ -297,7 +298,7 @@ class zynthian_gui_midi_config(zynthian_gui_selector_info):
+@@ -295,7 +296,7 @@ class zynthian_gui_midi_config(zynthian_gui_selector_info):
                      append_service("qmidinet", "QmidiNet",
                                     "QmidiNet. Provides MIDI over an IP connection using UDP/IP multicast (ipMIDI).", "midi_network.png")
  
@@ -847,10 +851,10 @@ index 036d0cc3..db415027 100644
                                     "Interface with Hexler TouchOSC modular control surface.", "midi_network.png")
  
 diff --git a/zyngui/zynthian_gui_midi_profile.py b/zyngui/zynthian_gui_midi_profile.py
-index 3b4b808c..d5698b6f 100644
+index 5933126a7..8f2559fa3 100644
 --- a/zyngui/zynthian_gui_midi_profile.py
 +++ b/zyngui/zynthian_gui_midi_profile.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -858,7 +862,7 @@ index 3b4b808c..d5698b6f 100644
  import os
  import sys
  import logging
-@@ -41,8 +42,7 @@ from zyngui.zynthian_gui_selector import zynthian_gui_selector
+@@ -39,8 +40,7 @@ from zyngui.zynthian_gui_selector import zynthian_gui_selector
  class zynthian_gui_midi_profile(zynthian_gui_selector):
  
      def __init__(self):
@@ -869,10 +873,10 @@ index 3b4b808c..d5698b6f 100644
  
      def get_profile_fpath(self, f):
 diff --git a/zyngui/zynthian_gui_midi_recorder.py b/zyngui/zynthian_gui_midi_recorder.py
-index b87ea886..53eb3d1f 100644
+index ed4b71470..f828516db 100644
 --- a/zyngui/zynthian_gui_midi_recorder.py
 +++ b/zyngui/zynthian_gui_midi_recorder.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -880,7 +884,7 @@ index b87ea886..53eb3d1f 100644
  import os
  import logging
  import tkinter
-@@ -46,10 +47,10 @@ from zyngine.zynthian_signal_manager import zynsigman
+@@ -44,10 +45,10 @@ from zyngine.zynthian_signal_manager import zynsigman
  
  class zynthian_gui_midi_recorder(zynthian_gui_selector_info):
  
@@ -896,10 +900,10 @@ index b87ea886..53eb3d1f 100644
      def __init__(self):
          super().__init__('MIDI file', default_icon="file_midi.png", tiny_ctrls=False, zsel_hidden=False)
 diff --git a/zyngui/zynthian_gui_mixer.py b/zyngui/zynthian_gui_mixer.py
-index a947a9d2..f4b4f3fb 100644
+index b48006cef..9204f724a 100644
 --- a/zyngui/zynthian_gui_mixer.py
 +++ b/zyngui/zynthian_gui_mixer.py
-@@ -25,6 +25,7 @@
+@@ -23,6 +23,7 @@
  # ******************************************************************************
  
  
@@ -907,7 +911,7 @@ index a947a9d2..f4b4f3fb 100644
  import copy
  import tkinter
  import logging
-@@ -1416,7 +1417,7 @@ class zynthian_gui_mixer(zynthian_gui_base):
+@@ -1421,7 +1422,7 @@ class zynthian_gui_mixer(zynthian_gui_base):
          self.mode_icons = {}
          for f in ("empty", "loopsync", "oneshot", "oneshotall"):
              try:
@@ -917,10 +921,10 @@ index a947a9d2..f4b4f3fb 100644
              except:
                  self.mode_icons[f] = empty_icon
 diff --git a/zyngui/zynthian_gui_pated_base.py b/zyngui/zynthian_gui_pated_base.py
-index 75d8156a..c4a6d0cf 100644
+index 6eb4f02df..a4fd658d2 100644
 --- a/zyngui/zynthian_gui_pated_base.py
 +++ b/zyngui/zynthian_gui_pated_base.py
-@@ -24,6 +24,7 @@
+@@ -22,6 +22,7 @@
  #
  # ******************************************************************************
  
@@ -928,7 +932,7 @@ index 75d8156a..c4a6d0cf 100644
  import os
  import copy
  import tkinter
-@@ -50,7 +51,7 @@ GRID_LINE_XTRONG = "#FFFFFF"
+@@ -48,7 +49,7 @@ GRID_LINE_XTRONG = "#FFFFFF"
  PLAYHEAD_BACKGROUND = zynthian_gui_config.color_variant(zynthian_gui_config.color_panel_bd, 40)
  PLAYHEAD_LINE = zynthian_gui_config.color_tx_off
  PLAYHEAD_HEIGHT = 12
@@ -947,10 +951,10 @@ index 75d8156a..c4a6d0cf 100644
          self.my_capture_dpath = self.my_data_dpath + "/capture"
          self.my_smf_dpath = self.my_data_dpath + "/files/Midi/patterns"
 diff --git a/zyngui/zynthian_gui_splash.py b/zyngui/zynthian_gui_splash.py
-index f0720dba..5f35852b 100644
+index add509af5..230b3a079 100644
 --- a/zyngui/zynthian_gui_splash.py
 +++ b/zyngui/zynthian_gui_splash.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -958,7 +962,7 @@ index f0720dba..5f35852b 100644
  import tkinter
  from PIL import Image, ImageDraw, ImageFont
  import logging
-@@ -60,7 +61,7 @@ class zynthian_gui_splash(zynthian_gui_fullscreen_modal):
+@@ -58,7 +59,7 @@ class zynthian_gui_splash(zynthian_gui_fullscreen_modal):
          pos_x = self.width / 2 - strlen / 2
          pos_y = int(self.height / 10)
          try:
@@ -968,10 +972,10 @@ index f0720dba..5f35852b 100644
              fpath = f"{config_dir}/img/fb_zynthian_message.jpg"
  
 diff --git a/zyngui/zynthian_gui_touchscreen_calibration.py b/zyngui/zynthian_gui_touchscreen_calibration.py
-index 8edd8c7a..cbcf324b 100644
+index 82605e177..4cd13c5e9 100644
 --- a/zyngui/zynthian_gui_touchscreen_calibration.py
 +++ b/zyngui/zynthian_gui_touchscreen_calibration.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -979,7 +983,7 @@ index 8edd8c7a..cbcf324b 100644
  import tkinter
  import logging
  import tkinter.font as tkFont
-@@ -391,11 +392,10 @@ class zynthian_gui_touchscreen_calibration(zynthian_gui_fullscreen_modal):
+@@ -389,11 +390,10 @@ class zynthian_gui_touchscreen_calibration(zynthian_gui_fullscreen_modal):
                  # If we got here then we need to append this device to config
                  # For the record it is with deep reservation that I code this duplicate writing of files - I was only follwing orders!
                  try:
@@ -994,10 +998,10 @@ index 8edd8c7a..cbcf324b 100644
                              (datetime.now()))
                      f.write('	Identifier "calibration"\n')
 diff --git a/zyngui/zynthian_gui_wifi.py b/zyngui/zynthian_gui_wifi.py
-index 79029038..0fc4fe3d 100644
+index cca1e3029..7ac9effc4 100644
 --- a/zyngui/zynthian_gui_wifi.py
 +++ b/zyngui/zynthian_gui_wifi.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ******************************************************************************
  
@@ -1005,7 +1009,7 @@ index 79029038..0fc4fe3d 100644
  import os
  import logging
  from time import sleep
-@@ -40,7 +41,7 @@ from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
+@@ -38,7 +39,7 @@ from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
  
  class zynthian_gui_wifi(zynthian_gui_selector_info):
  
@@ -1015,10 +1019,10 @@ index 79029038..0fc4fe3d 100644
      def __init__(self):
          super().__init__('Connection', default_icon="wifi.png")
 diff --git a/zyngui/zynthian_widget_euclidseq.py b/zyngui/zynthian_widget_euclidseq.py
-index c1e8de7e..b0bf7956 100644
+index 9b5478c81..e0e9ba9b8 100644
 --- a/zyngui/zynthian_widget_euclidseq.py
 +++ b/zyngui/zynthian_widget_euclidseq.py
-@@ -19,6 +19,7 @@
+@@ -18,6 +18,7 @@
  # For a full copy of the GNU General Public License see the LICENSE.txt file.
  # ******************************************************************************
  
@@ -1026,7 +1030,7 @@ index c1e8de7e..b0bf7956 100644
  import os
  import re # NEW: Import regex for path parsing
  import sys
-@@ -28,7 +29,7 @@ import pyliblo3 as liblo
+@@ -27,7 +28,7 @@ import pyliblo3 as liblo
  from tkinter import font as tkFont
  
  # Zynthian specific modules
@@ -1036,10 +1040,10 @@ index c1e8de7e..b0bf7956 100644
  
  
 diff --git a/zynlibs/zynmixer/zynmixer.py b/zynlibs/zynmixer/zynmixer.py
-index 609dae10..6868783d 100644
+index fc79feec6..956406d0d 100644
 --- a/zynlibs/zynmixer/zynmixer.py
 +++ b/zynlibs/zynmixer/zynmixer.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ********************************************************************
  
@@ -1047,7 +1051,7 @@ index 609dae10..6868783d 100644
  import math
  import ctypes
  import logging
-@@ -55,10 +56,10 @@ class ZynMixer():
+@@ -53,10 +54,10 @@ class ZynMixer():
          self.mixbus = is_mixbus
          if is_mixbus:
              self.lib_zynmixer = ctypes.cdll.LoadLibrary(
@@ -1061,10 +1065,10 @@ index 609dae10..6868783d 100644
          self.lib_zynmixer.addStrip.restype = ctypes.c_int8
          self.lib_zynmixer.removeStrip.argtypes = [ctypes.c_uint8]
 diff --git a/zynlibs/zynseq/zynseq.py b/zynlibs/zynseq/zynseq.py
-index 5e6b1aa6..97f020a1 100644
+index ca6532b9e..475ce1fd1 100644
 --- a/zynlibs/zynseq/zynseq.py
 +++ b/zynlibs/zynseq/zynseq.py
-@@ -23,6 +23,7 @@
+@@ -21,6 +21,7 @@
  #
  # ********************************************************************
  
@@ -1072,7 +1076,7 @@ index 5e6b1aa6..97f020a1 100644
  import ctypes
  import logging
  from os.path import dirname, realpath
-@@ -188,7 +189,7 @@ class zynseq(zynthian_engine):
+@@ -186,7 +187,7 @@ class zynseq(zynthian_engine):
      def __init__(self, state_manager=None, proc=None):
          self.state_manager = state_manager
          self.proc = proc
@@ -1082,7 +1086,7 @@ index 5e6b1aa6..97f020a1 100644
          try:
              self.libseq = ctypes.cdll.LoadLibrary(dirname(realpath(__file__))+"/build/libzynseq.so")
 diff --git a/zynthian_headless.py b/zynthian_headless.py
-index b231aa74..3cb7b7e4 100644
+index b231aa747..3cb7b7e4d 100644
 --- a/zynthian_headless.py
 +++ b/zynthian_headless.py
 @@ -1,3 +1,4 @@

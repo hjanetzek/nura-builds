@@ -11,10 +11,10 @@ From nura a0c55b28, without the admin menu entry (shared modules of the nura bra
  2 files changed, 51 insertions(+), 4 deletions(-)
 
 diff --git a/zynautoconnect/zynthian_autoconnect.py b/zynautoconnect/zynthian_autoconnect.py
-index 747535ba..b389d599 100755
+index b5c631a42..64ebd753a 100644
 --- a/zynautoconnect/zynthian_autoconnect.py
 +++ b/zynautoconnect/zynthian_autoconnect.py
-@@ -1126,7 +1126,11 @@ def audio_autoconnect():
+@@ -1124,7 +1124,11 @@ def audio_autoconnect():
                                  jackname += f":input_{proc.mixer_chan:02d}"
                              routes[jackname] = route
          for dst in routes:
@@ -27,7 +27,7 @@ index 747535ba..b389d599 100755
                  # This is an exact match so we do want to route exactly this
                  dst_ports = jclient.get_ports(f"^{dst}$", is_input=True, is_audio=True)
              else:
-@@ -1195,9 +1199,10 @@ def audio_autoconnect():
+@@ -1193,9 +1197,10 @@ def audio_autoconnect():
  
      # Replicate main output to headphones
      hp_ports = jclient.get_ports("Headphones:playback", is_input=True, is_audio=True)
@@ -41,7 +41,7 @@ index 747535ba..b389d599 100755
  
      # Enable zynmixer internal normalised routes and remove corresponding jack graph connections
      if "zynmixer_bus:input_00a" in required_routes and "zynmixer_bus:input_00b" in required_routes:
-@@ -1242,6 +1247,46 @@ def audio_autoconnect():
+@@ -1240,6 +1245,46 @@ def audio_autoconnect():
      release_lock()
  
  
@@ -89,10 +89,10 @@ index 747535ba..b389d599 100755
      ports = jclient.get_ports("system:playback", is_input=True, is_audio=True, is_physical=True)
      if jack_audio_device == "Dummy":
 diff --git a/zyngui/zynthian_gui_config.py b/zyngui/zynthian_gui_config.py
-index 3c722836..764b9b61 100644
+index d5853fe61..0b9e7336d 100644
 --- a/zyngui/zynthian_gui_config.py
 +++ b/zyngui/zynthian_gui_config.py
-@@ -619,6 +619,8 @@ hotplug_audio_enabled = get_env_int('ZYNTHIAN_HOTPLUG_AUDIO', 0)
+@@ -648,6 +648,8 @@ hotplug_audio_enabled = get_env_int('ZYNTHIAN_HOTPLUG_AUDIO', 0)
  disabled_audio_in = os.environ.get('ZYNTHIAN_HOTPLUG_AUDIO_DISABLED_IN', "").split(',')
  disabled_audio_out = os.environ.get('ZYNTHIAN_HOTPLUG_AUDIO_DISABLED_OUT', 'headphones,b1,b2').split(',')
  pfl_output = os.environ.get('ZYNTHIAN_PFL_OUTPUT', "None")

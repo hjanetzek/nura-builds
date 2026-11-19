@@ -17,10 +17,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 16 insertions(+)
 
 diff --git a/zyngui/zynthian_gui_config.py b/zyngui/zynthian_gui_config.py
-index 764b9b61..80e2b30c 100644
+index 0b9e7336d..ab855b37f 100644
 --- a/zyngui/zynthian_gui_config.py
 +++ b/zyngui/zynthian_gui_config.py
-@@ -863,6 +863,22 @@ if "zynthian_main.py" in sys.argv[0]:
+@@ -894,6 +894,22 @@ if "zynthian_main.py" in sys.argv[0]:
          if not font_size:
              font_size = int(display_width / 40)
  

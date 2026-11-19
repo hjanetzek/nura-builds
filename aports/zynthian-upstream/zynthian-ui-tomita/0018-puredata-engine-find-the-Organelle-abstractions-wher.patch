@@ -16,10 +16,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/zyngine/zynthian_engine_puredata.py b/zyngine/zynthian_engine_puredata.py
-index 22bf0633..ce844f0d 100644
+index d55ba6390..3be1dd6b6 100644
 --- a/zyngine/zynthian_engine_puredata.py
 +++ b/zyngine/zynthian_engine_puredata.py
-@@ -123,6 +123,12 @@ class zynthian_engine_puredata(zynthian_engine):
+@@ -122,6 +122,12 @@ class zynthian_engine_puredata(zynthian_engine):
              self.base_command = f"pd -jack -nojackconnect -jackname \"{self.jackname}\" -rt -alsamidi -mididev 1"
          else:
              self.base_command = f"pd -nogui -jack -nojackconnect -jackname \"{self.jackname}\" -rt -alsamidi -mididev 1"

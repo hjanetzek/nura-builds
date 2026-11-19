@@ -14,7 +14,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 3 insertions(+)
 
 diff --git a/zynconf/zynthian_config.py b/zynconf/zynthian_config.py
-index 4640b3df..80ee95bc 100755
+index 3f47b5036..efa7952b9 100644
 --- a/zynconf/zynthian_config.py
 +++ b/zynconf/zynthian_config.py
 @@ -313,6 +313,9 @@ def load_plain_envars(fpath, set_env=True):

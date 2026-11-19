@@ -15,7 +15,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 6 insertions(+), 5 deletions(-)
 
 diff --git a/desktop/setup_desktop.sh b/desktop/setup_desktop.sh
-index 1d028834..580242c8 100755
+index 1d0288349..580242c84 100755
 --- a/desktop/setup_desktop.sh
 +++ b/desktop/setup_desktop.sh
 @@ -107,11 +107,12 @@ do_dirs() {

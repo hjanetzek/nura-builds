@@ -15,14 +15,14 @@ Subject: [PATCH] Desktop mode: hide engines whose program isn't installed; fix
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 (cherry picked from commit 8a1c33f2a35f54243ffcbd9fa12574255bb976fb)
 ---
- zyngine/zynthian_chain_manager.py | 41 +++++++++++++++++++++++++++++--
- 1 file changed, 39 insertions(+), 2 deletions(-)
+ zyngine/zynthian_chain_manager.py | 42 +++++++++++++++++++++++++++++--
+ 1 file changed, 40 insertions(+), 2 deletions(-)
 
 diff --git a/zyngine/zynthian_chain_manager.py b/zyngine/zynthian_chain_manager.py
-index 1c9b95d9..2434cd95 100644
+index f8d682cf8..fe758b4ea 100644
 --- a/zyngine/zynthian_chain_manager.py
 +++ b/zyngine/zynthian_chain_manager.py
-@@ -23,6 +23,7 @@
+@@ -22,6 +22,7 @@
  #
  # ****************************************************************************
  
@@ -30,7 +30,7 @@ index 1c9b95d9..2434cd95 100644
  import logging
  
  # Zynthian specific modules
-@@ -30,6 +31,7 @@ import zynautoconnect
+@@ -29,6 +30,7 @@ import zynautoconnect
  from zyncoder.zyncore import lib_zyncore
  
  from zyngine import *
@@ -38,7 +38,7 @@ index 1c9b95d9..2434cd95 100644
  from zyngine import zynthian_lv2
  from zyngine.zynthian_chain import *
  from zyngine.zynthian_engine_jalv import *
-@@ -85,6 +87,21 @@ engine2class = {
+@@ -84,6 +86,22 @@ engine2class = {
      'CL': zynthian_engine_clippy
  }
  
@@ -57,10 +57,11 @@ index 1c9b95d9..2434cd95 100644
 +    "IR": "vlc"
 +}
 +
- # ----------------------------------------------------------------------------
- # Zynthian Chain Manager Class
- # ----------------------------------------------------------------------------
-@@ -197,6 +214,17 @@ class zynthian_chain_manager:
++
+ CC_NAMES = {
+     1: "ModWheel",
+     2: "Breath",
+@@ -234,6 +252,17 @@ class zynthian_chain_manager:
                  info['ENGINE'] = None
                  info['ENABLED'] = False
  
@@ -78,7 +79,7 @@ index 1c9b95d9..2434cd95 100644
          # Complete Pianoteq config
          pt_info = get_pianoteq_binary_info()
          if pt_info and pt_info['api']:
-@@ -1099,7 +1127,10 @@ class zynthian_chain_manager:
+@@ -1155,7 +1184,10 @@ class zynthian_chain_manager:
  
          engine = self.start_engine(processor, eng_code, eng_config)
          if not engine:
@@ -90,7 +91,7 @@ index 1c9b95d9..2434cd95 100644
              del self.processors[proc_id]
              self.state_manager.end_busy("add_processor")
              return None
-@@ -1416,6 +1447,10 @@ class zynthian_chain_manager:
+@@ -1549,6 +1581,10 @@ class zynthian_chain_manager:
          if eng_code not in self.engine_info:
              logging.error(f"Engine '{eng_code}' not found!")
              return None
@@ -101,7 +102,7 @@ index 1c9b95d9..2434cd95 100644
  
          if eng_code in self.zyngines:
              # Engine already started
-@@ -1479,7 +1514,9 @@ class zynthian_chain_manager:
+@@ -1612,7 +1648,9 @@ class zynthian_chain_manager:
                  eng_cat = info["CAT"]
                  if eng_cat in result:
                      hide_if_single_proc = eng_code not in self.single_processor_engines or eng_code not in self.zyngines

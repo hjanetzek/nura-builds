@@ -13,7 +13,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/zynlibs/zynclippy/clippy.c b/zynlibs/zynclippy/clippy.c
-index 751d3a1a..76bb0d90 100644
+index dd0852f09..1047ff20d 100644
 --- a/zynlibs/zynclippy/clippy.c
 +++ b/zynlibs/zynclippy/clippy.c
 @@ -824,7 +824,7 @@ uint8_t loadClip(uint8_t channel, uint8_t note, const char* path, uint16_t nbeat

@@ -1,8 +1,8 @@
-From b0c129c3dec16fd4d7a1124e691df639c9fc0f0d Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Hannes Janetzek <hannes.janetzek@gmail.com>
 Date: Tue, 3 Nov 2026 02:12:00 +0100
-Subject: [PATCH 28/29] Touch keypad LEDs: draw on show() like the LED strip;
- ALT labels follow ALT mode
+Subject: [PATCH] Touch keypad LEDs: draw on show() like the LED strip; ALT
+ labels follow ALT mode
 
 - The LED emulation drew every write. An LED update often sets an LED twice
   (F1-F4: first for ALT mode, then by the current screen, e.g. the MIDI
@@ -22,7 +22,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  2 files changed, 34 insertions(+), 23 deletions(-)
 
 diff --git a/zyngui/zynthian_gui_touchkeypad_v5.py b/zyngui/zynthian_gui_touchkeypad_v5.py
-index fa0daf1d..c04f7ded 100644
+index dc01e355d..8df79efa5 100644
 --- a/zyngui/zynthian_gui_touchkeypad_v5.py
 +++ b/zyngui/zynthian_gui_touchkeypad_v5.py
 @@ -248,20 +248,22 @@ class zynthian_gui_touchkeypad_v5(tkinter.Canvas):
@@ -61,10 +61,10 @@ index fa0daf1d..c04f7ded 100644
              else:
                  label = config[LABEL]
 diff --git a/zyngui/zynthian_wsleds_v5touch.py b/zyngui/zynthian_wsleds_v5touch.py
-index d66f88cf..0df1188d 100644
+index f80e1ec36..f87f6414f 100644
 --- a/zyngui/zynthian_wsleds_v5touch.py
 +++ b/zyngui/zynthian_wsleds_v5touch.py
-@@ -43,7 +43,8 @@ class touchkeypad_button_colors:
+@@ -41,7 +41,8 @@ class touchkeypad_button_colors:
      def __init__(self, wsleds):
          self.wsleds = wsleds
          self.zyngui = wsleds.zyngui
@@ -74,7 +74,7 @@ index d66f88cf..0df1188d 100644
          # A wanna-be abstraction: derive a named "mode" from the requested colors
          self.mode_map = {}
          self.mode_map[wsleds.wscolor_default] = 'default'
-@@ -52,23 +53,10 @@ class touchkeypad_button_colors:
+@@ -50,23 +51,10 @@ class touchkeypad_button_colors:
          self.mode_map[wsleds.wscolor_active2] = 'active2'
  
      def __setitem__(self, index, color):
@@ -101,7 +101,7 @@ index d66f88cf..0df1188d 100644
  
      def __getitem__(self, index):
          try:
-@@ -78,8 +66,29 @@ class touchkeypad_button_colors:
+@@ -76,8 +64,29 @@ class touchkeypad_button_colors:
  
  
      def show(self):
@@ -133,6 +133,3 @@ index d66f88cf..0df1188d 100644
  
      def ablend(self, a, fg, bg):
          """
--- 
-2.56.0
-

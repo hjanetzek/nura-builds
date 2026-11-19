@@ -13,10 +13,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 4 insertions(+)
 
 diff --git a/zyngine/zynthian_engine_alsa_mixer.py b/zyngine/zynthian_engine_alsa_mixer.py
-index 79443bb2..84647c34 100644
+index db92900e3..66d0ba96b 100644
 --- a/zyngine/zynthian_engine_alsa_mixer.py
 +++ b/zyngine/zynthian_engine_alsa_mixer.py
-@@ -31,6 +31,7 @@ import logging
+@@ -30,6 +30,7 @@ import logging
  import alsaaudio
  from subprocess import check_output
  
@@ -24,7 +24,7 @@ index 79443bb2..84647c34 100644
  from zyncoder.zyncore import lib_zyncore
  from zyngine.zynthian_engine import zynthian_engine
  from zyngine.zynthian_controller import zynthian_controller
-@@ -604,6 +605,9 @@ class zynthian_engine_alsa_mixer(zynthian_engine):
+@@ -603,6 +604,9 @@ class zynthian_engine_alsa_mixer(zynthian_engine):
          self.device = f"hw:{self.device_name}"
  
          try:
@@ -32,5 +32,5 @@ index 79443bb2..84647c34 100644
 +                # Raspberry Pi onboard audio; the zynthian-sys script isn't installed
 +                raise Exception("desktop mode")
              cmd = self.sys_dir + "/sbin/get_rbpi_audio_device.sh"
-             self.rbpi_device_name = check_output(cmd, shell=True).decode("utf-8")
+             self.rbpi_device_name = check_output([cmd]).decode("utf-8")
          except:

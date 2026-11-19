@@ -16,10 +16,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  2 files changed, 77 insertions(+), 3 deletions(-)
 
 diff --git a/zyngui/multitouch.py b/zyngui/multitouch.py
-index 143a761e..a8f36ded 100644
+index 1bb74ced8..709cded64 100644
 --- a/zyngui/multitouch.py
 +++ b/zyngui/multitouch.py
-@@ -35,7 +35,10 @@ from select import select
+@@ -33,7 +33,10 @@ from select import select
  from time import monotonic
  from threading import Thread
  from subprocess import run, PIPE
@@ -32,10 +32,10 @@ index 143a761e..a8f36ded 100644
  from collections import namedtuple
  from evdev import ecodes, InputDevice
 diff --git a/zyngui/zynthian_gui_help.py b/zyngui/zynthian_gui_help.py
-index 3e61a264..1a2320fd 100644
+index ac5ac9d81..fbac2f414 100644
 --- a/zyngui/zynthian_gui_help.py
 +++ b/zyngui/zynthian_gui_help.py
-@@ -27,8 +27,17 @@ import os
+@@ -26,8 +26,17 @@ import os
  import logging
  import tkinter
  from pathlib import Path
@@ -55,7 +55,7 @@ index 3e61a264..1a2320fd 100644
  
  
  # Zynthian specific modules
-@@ -426,3 +435,65 @@ class zynthian_gui_help(HtmlFrame):
+@@ -466,3 +475,65 @@ class zynthian_gui_help(HtmlFrame):
              self.zyngui.tts.announce(tts, False, False, False)
  
  # -------------------------------------------------------------------------------

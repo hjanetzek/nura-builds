@@ -19,7 +19,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  2 files changed, 13 insertions(+)
 
 diff --git a/desktop/install.sh b/desktop/install.sh
-index ff300455..20cd11e4 100755
+index ff3004554..20cd11e4f 100755
 --- a/desktop/install.sh
 +++ b/desktop/install.sh
 @@ -67,8 +67,16 @@ install_ui() {
@@ -40,7 +40,7 @@ index ff300455..20cd11e4 100755
  
  	# Byte-compile: the installed tree is read-only at run time
 diff --git a/desktop/zynthian_desktop.sh b/desktop/zynthian_desktop.sh
-index 993d9de3..f945d0f7 100755
+index 993d9de37..f945d0f7b 100755
 --- a/desktop/zynthian_desktop.sh
 +++ b/desktop/zynthian_desktop.sh
 @@ -9,6 +9,7 @@

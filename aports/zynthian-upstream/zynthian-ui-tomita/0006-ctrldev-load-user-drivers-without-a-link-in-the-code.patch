@@ -17,10 +17,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 31 insertions(+), 1 deletion(-)
 
 diff --git a/zyngine/zynthian_ctrldev_manager.py b/zyngine/zynthian_ctrldev_manager.py
-index 60d5aa02..10edf8a5 100644
+index a99976421..e8cf3be56 100644
 --- a/zyngine/zynthian_ctrldev_manager.py
 +++ b/zyngine/zynthian_ctrldev_manager.py
-@@ -26,7 +26,9 @@
+@@ -24,7 +24,9 @@
  
  from zynconf import zynthian_paths
  import os
@@ -30,7 +30,7 @@ index 60d5aa02..10edf8a5 100644
  import logging
  import importlib
  import traceback
-@@ -41,6 +43,30 @@ from zyncoder.zyncore import lib_zyncore
+@@ -39,6 +41,30 @@ from zyncoder.zyncore import lib_zyncore
  DRIVER_DEVELOPMENT = False
  #DRIVER_DEVELOPMENT = True
  
@@ -61,7 +61,7 @@ index 60d5aa02..10edf8a5 100644
  # ------------------------------------------------------------------------------
  # Zynthian Control Device Manager Class
  # ------------------------------------------------------------------------------
-@@ -74,7 +100,11 @@ class zynthian_ctrldev_manager():
+@@ -72,7 +98,11 @@ class zynthian_ctrldev_manager():
  
          # Find and load new driver modules
          for dirname in self.ctrldev_dirnames:

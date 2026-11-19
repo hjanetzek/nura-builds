@@ -20,7 +20,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  3 files changed, 63 insertions(+), 20 deletions(-)
 
 diff --git a/zynconf/zynthian_config.py b/zynconf/zynthian_config.py
-index 7001d94a..4640b3df 100755
+index c266c061b..3f47b5036 100644
 --- a/zynconf/zynthian_config.py
 +++ b/zynconf/zynthian_config.py
 @@ -172,6 +172,11 @@ config_dir = zynthian_paths.config_dir
@@ -35,21 +35,21 @@ index 7001d94a..4640b3df 100755
  # -------------------------------------------------------------------------------
  # Config management
  # -------------------------------------------------------------------------------
-@@ -541,6 +546,9 @@ def is_process_running(procname):
+@@ -538,6 +543,9 @@ def is_process_running(procname):
  
  
  def is_service_active(service):
 +    if desktop_mode:
 +        # The system's services are not zynthian's
 +        return False
-     cmd = "systemctl is-active %s" % service
      try:
-         result = check_output(cmd, shell=True).decode('utf-8', 'ignore')
+         result = check_output(["systemctl", "is-active", service]).decode('utf-8', 'ignore')
+     except Exception as e:
 diff --git a/zyngine/zynthian_state_manager.py b/zyngine/zynthian_state_manager.py
-index f4443b8f..2083ee1e 100644
+index 9782c6480..6bbaa7164 100644
 --- a/zyngine/zynthian_state_manager.py
 +++ b/zyngine/zynthian_state_manager.py
-@@ -69,6 +69,19 @@ zynthian_dir = zynthian_paths.zynthian_dir
+@@ -68,6 +68,19 @@ zynthian_dir = zynthian_paths.zynthian_dir
  ui_dir = zynthian_paths.ui_dir
  my_data_dir = zynthian_paths.my_data_dir
  ex_data_dir = zynthian_paths.ex_data_dir
@@ -69,25 +69,25 @@ index f4443b8f..2083ee1e 100644
  capture_dir_sdc = my_data_dir + "/capture"
  
  MAIN_MIXBUS_ID = -1
-@@ -929,13 +942,15 @@ class zynthian_state_manager:
+@@ -932,13 +945,15 @@ class zynthian_state_manager:
              self.last_event_flag = False
              self.last_event_ts = monotonic() - zynthian_gui_config.power_save_secs
              try:
--                check_output("powersave_control.sh on", shell=True)
+-                check_output(["powersave_control.sh", "on"])
 +                if not zynconf.desktop_mode:
-+                    check_output("powersave_control.sh on", shell=True)
++                    check_output(["powersave_control.sh", "on"])
              except Exception as e:
                  logging.error(e)
          else:
              logging.info("Power Save Mode: OFF")
              try:
--                check_output("powersave_control.sh off", shell=True)
+-                check_output(["powersave_control.sh", "off"])
 +                if not zynconf.desktop_mode:
-+                    check_output("powersave_control.sh off", shell=True)
++                    check_output(["powersave_control.sh", "off"])
              except Exception as e:
                  logging.error(e)
              self.ctrldev_manager.sleep_off()
-@@ -2474,6 +2489,7 @@ class zynthian_state_manager:
+@@ -2450,6 +2465,7 @@ class zynthian_state_manager:
      # Core Network Services
      # ---------------------------------------------------------------------------
  
@@ -95,7 +95,7 @@ index f4443b8f..2083ee1e 100644
      def start_vncserver(self, save_config=True):
          if not self.root_access:
              return
-@@ -2521,6 +2537,7 @@ class zynthian_state_manager:
+@@ -2497,6 +2513,7 @@ class zynthian_state_manager:
  
          self.end_busy("start_vncserver")
  
@@ -103,7 +103,7 @@ index f4443b8f..2083ee1e 100644
      def stop_vncserver(self, save_config=True):
          if not self.root_access:
              return
-@@ -2586,6 +2603,7 @@ class zynthian_state_manager:
+@@ -2562,6 +2579,7 @@ class zynthian_state_manager:
          else:
              self.stop_netump(False)
  
@@ -111,7 +111,7 @@ index f4443b8f..2083ee1e 100644
      def start_netump(self, save_config=True, wait=0):
          service = "jacknetumpd"
          if zynconf.is_service_active(service):
-@@ -2613,6 +2631,7 @@ class zynthian_state_manager:
+@@ -2589,6 +2607,7 @@ class zynthian_state_manager:
  
          self.end_busy("start_netump")
  
@@ -119,7 +119,7 @@ index f4443b8f..2083ee1e 100644
      def stop_netump(self, save_config=True, wait=0):
          service = "jacknetumpd"
          if not zynconf.is_service_active(service):
-@@ -2646,6 +2665,7 @@ class zynthian_state_manager:
+@@ -2622,6 +2641,7 @@ class zynthian_state_manager:
          else:
              self.stop_rtpmidi(False)
  
@@ -127,7 +127,7 @@ index f4443b8f..2083ee1e 100644
      def start_rtpmidi(self, save_config=True, wait=0):
          service = "jackrtpmidid"
          if zynconf.is_service_active(service):
-@@ -2673,6 +2693,7 @@ class zynthian_state_manager:
+@@ -2649,6 +2669,7 @@ class zynthian_state_manager:
  
          self.end_busy("start_rtpmidi")
  
@@ -135,7 +135,7 @@ index f4443b8f..2083ee1e 100644
      def stop_rtpmidi(self, save_config=True, wait=0):
          service = "jackrtpmidid"
          if not zynconf.is_service_active(service):
-@@ -2699,6 +2720,7 @@ class zynthian_state_manager:
+@@ -2675,6 +2696,7 @@ class zynthian_state_manager:
  
          self.end_busy("stop_rtpmidi")
  
@@ -143,7 +143,7 @@ index f4443b8f..2083ee1e 100644
      def start_qmidinet(self, save_config=True, wait=0):
          service = "qmidinet"
          if zynconf.is_service_active(service):
-@@ -2726,6 +2748,7 @@ class zynthian_state_manager:
+@@ -2702,6 +2724,7 @@ class zynthian_state_manager:
  
          self.end_busy("start_qmidinet")
  
@@ -151,7 +151,7 @@ index f4443b8f..2083ee1e 100644
      def stop_qmidinet(self, save_config=True, wait=0):
          service = "qmidinet"
          if not zynconf.is_service_active(service):
-@@ -2758,6 +2781,7 @@ class zynthian_state_manager:
+@@ -2734,6 +2757,7 @@ class zynthian_state_manager:
          else:
              self.stop_qmidinet(False)
  
@@ -159,7 +159,7 @@ index f4443b8f..2083ee1e 100644
      def start_touchosc2midi(self, save_config=True, wait=0):
          service = "touchosc2midi"
          if zynconf.is_service_active(service):
-@@ -2785,6 +2809,7 @@ class zynthian_state_manager:
+@@ -2761,6 +2785,7 @@ class zynthian_state_manager:
  
          self.end_busy("start_touchosc2midi")
  
@@ -167,23 +167,23 @@ index f4443b8f..2083ee1e 100644
      def stop_touchosc2midi(self, save_config=True, wait=0):
          service = "touchosc2midi"
          if not zynconf.is_service_active(service):
-@@ -2818,6 +2843,7 @@ class zynthian_state_manager:
+@@ -2794,6 +2819,7 @@ class zynthian_state_manager:
              self.stop_touchosc2midi(False)
  
      # Unblock all soft-blocked bluetooth controllers
 +    @system_service
      def unblock_bluetooth_controllers(self):
          self.start_busy("Unblock Bluetooth Controllers")
-         for row in check_output("rfkill -n", shell=True, encoding="utf-8").split("\n"):
-@@ -2827,6 +2853,7 @@ class zynthian_state_manager:
-                 check_output(f"rfkill unblock {parts[0].strip()}", shell=True)
+         for row in check_output(["rfkill", "-n"], encoding="utf-8").split("\n"):
+@@ -2803,6 +2829,7 @@ class zynthian_state_manager:
+                 check_output(["rfkill", "unblock", parts[0].strip()])
          self.end_busy("Unblock Bluetooth Controllers")
  
 +    @system_service
      def select_bluetooth_controller(self, controller):
          if controller.count(":") != 5:
              logging.error(f"Bad controller address ({controller})!")
-@@ -2848,6 +2875,7 @@ class zynthian_state_manager:
+@@ -2824,6 +2851,7 @@ class zynthian_state_manager:
              "ZYNTHIAN_MIDI_BLE_CONTROLLER": zynthian_gui_config.ble_controller
          })
  
@@ -191,7 +191,7 @@ index f4443b8f..2083ee1e 100644
      def start_bluetooth(self, save_config=True, wait=0):
          service = "bluetooth"
          if zynconf.is_service_active(service):
-@@ -2877,6 +2905,7 @@ class zynthian_state_manager:
+@@ -2853,6 +2881,7 @@ class zynthian_state_manager:
  
          self.end_busy("start_bluetooth")
  
@@ -199,7 +199,7 @@ index f4443b8f..2083ee1e 100644
      def stop_bluetooth(self, save_config=True, wait=0):
          service = "bluetooth"
          if not zynconf.is_service_active(service):
-@@ -2909,6 +2938,7 @@ class zynthian_state_manager:
+@@ -2885,6 +2914,7 @@ class zynthian_state_manager:
          else:
              self.stop_bluetooth(False)
  
@@ -207,7 +207,7 @@ index f4443b8f..2083ee1e 100644
      def start_aubionotes(self, save_config=True, wait=0):
          service = "aubionotes"
          if zynconf.is_service_active(service):
-@@ -2937,6 +2967,7 @@ class zynthian_state_manager:
+@@ -2913,6 +2943,7 @@ class zynthian_state_manager:
  
          self.end_busy("start_aubionotes")
  
@@ -215,7 +215,7 @@ index f4443b8f..2083ee1e 100644
      def stop_aubionotes(self, save_config=True, wait=0):
          service = "aubionotes"
          if not zynconf.is_service_active(service):
-@@ -2986,7 +3017,8 @@ class zynthian_state_manager:
+@@ -2959,7 +2990,8 @@ class zynthian_state_manager:
              return False
  
      def check_for_updates(self):
@@ -226,10 +226,10 @@ index f4443b8f..2083ee1e 100644
          self.checking_for_updates = True
  
 diff --git a/zyngui/zynthian_gui_admin.py b/zyngui/zynthian_gui_admin.py
-index 632dafdf..65c0ddea 100644
+index b791942d4..8dfdfa87b 100644
 --- a/zyngui/zynthian_gui_admin.py
 +++ b/zyngui/zynthian_gui_admin.py
-@@ -67,7 +67,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+@@ -66,7 +66,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
  
          self.state_manager = self.zyngui.state_manager
  
@@ -238,7 +238,7 @@ index 632dafdf..65c0ddea 100644
              self.default_rbpi_headphones()
  
      def refresh_status(self):
-@@ -89,7 +89,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+@@ -88,7 +88,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
  
      def build_view(self):
          self.update_available = self.state_manager.update_available
@@ -247,7 +247,7 @@ index 632dafdf..65c0ddea 100644
              self.refresh_wifi = True
              self.refresh_wifi_thread = Thread(target=self.refresh_wifi_task, name="wifi_refresh")
              self.refresh_wifi_thread.start()
-@@ -163,7 +163,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+@@ -162,7 +162,7 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
          #self.list_data.append((self.audio_levels, 0, "Audio Levels", ["Show audio levels view.", "meters.png"]))
          self.list_data.append((self.pfl, 0, f"PFL Output ({zynthian_gui_config.pfl_output})", ["Select the audio output device for pre-fader listening.", "headphones.png"]))
          self.list_data.append((self.show_tts, 0, "ZynVoice", ["Text to speech accessibility options", "audio_options.png"]))
@@ -256,7 +256,7 @@ index 632dafdf..65c0ddea 100644
              if zynthian_gui_config.rbpi_headphones:
                  self.list_data.append((self.stop_rbpi_headphones, 0, "\u2612 RBPi Headphones",
                                         ["RBPi onboard headphone output (Lo-Fi) is enabled", "headphones.png"]))
-@@ -194,17 +194,19 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+@@ -193,17 +193,19 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
  
          self.list_data.append((self.network_info, 0, "Network Info",
                                 ["Show network details, e.g. IP address, etc.", "network.png"]))
@@ -287,7 +287,7 @@ index 632dafdf..65c0ddea 100644
  
          self.list_data.append((None, 0, "> USER INTERFACE"))
          self.list_data.append((self.visible_chains, 0, f"Visible Chains ({zynthian_gui_config.visible_mixer_strips})",
-@@ -237,9 +239,10 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
+@@ -236,9 +238,10 @@ class zynthian_gui_admin(zynthian_gui_selector_info):
          if "brightness_config" in self.zyngui.screens and self.zyngui.screens["brightness_config"].get_num_zctrls() > 0:
              self.list_data.append((self.zyngui.brightness_config, 0, "Brightness",
                                     ["Adjust display and LED brightness.", "bright_settings.png"]))

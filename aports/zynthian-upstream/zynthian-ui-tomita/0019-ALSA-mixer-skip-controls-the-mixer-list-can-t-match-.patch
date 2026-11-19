@@ -19,10 +19,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 9 insertions(+)
 
 diff --git a/zyngine/zynthian_engine_alsa_mixer.py b/zyngine/zynthian_engine_alsa_mixer.py
-index 84647c34..faa27edb 100644
+index 66d0ba96b..2ff102d81 100644
 --- a/zyngine/zynthian_engine_alsa_mixer.py
 +++ b/zyngine/zynthian_engine_alsa_mixer.py
-@@ -221,6 +221,15 @@ class zynthian_engine_alsa_mixer(zynthian_engine):
+@@ -220,6 +220,15 @@ class zynthian_engine_alsa_mixer(zynthian_engine):
          try:
              is_log = False
              mixer_ctrl_names = sorted(set(alsaaudio.mixers(device=device)))

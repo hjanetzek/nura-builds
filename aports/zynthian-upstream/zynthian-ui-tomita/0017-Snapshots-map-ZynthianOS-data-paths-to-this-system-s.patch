@@ -18,7 +18,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  2 files changed, 29 insertions(+), 1 deletion(-)
 
 diff --git a/zynconf/zynthian_paths.py b/zynconf/zynthian_paths.py
-index 0956cf6d..dac7058a 100644
+index 0956cf6df..dac7058a2 100644
 --- a/zynconf/zynthian_paths.py
 +++ b/zynconf/zynthian_paths.py
 @@ -65,3 +65,31 @@ def native_lib(fname, build_dir):
@@ -54,10 +54,10 @@ index 0956cf6d..dac7058a 100644
 +
 +    return remap(obj)
 diff --git a/zyngine/zynthian_state_manager.py b/zyngine/zynthian_state_manager.py
-index 2083ee1e..7bac75ba 100644
+index 6bbaa7164..9a18fdbd2 100644
 --- a/zyngine/zynthian_state_manager.py
 +++ b/zyngine/zynthian_state_manager.py
-@@ -1117,7 +1117,7 @@ class zynthian_state_manager:
+@@ -1120,7 +1120,7 @@ class zynthian_state_manager:
  
          mute = self.zynmixer_bus.get_mute(0)
          try:

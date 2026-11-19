@@ -14,7 +14,7 @@ when the tree has no Qt UI.
  4 files changed, 83 insertions(+), 9 deletions(-)
 
 diff --git a/desktop/install.sh b/desktop/install.sh
-index 20cd11e4..24c866ac 100755
+index 20cd11e4f..24c866aca 100755
 --- a/desktop/install.sh
 +++ b/desktop/install.sh
 @@ -51,6 +51,13 @@ install_ui() {
@@ -32,7 +32,7 @@ index 20cd11e4..24c866ac 100755
  	mkdir -p "$ui_dst/desktop"
  	install -m 755 "$ui_src/desktop/zynthian_desktop.sh" "$ui_src/desktop/setup_desktop.sh" "$ui_dst/desktop/"
 diff --git a/desktop/setup_desktop.sh b/desktop/setup_desktop.sh
-index 580242c8..cb6a3347 100755
+index 580242c84..cb6a3347d 100755
 --- a/desktop/setup_desktop.sh
 +++ b/desktop/setup_desktop.sh
 @@ -6,10 +6,14 @@
@@ -147,7 +147,7 @@ index 580242c8..cb6a3347 100755
  
  echo "=== Done. Start with: $DESKTOP_DIR/zynthian_desktop.sh"
 diff --git a/desktop/zynthian_desktop.sh b/desktop/zynthian_desktop.sh
-index f945d0f7..7e968438 100755
+index f945d0f7b..7e9684384 100755
 --- a/desktop/zynthian_desktop.sh
 +++ b/desktop/zynthian_desktop.sh
 @@ -84,7 +84,15 @@ cd "$ZYNTHIAN_UI_DIR"
@@ -168,7 +168,7 @@ index f945d0f7..7e968438 100755
  	echo "zynthian exit status: $status"
  
 diff --git a/desktop/zynthian_desktop_env.sh b/desktop/zynthian_desktop_env.sh
-index 736340ed..97d231b9 100755
+index 736340edd..97d231b92 100755
 --- a/desktop/zynthian_desktop_env.sh
 +++ b/desktop/zynthian_desktop_env.sh
 @@ -9,6 +9,8 @@

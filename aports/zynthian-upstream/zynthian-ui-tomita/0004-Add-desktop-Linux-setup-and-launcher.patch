@@ -25,7 +25,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/desktop/setup_desktop.sh b/desktop/setup_desktop.sh
 new file mode 100755
-index 00000000..94eda1fd
+index 000000000..94eda1fd2
 --- /dev/null
 +++ b/desktop/setup_desktop.sh
 @@ -0,0 +1,152 @@
@@ -183,7 +183,7 @@ index 00000000..94eda1fd
 +echo "=== Done. Start with: $DESKTOP_DIR/zynthian_desktop.sh"
 diff --git a/desktop/zynthian_desktop.sh b/desktop/zynthian_desktop.sh
 new file mode 100755
-index 00000000..957b803d
+index 000000000..957b803d5
 --- /dev/null
 +++ b/desktop/zynthian_desktop.sh
 @@ -0,0 +1,95 @@
@@ -284,7 +284,7 @@ index 00000000..957b803d
 +done
 diff --git a/desktop/zynthian_desktop_env.sh b/desktop/zynthian_desktop_env.sh
 new file mode 100755
-index 00000000..736340ed
+index 000000000..736340edd
 --- /dev/null
 +++ b/desktop/zynthian_desktop_env.sh
 @@ -0,0 +1,50 @@
@@ -340,7 +340,7 @@ index 00000000..736340ed
 +unset _zd_ui_dir _zd_config_home _zd_data_home _zd_lv2_system
 diff --git a/desktop/zynthian_envars_desktop.sh b/desktop/zynthian_envars_desktop.sh
 new file mode 100755
-index 00000000..ba6dc878
+index 000000000..ba6dc878c
 --- /dev/null
 +++ b/desktop/zynthian_envars_desktop.sh
 @@ -0,0 +1,96 @@

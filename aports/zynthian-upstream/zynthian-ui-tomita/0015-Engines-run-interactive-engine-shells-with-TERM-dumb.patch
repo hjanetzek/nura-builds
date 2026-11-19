@@ -17,7 +17,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/zyngine/zynthian_engine.py b/zyngine/zynthian_engine.py
-index 88b6ec62..927f7f5b 100644
+index 4501df4be..f2b65e8df 100644
 --- a/zyngine/zynthian_engine.py
 +++ b/zyngine/zynthian_engine.py
 @@ -67,6 +67,11 @@ class zynthian_basic_engine:

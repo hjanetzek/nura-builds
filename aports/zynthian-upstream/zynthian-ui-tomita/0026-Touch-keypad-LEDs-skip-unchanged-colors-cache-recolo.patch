@@ -1,8 +1,8 @@
-From 448bfc427fafdbf957c9d7abbd1df1f3ffc48e91 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Hannes Janetzek <hannes.janetzek@gmail.com>
 Date: Tue, 3 Nov 2026 01:12:41 +0100
-Subject: [PATCH 27/29] Touch keypad LEDs: skip unchanged colors, cache
- recolored button images
+Subject: [PATCH] Touch keypad LEDs: skip unchanged colors, cache recolored
+ button images
 
 The LED update sets all buttons 5 times per second: skip a button whose
 color hasn't changed before converting and blending it. Image buttons
@@ -17,7 +17,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  2 files changed, 19 insertions(+), 7 deletions(-)
 
 diff --git a/zyngui/zynthian_gui_touchkeypad_v5.py b/zyngui/zynthian_gui_touchkeypad_v5.py
-index 22753709..fa0daf1d 100644
+index d9d88e877..dc01e355d 100644
 --- a/zyngui/zynthian_gui_touchkeypad_v5.py
 +++ b/zyngui/zynthian_gui_touchkeypad_v5.py
 @@ -58,6 +58,7 @@ class zynthian_gui_touchkeypad_v5(tkinter.Canvas):
@@ -65,10 +65,10 @@ index 22753709..fa0daf1d 100644
              self.itemconfig(config[IMG_ID], image=tkimage)
          else:
 diff --git a/zyngui/zynthian_wsleds_v5touch.py b/zyngui/zynthian_wsleds_v5touch.py
-index 74b3218a..d66f88cf 100644
+index 0e9d57b85..f80e1ec36 100644
 --- a/zyngui/zynthian_wsleds_v5touch.py
 +++ b/zyngui/zynthian_wsleds_v5touch.py
-@@ -52,6 +52,9 @@ class touchkeypad_button_colors:
+@@ -50,6 +50,9 @@ class touchkeypad_button_colors:
          self.mode_map[wsleds.wscolor_active2] = 'active2'
  
      def __setitem__(self, index, color):
@@ -78,6 +78,3 @@ index 74b3218a..d66f88cf 100644
          self.led_status[index] = color
          mode = self.mode_map.get(color, None)
          # request color change on the onscreen touchkeypad
--- 
-2.56.0
-

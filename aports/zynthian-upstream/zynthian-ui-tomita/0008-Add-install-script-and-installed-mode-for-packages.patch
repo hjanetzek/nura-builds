@@ -25,7 +25,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/desktop/install.sh b/desktop/install.sh
 new file mode 100755
-index 00000000..ff300455
+index 000000000..ff3004554
 --- /dev/null
 +++ b/desktop/install.sh
 @@ -0,0 +1,106 @@
@@ -136,7 +136,7 @@ index 00000000..ff300455
 +	*) echo "Unknown component: $component"; exit 1 ;;
 +esac
 diff --git a/desktop/setup_desktop.sh b/desktop/setup_desktop.sh
-index 94eda1fd..1d028834 100755
+index 94eda1fd2..1d0288349 100755
 --- a/desktop/setup_desktop.sh
 +++ b/desktop/setup_desktop.sh
 @@ -52,9 +52,10 @@ PY_PACKAGES=(
@@ -169,7 +169,7 @@ index 94eda1fd..1d028834 100755
  esac
  
 diff --git a/desktop/zynthian_desktop.sh b/desktop/zynthian_desktop.sh
-index 957b803d..993d9de3 100755
+index 957b803d5..993d9de37 100755
 --- a/desktop/zynthian_desktop.sh
 +++ b/desktop/zynthian_desktop.sh
 @@ -13,12 +13,21 @@
