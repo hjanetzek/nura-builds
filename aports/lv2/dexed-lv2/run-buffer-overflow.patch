@@ -1,0 +1,44 @@
+--- a/dexed.cpp
++++ b/dexed.cpp
+@@ -411,14 +411,16 @@
+            continue;
+        }
+ 
+-       // render audio from the last frame until the timestamp of this event
+-       GetSamples (num_this_time, outbuf_);
+-      
+-       // i is the index of the engine's buf, which always starts at 0 (i think)
+-       // j is the index of the plugin's float output buffer which will be the timestamp
+-       // of the last processed atom event.
+-       for (uint32_t i = 0, j = last_frame; i < num_this_time; ++i, ++j)
+-           output[j]=outbuf_[i];
++       // render audio from the last frame until the timestamp of this event, in pieces of
++       // at most bufsize_ samples: outbuf_ holds bufsize_ (256) samples, a span between
++       // events can be a whole period (e.g. 480 frames), which overflowed it
++       for (uint32_t j = last_frame; num_this_time > 0; ) {
++           uint32_t n = num_this_time < bufsize_ ? num_this_time : bufsize_;
++           GetSamples (n, outbuf_);
++           for (uint32_t i = 0; i < n; ++i, ++j)
++               output[j]=outbuf_[i];
++           num_this_time -= n;
++       }
+ 
+        last_frame = ev->time.frames;
+     }
+@@ -431,9 +433,13 @@
+        // already been handled.
+ 
+        num_this_time = sample_count - last_frame;
+-       GetSamples (num_this_time, outbuf_);
+-       for (uint32_t i = 0, j = last_frame; i < num_this_time; ++i, ++j)
+-           output[j] = outbuf_[i];
++       for (uint32_t j = last_frame; num_this_time > 0; ) {
++           uint32_t n = num_this_time < bufsize_ ? num_this_time : bufsize_;
++           GetSamples (n, outbuf_);
++           for (uint32_t i = 0; i < n; ++i, ++j)
++               output[j] = outbuf_[i];
++           num_this_time -= n;
++       }
+     }
+     
+     fx.process(output, sample_count);

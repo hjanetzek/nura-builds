@@ -283,10 +283,14 @@ differently:
 
 ## Keeping up with upstream
 
-`GITHUB_TOKEN=$(gh auth token) tools/check-updates.py [--all]` checks each package's main
-GitHub source: pinned commits against the default branch (or `_branch=` in the APKBUILD, e.g.
-MiMi-d's `zynthian` branch), tags against the latest release and newest tag. Debian, SourceForge
-and website tarballs are skipped, submodules aren't checked. Packages with updates are marked `*`.
+`scripts/check-updates.py [PKGNAME...]` (GitHub via `gh`'s token) finds the newest upstream version
+of each recipe in `aports/`: GitHub releases and tags, for snapshots (`_git<date>`) new commits on
+the default branch (or `_branch=` in the APKBUILD, e.g. MiMi-d's `zynthian` branch), Qt's download
+directory for Qt and PySide, Repology for the rest. `updates.conf` adjusts it per recipe (skip,
+another GitHub repository or Repology project, versions to ignore). Weekly, `update-check.yml`
+turns its findings into one issue per recipe ("update <pkg> to <version>", label `update`) with
+the steps to do it, and rebuilds published packages whose shared libraries Alpine dropped
+(`scripts/check-abi.py`).
 
 ## Licences and names
 

@@ -1,0 +1,196 @@
+# The package sets (sets/: Qt, PySide, plugins, Mesa, kernels, device packages; sets/order) for all architectures, per package
+# (docs/ci-plan.md): the plan compares each recipe with the published package repository and its
+# manifest and builds only what is new, has another version or a changed recipe (and what
+# FORCE_AFTER makes depend on that); the sets in order (sets/order), each on top of the release
+# and the earlier sets' packages; then publishes, merged into the releases "<arch>". On pushes to
+# main that change recipes or sets, and by hand. On other branches (by hand) it builds without
+# publishing.
+name: sets
+
+on:
+  workflow_dispatch:
+    inputs:
+      sets: { description: "sets (space separated; empty: all)", default: "" }
+      arch: { description: "architectures (space separated)", default: "aarch64 x86_64 armv7" }
+      packages: { description: "only these packages (space separated), always built", default: "" }
+      force: { description: "rebuild the selected packages even if up to date", type: boolean, default: false }
+  push:
+    branches: [main]
+    paths: ["aports/**", "devices/**", "sets/**"]
+
+# Queued, not cancelled: a run that publishes shouldn't be cut off
+concurrency:
+  group: sets-${{ github.ref }}
+  cancel-in-progress: false
+
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    outputs:
+      qt_base: ${{ steps.plan.outputs.qt_base }}
+      qt_declarative: ${{ steps.plan.outputs.qt_declarative }}
+      qt_wayland: ${{ steps.plan.outputs.qt_wayland }}
+      qt_tools: ${{ steps.plan.outputs.qt_tools }}
+      pyside: ${{ steps.plan.outputs.pyside }}
+      plugins: ${{ steps.plan.outputs.plugins }}
+      mesa: ${{ steps.plan.outputs.mesa }}
+      kernels: ${{ steps.plan.outputs.kernels }}
+      devices: ${{ steps.plan.outputs.devices }}
+      arches: ${{ steps.plan.outputs.arches }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { persist-credentials: false }
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHES: ${{ inputs.arch || 'aarch64 x86_64 armv7' }}
+          SETS: ${{ inputs.sets }}
+          PACKAGES: ${{ inputs.packages }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: |
+          # shellcheck disable=SC2086 # lists ($ARCHES) and an optional flag ($FORCE)
+          mkdir -p plans
+          for a in $ARCHES; do
+            mkdir -p "plans/$a"
+            gh release download "$a" -D "plans/$a" -p APKINDEX.tar.gz -p manifest.json 2>/dev/null || true
+            python3 scripts/plan-packages.py --arch "$a" --index "plans/$a/APKINDEX.tar.gz" \
+              --manifest "plans/$a/manifest.json" --sets "$SETS" --packages "$PACKAGES" $FORCE \
+              --json "plans/$a/plan.json" | tee -a "$GITHUB_STEP_SUMMARY"
+            rm -f "plans/$a/APKINDEX.tar.gz" "plans/$a/manifest.json"
+          done
+          # per set: the architectures with something to build (a JSON list for the matrix)
+          python3 - $ARCHES <<'PY' >> "$GITHUB_OUTPUT"
+          import json, sys
+          order = open("sets/order").read().split()
+          plans = {a: json.load(open(f"plans/{a}/plan.json")) for a in sys.argv[1:]}
+          for s in order:
+              print(f'{s.replace("-", "_")}=' + json.dumps([a for a, p in plans.items() if p["sets"].get(s)]))
+          # publishing: the architectures with something built or adopted
+          print("arches=" + json.dumps([a for a, p in plans.items() if p["sets"] or p["adopt"]]))
+          PY
+      # one artifact per architecture (build-set.yml takes its own)
+      - uses: actions/upload-artifact@v7
+        with: { name: plan-aarch64, path: plans/aarch64, if-no-files-found: ignore, retention-days: 3 }
+      - uses: actions/upload-artifact@v7
+        with: { name: plan-x86_64, path: plans/x86_64, if-no-files-found: ignore, retention-days: 3 }
+      - uses: actions/upload-artifact@v7
+        with: { name: plan-armv7, path: plans/armv7, if-no-files-found: ignore, retention-days: 3 }
+
+  qt-base:
+    needs: plan
+    if: ${{ needs.plan.outputs.qt_base != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_base) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: qt-base, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  qt-declarative:
+    needs: [plan, qt-base]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.qt_declarative != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_declarative) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: qt-declarative, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  qt-wayland:
+    needs: [plan, qt-declarative]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.qt_wayland != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_wayland) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: qt-wayland, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  qt-tools:
+    needs: [plan, qt-wayland]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.qt_tools != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.qt_tools) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: qt-tools, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  pyside:
+    needs: [plan, qt-tools]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.pyside != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.pyside) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: pyside, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  plugins:
+    needs: [plan, pyside]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.plugins != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.plugins) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: plugins, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  mesa:
+    needs: [plan, plugins]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.mesa != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.mesa) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: mesa, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  kernels:
+    needs: [plan, mesa]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.kernels != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.kernels) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: kernels, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  devices:
+    needs: [plan, kernels]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.devices != '[]' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.devices) }}" } }
+    uses: ./.github/workflows/build-set.yml
+    with: { set: devices, arch: "${{ matrix.arch }}" }
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+
+  # Only when no set failed (a half-built Qt shouldn't be published); KEEPGOING failures inside a
+  # set (a plugin) don't fail it. Serialized per architecture with every other publishing workflow.
+  publish:
+    needs: [plan, qt-base, qt-declarative, qt-wayland, qt-tools, pyside, plugins, mesa, kernels, devices]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.plan.outputs.arches != '[]' && github.ref == 'refs/heads/main' }}
+    strategy: { fail-fast: false, matrix: { arch: "${{ fromJSON(needs.plan.outputs.arches) }}" } }
+    concurrency: { group: "publish-${{ matrix.arch }}", cancel-in-progress: false }
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    env:
+      NURA_ARCH: ${{ matrix.arch }}
+      GH_TOKEN: ${{ github.token }}
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { persist-credentials: false }
+      - uses: actions/download-artifact@v8
+        with: { pattern: "new-*-${{ matrix.arch }}", path: new }
+      - uses: actions/download-artifact@v8
+        with: { name: "plan-${{ matrix.arch }}", path: plan }
+      # the plan's adopted entries even when nothing was built (the plan as its own directory);
+      # download-artifact puts a single artifact into new/ itself, several into new/<name>/
+      - run: scripts/publish.sh sets plan new new/*/ 2>&1

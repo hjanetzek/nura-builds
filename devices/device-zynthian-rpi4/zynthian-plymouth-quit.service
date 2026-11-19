@@ -1,0 +1,13 @@
+# Plymouth's boot animation until zynthian's first frame (zynthian-plymouth-quit), not only until
+# the boot target: plymouth-quit and plymouth-quit-wait do nothing at boot on the kits (drop-ins),
+# so tinydm starts zynthian while the animation runs
+[Unit]
+Description=Quit the boot animation when zynthian is visible
+After=plymouth-start.service
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/zynthian-plymouth-quit 120
+
+[Install]
+WantedBy=multi-user.target

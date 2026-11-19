@@ -26,6 +26,9 @@ concurrency:
 env:
   REF: ${{ inputs.ref || 's3ve3g-kernel-next' }}
 
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
 jobs:
   versions:
     runs-on: ubuntu-latest
@@ -34,7 +37,7 @@ jobs:
       versions: ${{ steps.v.outputs.versions }}
     steps:
       - uses: actions/checkout@v7
-        with: { ref: "${{ env.REF }}" }
+        with: { persist-credentials: false, ref: "${{ env.REF }}" }
       - id: v
         env:
           WANTED: ${{ inputs.versions }}
@@ -79,7 +82,7 @@ jobs:
       VERSION: ${{ matrix.version }}
     steps:
       - uses: actions/checkout@v7
-        with: { ref: "${{ env.REF }}" }
+        with: { persist-credentials: false, ref: "${{ env.REF }}" }
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost || true

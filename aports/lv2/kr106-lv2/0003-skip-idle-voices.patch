@@ -1,0 +1,36 @@
+KR-106: optionally skip voices whose envelope finished and whose VCA is closed
+
+Not upstream (nura-builds). With -DKR106_SKIP_IDLE_VOICES a voice that is !GetBusy() and has
+mVcaSlew < 1e-6 (contributes exactly 0 to the mix bus) is frozen instead of running its
+DCO/VCF/DC-blocker chain every sample. States are kept, so the next note resumes them; the
+VCA opens from 0, which masks the difference. Upstream deliberately keeps idle voices running
+(free-running filter self-oscillation phase); the audible output only differs in the phase of
+the next note's oscillator/filter noise (band levels of a retriggered chord within 0.1 dB).
+
+diff --git a/Source/DSP/KR106_DSP.h b/Source/DSP/KR106_DSP.h
+index aebcc04..094cd8a 100644
+--- a/Source/DSP/KR106_DSP.h
++++ b/Source/DSP/KR106_DSP.h
+@@ -569,10 +569,22 @@ public:
+     // the oscillators free-run regardless of gate state. Keeps filter
+     // state, self-osc, and DC-blocker state coherent across note
+     // triggers — no first-sample transient when a voice (re)triggers.
++    //
++    // KR106_SKIP_IDLE_VOICES (not upstream; for small ARM boards): a voice whose
++    // envelope has finished and whose VCA slew has closed contributes exactly
++    // nothing to the mix bus (vcaGain ~ 0), so its DCO/VCF/DC-blocker chain is
++    // frozen instead of run. Its states are kept, not reset: the next note
++    // resumes the filter (including a self-oscillation amplitude) where it
++    // stopped, and the new note's VCA opens from 0 through the BA662 slew, which
++    // masks any state discontinuity. Idle cost drops to the post-mix chain.
+     for (int vi = 0; vi < mActiveVoices; vi++)
+     {
+       auto& v = *mVoices[vi];
+       v.mLfoEnvAmp = mLFO.mAmp;
++#ifdef KR106_SKIP_IDLE_VOICES
++      if (!v.GetBusy() && v.mVcaSlew < 1e-6f)
++        continue;
++#endif
+       v.ProcessSamplesAccumulating(mModulations.data(), mMixBusOS.data(),
+                                     kNumModulations, 0, nFrames);
+     }

@@ -1,0 +1,14 @@
+# The zynthian kit named in /boot/zynthian.txt, applied before the kiosk starts (zynthian-kit-boot)
+[Unit]
+Description=zynthian kit from /boot/zynthian.txt
+After=local-fs.target systemd-user-sessions.service
+Before=tinydm.service
+ConditionPathExists=/boot/zynthian.txt
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/zynthian/zynthian-kit-boot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,25 @@
+--- a/JUCE/modules/juce_audio_plugin_client/LV2/juce_LV2_Wrapper.cpp
++++ b/JUCE/modules/juce_audio_plugin_client/LV2/juce_LV2_Wrapper.cpp
+@@ -545,6 +545,9 @@
+     ~SharedMessageThread()
+     {
+         MessageManager::getInstance()->stopDispatchLoop();
++        // run() shuts JUCE down (deleting the message queue) once the quit message is
++        // dispatched, possibly while stopDispatchLoop() above still uses the queue
++        stopPosted.signal();
+         waitForThreadToExit (5000);
+     }
+ 
+@@ -556,10 +559,12 @@
+         initialised = true;
+ 
+         MessageManager::getInstance()->runDispatchLoop();
++        stopPosted.wait();
+     }
+ 
+ private:
+     volatile bool initialised;
++    WaitableEvent stopPosted;
+ };
+ #endif
+ 

@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=zynthian (framebuffer)
+Comment=zynthian's Qt UI on a framebuffer without a compositor (the zynthian kits' SPI panels)
+Exec=dbus-run-session -- /usr/libexec/zynthian/zynthian-fb
+Type=Application

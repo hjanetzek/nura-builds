@@ -1,0 +1,5 @@
+# The zynthian kit's overlays (sound card, display): written by zynthian's kit setup.
+# None yet: onboard audio and HDMI only.
+# Onboard audio
+dtparam=audio=on
+audio_pwm_mode=2

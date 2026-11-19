@@ -1,9 +1,11 @@
 # Build single packages by name, e.g. new or changed recipes on a branch (of this repository, or of
-# zynthian-ui for its recipes), without running the whole target: starts from the newest cached packages of a stage (default: plugins,
-# which has Qt, PySide and the plugins), builds the named packages (forced; missing or outdated
+# zynthian-ui for its recipes), without running the whole target: starts from the published package repository of the
+# architecture (release "<arch>": Qt, PySide, the plugins), builds the named packages (forced; missing or outdated
 # dependencies too) and uploads the built .apk files and the build log as an artifact.
 #
 #   gh workflow run packages.yml --ref my-branch -f packages="dexed-lv2 eq10q-lv2"
+#   gh workflow run packages.yml --ref my-branch -f packages="zyncoder-hw=@zyncoder zynthian-hw" -f image=zynthian-rpi4
+# (PKG=@REPO: from the checkout of a source repository of the target, as the stages build it)
 name: packages
 
 on:
@@ -13,7 +15,8 @@ on:
       target: { description: "target (targets/<target>.sh)", default: zynthian }
       zynthian-ui-ref: { description: "zynthian-ui branch", default: main }
       zyncoder-ref: { description: "zyncoder branch", default: nura }
-      base: { description: "stage whose cached packages to start from", default: plugins }
+      arch: { description: "architecture", type: choice, options: [aarch64, x86_64, armv7], default: aarch64 }
+      image: { description: "then an image for this device (e.g. zynthian-rpi4) from the release and these packages", default: "" }
   # Also called per package by plugin.yml (pushes to plugin-* branches)
   workflow_call:
     inputs:
@@ -21,14 +24,23 @@ on:
       target: { type: string, default: zynthian }
       zynthian-ui-ref: { type: string, default: main }
       zyncoder-ref: { type: string, default: nura }
-      base: { type: string, default: plugins }
+      arch: { type: string, default: aarch64 }
+      image: { type: string, default: "" }
+    secrets:
+      NURA_ABUILD_KEY: { required: false }
+      NURA_ABUILD_KEY_NAME: { required: false }
+      NURA_IMAGE_PASSWORD: { required: false }
+
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     timeout-minutes: 350
     env:
       TARGET: ${{ inputs.target }}
+      NURA_ARCH: ${{ inputs.arch }}
       NURA_WORK: /home/runner/nura-work
       NURA_SRC: /home/runner/nura-src
       NURA_OUT: /home/runner/nura-out
@@ -38,33 +50,25 @@ jobs:
       ZYNCODER_REF: ${{ inputs.zyncoder-ref }}
     steps:
       - uses: actions/checkout@v7
+        with: { persist-credentials: false }
 
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost || true
           df -h /
 
-      # Cache keys: packages-<target>-<stage>-<signing key>-... (stage.yml); the newest match
-      - name: Cache prefix
-        id: key
-        run: |
-          kfp=$(printf '%s\n' "$NURA_ABUILD_KEY" | openssl rsa -pubout 2>/dev/null | sha256sum | cut -c1-8)
-          echo "prefix=packages-$TARGET-${{ inputs.base }}-$kfp-" >> "$GITHUB_OUTPUT"
-
-      - name: Cached packages of ${{ inputs.base }}
-        id: cache
-        uses: actions/cache/restore@v6
-        with:
-          key: ${{ steps.key.outputs.prefix }}
-          restore-keys: ${{ steps.key.outputs.prefix }}
-          path: /home/runner/nura-out/packages.tar
-
       - uses: ./.github/actions/pmaports
 
       - name: Set up pmbootstrap
+        run: scripts/setup.sh
+
+      # The published package repository (dependencies already built: Qt, PySide, plugins)
+      - name: Published packages
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "base: ${{ steps.cache.outputs.cache-matched-key || 'none, dependencies are built' }}"
-          scripts/setup.sh
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/fetch-released.sh
 
       - name: Build ${{ inputs.packages }}
         env:
@@ -93,6 +97,26 @@ jobs:
           name: packages-${{ github.run_id }}-${{ inputs.packages }}
           path: /home/runner/nura-out/built
           retention-days: 7
+
+      # An image from the published packages and the ones just built (scripts/image.sh), without
+      # running the target's stages: a quick test image for one device from a branch
+      - name: Image for ${{ inputs.image }}
+        if: inputs.image != ''
+        env:
+          DEVICE: ${{ inputs.image }}
+          NURA_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/image.sh "$DEVICE"
+
+      - name: Upload the image
+        if: inputs.image != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ github.run_id }}-${{ inputs.image }}
+          path: /home/runner/nura-out/*.img.zst
+          retention-days: 7
+          compression-level: 0
 
       - name: Build log
         if: failure()

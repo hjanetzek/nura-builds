@@ -1,0 +1,85 @@
+KR-106 VCF: fewer divisions and no data-dependent branches in the per-sample filter
+
+Not upstream (nura-builds, aarch64/Raspberry Pi 4). NLStage(): Newton step over a common
+denominator (4 -> 1 division per stage), OTASat() clamps instead of branching (identical at
++-3), dfGain without two divisions. Same math; output differs only by float rounding
+(-75..-150 dB below the signal in before/after renders, the same order as -O2 vs -O3 rounding
+changes). -DKR106_SLOW_NLSTAGE builds the original code.
+
+diff --git a/Source/DSP/KR106VCF_OPTIMIZED.h b/Source/DSP/KR106VCF_OPTIMIZED.h
+index 100e57b..ba85789 100644
+--- a/Source/DSP/KR106VCF_OPTIMIZED.h
++++ b/Source/DSP/KR106VCF_OPTIMIZED.h
+@@ -127,8 +127,13 @@ struct VCF
+   // OTA differential-pair tanh (Padé approximant of tanh(x)).
+   static float OTASat(float x)
+   {
++#ifndef KR106_SLOW_NLSTAGE
++    // branchless: the rational function is exactly +-1 at x = +-3
++    x = std::min(std::max(x, -3.f), 3.f);
++#else
+     if (x > 3.f) return 1.f;
+     if (x < -3.f) return -1.f;
++#endif
+     float x2 = x * x;
+     return x * (27.f + x2) / (27.f + 9.f * x2);
+   }
+@@ -215,8 +220,34 @@ struct VCF
+ 
+   // Nonlinear one-pole OTA-C stage: solves y = s + g*tanh(x - y)
+   // via one Newton-Raphson iteration from the linear TPT estimate.
++  //
++  // Same math as OTASat()/OTASatDeriv(), restructured for speed (-DKR106_SLOW_NLSTAGE builds the original):
++  //  - clamping sd to [-3, 3] replaces the branches: OTASat(+-3) = 108/108 = 1 and
++  //    OTASatDeriv(+-3) = 27 * 0 / d^2 = 0 exactly, so the result is unchanged, but the
++  //    audio-dependent branches (mispredicts) go away;
++  //  - the Newton step is written over the common denominator, so the tanh
++  //    approximant, its derivative and f/f' need one division instead of three;
++  //  - otaScale is always kOTAScaleBase, so /otaScale is a multiply by a constant.
++  // 4 divisions per stage -> 1 (16 -> 4 per oversampled sample and voice).
+   static float NLStage(float& s, float x, float g, float g1, float otaScale)
+   {
++#ifndef KR106_SLOW_NLSTAGE
++    (void)otaScale;
++    static constexpr float kInvOTAScale = 1.f / kOTAScaleBase;
++    float y = s + g1 * (x - s);
++    float diff = x - y;
++    float sd = std::min(std::max(diff * kOTAScaleBase, -3.f), 3.f);
++    float sd2 = sd * sd;
++    // Newton step y -= f / f' with f = y - s - g t, t = sd (27 + sd^2) / d / otaScale,
++    // f' = 1 + g 27 (27 - 3 sd^2) / d^2, d = 27 + 9 sd^2: numerator and denominator
++    // multiplied by d^2, so one division per stage remains.
++    float d = 27.f + 9.f * sd2;
++    float num = (y - s) * d * d - g * kInvOTAScale * sd * (27.f + sd2) * d;
++    float den = d * d + g * 27.f * (27.f - 3.f * sd2);
++    y -= num / den;
++    s = 2.f * y - s;
++    return y;
++#else
+     float y = s + g1 * (x - s);
+     float diff = x - y;
+     float sd = diff * otaScale;
+@@ -226,6 +257,7 @@ struct VCF
+     y -= f / df;
+     s = 2.f * y - s;
+     return y;
++#endif
+   }
+ 
+   // ============================================================
+@@ -390,9 +422,15 @@ struct VCF
+     // that handles linear bilinear warping, this handles nonlinear
+     // saturation-induced pitch shift that only appears in self-osc.
+     float stateAmp = fabsf(mS[3]);
++#ifndef KR106_SLOW_NLSTAGE
++    // g1 / max(1/sqrt(1 + 0.6 a^2), 0.65) == g1 * min(sqrt(1 + 0.6 a^2), 1/0.65):
++    // the same value without two divisions.
++    float g1NL = std::min(mC.g1 * std::min(sqrtf(1.f + 0.6f * stateAmp * stateAmp), 1.f / 0.65f), 0.98f);
++#else
+     float dfGain = 1.f / sqrtf(1.f + 0.6f * stateAmp * stateAmp);
+     dfGain = std::max(dfGain, 0.65f);
+     float g1NL = std::min(mC.g1 / dfGain, 0.98f);
++#endif
+     float gNL  = g1NL / (1.f - g1NL);
+ 
+     float lp1 = NLStage(mS[0], u,   gNL, g1NL, mC.otaScale);

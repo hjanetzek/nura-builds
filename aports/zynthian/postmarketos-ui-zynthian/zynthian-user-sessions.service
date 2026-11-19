@@ -1,0 +1,17 @@
+# zynthian kiosk (postmarketos-ui-zynthian): systemd's unit without remote-fs.target and
+# network.target in After=, so logins - tinydm's kiosk session, after this unit - don't wait for
+# NetworkManager (~1 s at boot on a Pi 4). zynthian doesn't need the network to start and the
+# devices have no network home directories. (Drop-ins can't remove an After=; this replaces
+# /usr/lib/systemd/system/systemd-user-sessions.service.)
+#  SPDX-License-Identifier: LGPL-2.1-or-later (systemd)
+
+[Unit]
+Description=Permit User Sessions
+Documentation=man:systemd-user-sessions.service(8)
+After=nss-user-lookup.target home.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/systemd/systemd-user-sessions start
+ExecStop=/usr/lib/systemd/systemd-user-sessions stop

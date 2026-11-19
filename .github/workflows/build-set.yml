@@ -1,0 +1,88 @@
+# One package set (sets/<set>.sh) for one architecture, on a native runner (arm64 for aarch64 and
+# armv7, x86-64 for x86_64): the published package repository (release "<arch>") plus the
+# packages earlier sets of this run built (their artifacts), then the packages the plan lists
+# (plan-packages.py), and the new packages as the artifact new-<set>-<arch> (for the later sets
+# and for publishing). docs/ci-plan.md.
+name: build-set
+on:
+  workflow_call:
+    inputs:
+      set: { type: string, required: true }
+      arch: { type: string, required: true }
+    secrets:
+      NURA_ABUILD_KEY: { required: false }
+      NURA_ABUILD_KEY_NAME: { required: false }
+
+# Read-only by default; jobs that publish ask for more
+permissions: { contents: read }
+
+jobs:
+  build:
+    runs-on: ${{ inputs.arch == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    timeout-minutes: 350
+    env:
+      TARGET: zynthian
+      NURA_ARCH: ${{ inputs.arch }}
+      SET: ${{ inputs.set }}
+      NURA_WORK: /home/runner/nura-work
+      NURA_SRC: /home/runner/nura-src
+      NURA_OUT: /home/runner/nura-out
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { persist-credentials: false }
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost || true
+          df -h /
+
+      - uses: actions/download-artifact@v8
+        with: { name: "plan-${{ inputs.arch }}", path: /home/runner/plan }
+
+      - uses: ./.github/actions/pmaports
+
+      - name: Set up pmbootstrap
+        run: scripts/setup.sh
+
+      - name: Published packages
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/fetch-released.sh
+
+      # Packages earlier sets of this run built: into the local repository, and counted as
+      # fetched (collect-new.sh passes on only this set's packages)
+      - uses: actions/download-artifact@v8
+        with: { pattern: "new-*-${{ inputs.arch }}", path: /home/runner/earlier, merge-multiple: true }
+      - name: Packages of earlier sets
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ls /home/runner/earlier/*.apk >/dev/null 2>&1 || { echo "none"; exit 0; }
+          dir="$NURA_WORK/packages/edge/$NURA_ARCH"
+          sudo cp /home/runner/earlier/*.apk "$dir/"
+          sudo chown -R 12345:12345 "$NURA_WORK/packages"
+          (cd /home/runner/earlier && sha256sum -- *.apk) >> "$NURA_OUT/released/fetched.txt"
+          find /home/runner/earlier -name "*.apk" -printf "%f\n"
+          pmbootstrap -c "$HOME/.config/pmbootstrap-nura-$TARGET.cfg" -y index
+
+      - name: Build ${{ inputs.set }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          scripts/build-set.sh "$SET" /home/runner/plan/plan.json
+
+      - name: New packages
+        if: success() || failure()
+        run: scripts/collect-new.sh "$SET-$NURA_ARCH" /home/runner/plan/plan.json
+
+      - uses: actions/upload-artifact@v7
+        if: success() || failure()
+        with:
+          name: new-${{ inputs.set }}-${{ inputs.arch }}
+          path: /home/runner/nura-out/new/${{ inputs.set }}-${{ inputs.arch }}
+          retention-days: 3
+
+      - name: Build log
+        if: failure()
+        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true

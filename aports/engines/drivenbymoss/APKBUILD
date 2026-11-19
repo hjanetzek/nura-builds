@@ -1,0 +1,92 @@
+# DrivenByMoss (Rust port) for zynthian on postmarketOS/Nura: the core library, its Python
+# binding and reference host, and the zynthian controller drivers (doc/ZYNTHIAN_PLAN.md §5), with
+# libdbm_nihost.so and its udev rule: the Maschine Mk2 and JAM drivers drive the devices over
+# hidraw in zynthian's process (support/linux/ni_host, doc/ZYNTHIAN_INTEGRATION.md §10); the
+# dbm-nihost daemon (support/linux/ni_host, no package; Bitwig and the like) is not needed.
+#
+# Built from a fixed commit of https://github.com/hjanetzek/drivenbymoss-rust (the recipe there,
+# nura/drivenbymoss, adapted to the tarball), in nura-builds' plugins set: rebuilt only when this
+# recipe changes, not in every zynthian run. New versions: _commit and pkgver (a _p<date-time>
+# above the last one: the zynthian runs published timestamp versions 26.1.0_p2026111...).
+# A local checkout: pmbootstrap build --src=/path/to/drivenbymoss-rust drivenbymoss.
+# prepare() fetches the crates of Cargo.lock (network).
+pkgname=drivenbymoss
+pkgver=26.1.0_p20261118000000
+pkgrel=0
+_commit=6a14d552514e8b83415094a4684890501e0ce327
+pkgdesc="DrivenByMoss controller support (Rust port) with zynthian controller drivers"
+url="https://github.com/hjanetzek/drivenbymoss-rust"
+arch="aarch64 armv7 x86_64"
+license="LGPL-3.0-only AND GPL-2.0-or-later"
+options="net !check"
+# Not zynthian-ui: abuild installs depends for the build too, and pmbootstrap's cross build
+# (crossdirect) also in the host chroot, where there is no zynthian-ui (it then tries to build
+# zynthian-ui and Qt 6.12 for x86_64). The drivers only run inside zynthian anyway.
+depends="python3"
+# python3: compileall in package(); cmake, samurai: libdbm_nihost (C++, no ALSA)
+makedepends="cargo python3 cmake samurai"
+builddir="$srcdir/drivenbymoss-rust-$_commit"
+install="$pkgname.post-install $pkgname.post-upgrade"
+source="drivenbymoss-rust-$_commit.tar.gz::https://github.com/hjanetzek/drivenbymoss-rust/archive/$_commit.tar.gz
+	$pkgname.post-install
+	$pkgname.post-upgrade
+	"
+
+# pmbootstrap sets RUSTC_WRAPPER=sccache, which CI's chroot doesn't have: cargo then fails
+# ("could not execute process `/usr/bin/sccache rustc -vV`")
+_no_missing_wrapper() {
+	if [ -n "${RUSTC_WRAPPER:-}" ] && ! command -v "$RUSTC_WRAPPER" >/dev/null; then
+		unset RUSTC_WRAPPER
+	fi
+}
+
+prepare() {
+	default_prepare
+	_no_missing_wrapper
+	export CARGO_HOME="$srcdir"/cargo
+	cargo fetch --locked
+}
+
+build() {
+	_no_missing_wrapper
+	export CARGO_HOME="$srcdir"/cargo
+	# With Lua (the default feature): mlua builds Lua 5.4 from its vendored C source, natively
+	cargo build --release --frozen --lib
+
+	# libdbm_nihost only (the daemon, which needs ALSA, is not packaged)
+	cmake -S support/linux/ni_host -B build-nihost -G Ninja -DCMAKE_BUILD_TYPE=Release
+	cmake --build build-nihost --target dbm_nihost
+}
+
+package() {
+	install -Dm755 target/release/libdrivenbymoss.so -t "$pkgdir"/usr/lib/drivenbymoss/
+	install -Dm755 build-nihost/libdbm_nihost.so -t "$pkgdir"/usr/lib/drivenbymoss/
+	# hidraw access to the Maschines for the group audio (and uaccess). In /etc, not
+	# /usr/lib/udev/rules.d: postmarketOS' mkinitfs has an apk trigger on /usr/lib/udev and would
+	# rebuild the initramfs at every install (the rule isn't needed there); the post-install
+	# script reloads udev instead. Not 70-dbm-nihost.rules: that name belongs to the former
+	# package dbm-nihost
+	install -Dm644 support/linux/ni_host/packaging/70-dbm-nihost.rules \
+		"$pkgdir"/etc/udev/rules.d/70-drivenbymoss-maschine.rules
+
+	# The binding and the reference host: the drivers' default DBM_PYTHON_DIR
+	local py="$pkgdir"/usr/share/drivenbymoss/python
+	mkdir -p "$py"
+	cp -r bindings/python/drivenbymoss bindings/python/dbm_host "$py"/
+
+	# The drivers into zynthian's own driver folder (the user's folder is in the home directory,
+	# which a package can't fill; see the plan §5)
+	local ctrldev="$pkgdir"/usr/share/zynthian/zynthian-ui/zyngine/ctrldev
+	mkdir -p "$ctrldev"
+	cp -r backends/zynthian/ctrldev/. "$ctrldev"/
+
+	find "$pkgdir" -type d -name __pycache__ -prune -exec rm -rf {} +
+	python3 -m compileall -q -d /usr/share/drivenbymoss/python "$py"
+	python3 -m compileall -q -d /usr/share/zynthian/zynthian-ui/zyngine/ctrldev "$ctrldev"
+}
+
+sha512sums="
+a08a6c53b8602649cc6b6f25dad03995cb085fc7f23a485be4b13900cd0847422c686dbc81953e90a9e778a166937d0f72e32d9ba9716e1e4df248bdc31e0c50  drivenbymoss-rust-6a14d552514e8b83415094a4684890501e0ce327.tar.gz
+35710f756f26d796cf18f388b268827579dfcdefd0deee0eabe2c283b3f45b8d125d310441acf9e3c9c01dbd9406bffa152c3b197bc7634eac13c3bdf5e0a4e0  drivenbymoss.post-install
+35710f756f26d796cf18f388b268827579dfcdefd0deee0eabe2c283b3f45b8d125d310441acf9e3c9c01dbd9406bffa152c3b197bc7634eac13c3bdf5e0a4e0  drivenbymoss.post-upgrade
+"

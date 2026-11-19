@@ -1,0 +1,3 @@
+#!/bin/sh
+rc-update add nura-powerkey default >/dev/null 2>&1 || true
+exit 0

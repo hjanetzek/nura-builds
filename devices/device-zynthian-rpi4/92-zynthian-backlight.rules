@@ -1,0 +1,6 @@
+# The kits' panel backlight (gpio-backlight "soc:backlight": piscreen2r-backlight for the V4's
+# ZynScreen, GPIO 22) on at boot, and switchable by the video group (zynthian's screen saver).
+# It came up powered down (bl_power 4): the fbtft framebuffer can't unblank (fb_ili9486 has no blank
+# operation, its sysfs blank stays 4), and the text console that would otherwise switch the display
+# on is kept off the kit's display (fbcon=map:22, as ZynthianOS). Found on the V4 kit, 2026-11-17.
+ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="soc:backlight", ATTR{bl_power}="0", RUN+="/bin/chgrp video /sys%p/bl_power /sys%p/brightness", RUN+="/bin/chmod g+w /sys%p/bl_power /sys%p/brightness"

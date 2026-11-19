@@ -6,7 +6,7 @@
 # loads X11 only when the editor opens).
 pkgname=kr106-lv2
 pkgver=2.5.13
-pkgrel=0
+pkgrel=1
 _commit=bc15caee5843ab238a25d0969e68d57db2b1615f
 _libs_juce=501c07674e1ad693085a7e7c398f205c2677f5da
 _libs_clap_juce_extensions=e1f67893cc409a40c1154fa2e78c97046da24ce0
@@ -34,6 +34,10 @@ source="$pkgname-$_commit.tar.gz::https://github.com/kayrockscreenprinting/ultra
 	libs_clap_juce_extensions-${_libs_clap_juce_extensions}.tar.gz::https://github.com/free-audio/clap-juce-extensions/archive/${_libs_clap_juce_extensions}.tar.gz
 	libs_clap_juce_extensions_clap_libs_clap-${_libs_clap_juce_extensions_clap_libs_clap}.tar.gz::https://github.com/free-audio/clap/archive/${_libs_clap_juce_extensions_clap_libs_clap}.tar.gz
 	libs_clap_juce_extensions_clap_libs_clap_helpers-${_libs_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz::https://github.com/free-audio/clap-helpers/archive/${_libs_clap_juce_extensions_clap_libs_clap_helpers}.tar.gz
+	0001-vcf-fewer-divisions.patch
+	0002-voice-precomputed-coefficients.patch
+	0003-skip-idle-voices.patch
+	0004-wavetable-init-recurrence.patch
 	"
 builddir="$srcdir/ultramaster_kr106-$_commit"
 options="!check" # no tests
@@ -63,7 +67,12 @@ build() {
 	# _NL_IDENTIFICATION_*/_NL_ADDRESS_* locale items as items musl doesn't have (nl_langinfo() returns "");
 	# <utility> for std::exchange, which older JUCE gets indirectly from glibc's libstdc++ headers
 	# -Wno-template-body: GCC 15 errors in templates that are never instantiated (chowdsp_utils)
-	export CXXFLAGS="$CXXFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -include utility -Wno-template-body \
+	# -DKR106_SKIP_IDLE_VOICES (0003): voices with a finished envelope and closed VCA are not
+	# processed; an idle instance costs ~0.17 instead of ~1.15 ms per 256-frame cycle on a Pi 4.
+	# CMake Release already compiles with -O3 -ffp-contract=fast -fno-math-errno (after abuild's -Os);
+	# -mtune/-mcpu=cortex-a72 measured no gain. Optional, ~6 % less when playing, rounding-level
+	# sound change: -ffast-math -fno-finite-math-only (also applies to the JUCE code of the plugin).
+	export CXXFLAGS="$CXXFLAGS -DKR106_SKIP_IDLE_VOICES -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE -include utility -Wno-template-body \
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001 \
 		-D_NL_ADDRESS_LANG_AB=0x60002 -D_NL_ADDRESS_COUNTRY_AB2=0x60003"
 	export CFLAGS="$CFLAGS -I$srcdir/musl-compat -D_LARGEFILE64_SOURCE"
@@ -84,4 +93,8 @@ ca0693f0c34f3c3808409f4a85031c52e5ca9085896c03c05900421426ff863947e492c922c2c78f
 cbcf5469a02c0356dd8a2d78ffad4cf0d52df128882ce14e54840d8d269a196572c70c67196f2ffd93e56c303e3d27d3bd53c7c934b44a792e2937584cc619fe  libs_clap_juce_extensions-e1f67893cc409a40c1154fa2e78c97046da24ce0.tar.gz
 003b726551d8db673e6cda71a5b4c90e6205db17f2a7fbd8e4c8d04ac85576cbbf53a657fe6cb4823ac130ea0408da17ab394e8337be5653baa04033ca7f29f2  libs_clap_juce_extensions_clap_libs_clap-29ffcc273be7c7c651f6c9953b99e69700e2387a.tar.gz
 ce30948ec694f1d7562adea93cff001e7ecf70ab5db5095584a38ce0b6621d2ef50f0ae407f9491939b884b6635258859c77f3879e1d29dbf4dbdf381c6e968c  libs_clap_juce_extensions_clap_libs_clap_helpers-a61bcdf0ecc2c8db1e80bfe8bf9cb7e8d9fd2bbc.tar.gz
+a12428dff7792c5d573904266d18590554668f0c9263b7b9b0aab9ede627cd7ccc7be0d97f443bd6b77d3f9372ec4739aacb0fc641c6efc73954a80cbc7b4900  0001-vcf-fewer-divisions.patch
+fac28040f95fb5183e1eb7302c2d1c7ecbdfe19d08b3e1d02ba65a43460b831206ba443639920bedca001b1a367152f77b6f178ad662edc6873308aa48bed2f8  0002-voice-precomputed-coefficients.patch
+1dcb1d6816fa318890c315781155bc373e5f95cb25fd4dc712de80fc7fa641863f729b6b27426a1ec366b0cc8c950b5c79571b6e0d2d2a4f0c0ec3fa4cfd4414  0003-skip-idle-voices.patch
+6c99aa783ddb1d84f2c8aa76769d536d9c4ed90560bf0cf420388a9c93d4a95c81fbbf53794ff96f7bd470f6b230122445cf2c2066dee55e448ca3a41e7b65f9  0004-wavetable-init-recurrence.patch
 "

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Session: zynthian's Qt UI without a compositor, on a framebuffer through Qt's linuxfb: the
+# zynthian kits' SPI panels (fbtft: a framebuffer only, no DRM, so neither cage nor niri). The
+# lightest way measured on the V4 kit (nura-builds docs/zynthian-rpi.md, option D): Qt flushes
+# only the changed rectangles, and fbtft sends only those (SPI traffic idle 0.03 MB/s, Tk on
+# ZynthianOS 1.36 MB/s). No native plugin windows (they need a display server).
+#
+# Selected by zynthian-kit for kits with such a panel (kiosk-session zynthian-fb).
+# The framebuffer: ZYNTHIAN_FB in /etc/default/zynthian (e.g. /dev/fb1), else the first fbtft one
+# (driver name fb_*: fb_ili9486, ...), else /dev/fb0. Touch through libinput (calibration by udev,
+# the device package); the user needs the groups video and input (zynthian-kit adds them).
+set -eu
+
+. /usr/libexec/zynthian/zynthian-session.sh
+zynthian_device_defaults
+zynthian_session_env
+
+fb=${ZYNTHIAN_FB:-}
+if [ -z "$fb" ]; then
+	for d in /sys/class/graphics/fb*; do
+		case "$(cat "$d/name" 2>/dev/null)" in
+			fb_*) fb=/dev/${d##*/}; break ;;
+		esac
+	done
+fi
+fb=${fb:-/dev/fb0}
+
+export ZYNTHIAN_UI=qt
+export QT_QPA_PLATFORM="linuxfb:fb=$fb:nographicsmodeswitch"
+export QT_QPA_FB_HIDECURSOR=1
+unset QT_WAYLAND_DISABLE_WINDOWDECORATION
+echo "zynthian-fb: Qt linuxfb on $fb" >&2
+exec zynthian

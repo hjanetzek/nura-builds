@@ -1,0 +1,175 @@
+#!/bin/sh
+# Build Nura packages and install them on a running device over SSH.
+#
+# Usage: deploy.sh [-c CONFIG] [-H HOST] [-P PORT] [-u USER] [-a ARCH] [-U ZYNTHIAN_UI] [-z ZYNCODER] [-j JALV] [-m DBM] [-W WEBCONF] [-k] [-n] [-S] [-r] [-d] PACKAGE...
+#   -c CONFIG    pmbootstrap config (default: ~/.config/pmbootstrap-zynthian.cfg)
+#   -H HOST      device address (default: <hostname from the config>.local, via avahi)
+#   -P PORT      SSH port on the device (default 22; the QEMU VM: -H 127.0.0.1 -P 2222 -a x86_64)
+#   -u USER      SSH user on the device (default: user from the config)
+#   -a ARCH      package architecture (default: aarch64)
+#   -U ZYNTHIAN_UI  zynthian-ui checkout for the zynthian-ui package (default: ../zynthian-ui next
+#                to this nura-builds checkout)
+#   -z ZYNCODER  zyncoder checkout for the zyncoder package (default: ../zyncoder next to
+#                this nura-builds checkout)
+#   -j JALV      zynthian's jalv checkout for the zynthian-jalv package (default: ../jalv next
+#                to this nura-builds checkout; without it, the APKBUILD's pinned tarball)
+#   -m DBM       drivenbymoss-rust checkout for the drivenbymoss and dbm-nihost packages
+#                (default: ../drivenbymoss-rust next to this nura-builds checkout; its recipe
+#                directory nura/ must be linked into pmaports, see README.md)
+#   -W WEBCONF   zynthian-webconf checkout (nura branch) for the zynthian-webconf package
+#                (default: ../zynthian-webconf-nura, else ../zynthian-webconf; its nura/ linked
+#                into pmaports as for -m)
+#   -k           install this work dir's package signing key on the device if needed (a device
+#                whose image was built with another work dir rejects the packages: "UNTRUSTED
+#                signature")
+#   -n           do not build; install the newest packages already built
+#   -S           strict build: let pmbootstrap zap the build chroots first (its default).
+#                Without it builds run with --lax, which keeps the chroot and the --src copy.
+#   -r           restart the kiosk session afterwards (systemctl restart tinydm)
+#   -d           dry run: print the commands instead of running them
+#
+# Examples:
+#   deploy.sh -r zynthian-ui                 # build zynthian-ui from its checkout, install, restart
+#   deploy.sh zyncoder zynthian-ui           # both checkouts
+#   deploy.sh postmarketos-ui-zynthian       # the kiosk package
+#   deploy.sh zyncoder-hw zynthian-hw        # zynthian kit support (Raspberry Pi), from ../zyncoder
+#   deploy.sh drivenbymoss dbm-nihost        # DrivenByMoss's zynthian drivers and the Maschine host
+#   deploy.sh zynthian-webconf               # the web configuration (http://<device>.local:8080)
+#
+# zynthian-ui, zyncoder, zynthian-jalv, drivenbymoss and dbm-nihost from
+# their checkouts
+# (pmbootstrap build --src); other packages from their APKBUILDs. With zynthian-ui, its
+# dependencies zynthian-jalv and aeolus are built and installed too when no package of them exists
+# for ARCH yet. A subpackage (-dbg, zynthian-help, ...) is built
+# with its main package. Installing uses "pmbootstrap sideload": it copies the newest version of
+# each package and runs "sudo apk add" on the device.
+set -eu
+
+here=$(cd "$(dirname "$0")" && pwd)
+# aports/zynthian/ of nura-builds (the recipes moved here from zynthian-ui's nura/ on 2026-11-19);
+# the source checkouts are expected next to the nura-builds checkout
+siblings=$(cd "$here/../../.." && pwd)
+checkout=$siblings/zynthian-ui
+zyncoder=$siblings/zyncoder
+jalv=$siblings/jalv
+dbm=$siblings/drivenbymoss-rust
+webconf=$siblings/zynthian-webconf-nura
+[ -d "$webconf" ] || webconf=$siblings/zynthian-webconf
+cfg=$HOME/.config/pmbootstrap-zynthian.cfg
+host=
+port=22
+user=
+arch=aarch64
+build=1
+lax=--lax
+restart=0
+dry=0
+installkey=
+
+usage() { sed -n '2,/^set -eu/{/^set -eu/d;s/^# \{0,1\}//;p}' "$0"; exit "${1:-0}"; }
+
+while getopts c:H:P:u:a:U:z:j:m:W:knSrdh opt; do
+	case $opt in
+		c) cfg=$OPTARG ;;
+		H) host=$OPTARG ;;
+		P) port=$OPTARG ;;
+		u) user=$OPTARG ;;
+		a) arch=$OPTARG ;;
+		U) checkout=$OPTARG ;;
+		z) zyncoder=$OPTARG ;;
+		j) jalv=$OPTARG ;;
+		m) dbm=$OPTARG ;;
+		W) webconf=$OPTARG ;;
+		k) installkey=--install-key ;;
+		n) build=0 ;;
+		S) lax= ;;
+		r) restart=1 ;;
+		d) dry=1 ;;
+		h) usage ;;
+		*) usage 1 ;;
+	esac
+done
+shift $((OPTIND - 1))
+[ $# -gt 0 ] || usage 1
+[ -f "$cfg" ] || { echo "no pmbootstrap config: $cfg" >&2; exit 1; }
+
+cfgval() { sed -n "s/^$1 *= *//p" "$cfg" | head -n 1; }
+[ -n "$user" ] || user=$(cfgval user)
+[ -n "$host" ] || host=$(cfgval hostname).local
+
+run() {
+	echo "+ $*"
+	[ "$dry" = 1 ] || "$@"
+}
+pmb() { run pmbootstrap -c "$cfg" "$@"; }
+
+# Main package of a (sub)package name
+mainpkg() {
+	case $1 in
+		*-dbg) echo "${1%-dbg}" ;;
+		zynthian-help | zynthian-sys-config) echo zynthian-data ;;
+		*) echo "$1" ;;
+	esac
+}
+
+if [ "$build" = 1 ]; then
+	mains=
+	for pkg in "$@"; do
+		main=$(mainpkg "$pkg")
+		case " $mains " in *" $main "*) ;; *) mains="$mains $main" ;; esac
+	done
+	# Dependencies first: with --src, pmbootstrap doesn't build missing dependencies
+	# (zynthian-ui needs zyncoder, zynthian-jalv, aeolus and zynthian-data, the kiosk needs
+	# zynthian-ui). zynthian-ui's dependencies from this work dir's recipes come along with it if
+	# no package of them is built for ARCH yet ("Additional packages need building" otherwise).
+	case " $mains " in
+		*" zynthian-ui "*)
+			workdir=$(cfgval work)
+			[ -n "$workdir" ] || workdir=$HOME/.local/var/pmbootstrap
+			for dep in zynthian-jalv aeolus; do
+				case " $mains " in *" $dep "*) continue ;; esac
+				ls "$workdir"/packages/edge/"$arch"/"$dep"-[0-9]*.apk >/dev/null 2>&1 ||
+					{ mains="$mains $dep"; set -- "$@" "$dep"; }
+			done ;;
+	esac
+	ordered=
+	for main in zyncoder zyncoder-hw zynthian-jalv aeolus zynthian-data zynthian-ui drivenbymoss dbm-nihost zynthian-webconf postmarketos-ui-zynthian; do
+		case " $mains " in *" $main "*) ordered="$ordered $main" ;; esac
+	done
+	for main in $mains; do
+		case " $ordered " in *" $main "*) ;; *) ordered="$ordered $main" ;; esac
+	done
+	for main in $ordered; do
+		case $main in
+			# shellcheck disable=SC2086 # empty $lax is intended
+			zynthian-ui) pmb build $lax --arch "$arch" --src="$checkout" zynthian-ui ;;
+			# shellcheck disable=SC2086
+			# zyncoder-hw: the zynthian kits' builds, from the same checkout
+			zyncoder | zyncoder-hw) pmb build $lax --arch "$arch" --src="$zyncoder" "$main" ;;
+			# DrivenByMoss: both packages from the drivenbymoss-rust checkout
+			# shellcheck disable=SC2086
+			drivenbymoss | dbm-nihost) pmb build $lax --arch "$arch" --src="$dbm" "$main" ;;
+			# shellcheck disable=SC2086
+			zynthian-webconf) pmb build $lax --arch "$arch" --src="$webconf" zynthian-webconf ;;
+			zynthian-jalv)
+				if [ -d "$jalv" ]; then
+					# shellcheck disable=SC2086
+					pmb build $lax --arch "$arch" --src="$jalv" zynthian-jalv
+				else
+					# shellcheck disable=SC2086
+					pmb build $lax --arch "$arch" zynthian-jalv
+				fi ;;
+			# Also noarch packages for the device's architecture: otherwise pmbootstrap builds
+			# them for the host and pulls in host builds of their dependencies.
+			# shellcheck disable=SC2086
+			*) pmb build $lax --arch "$arch" "$main" ;;
+		esac
+	done
+fi
+
+# shellcheck disable=SC2086 # empty $installkey is intended
+pmb sideload $installkey --arch "$arch" --host "$host" --port "$port" --user "$user" "$@"
+
+if [ "$restart" = 1 ]; then
+	run ssh -t -p "$port" "$user@$host" 'sudo systemctl restart tinydm'
+fi

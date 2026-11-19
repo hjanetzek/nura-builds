@@ -1,0 +1,169 @@
+# Reference: <https://postmarketos.org/devicepkg>
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# zynthian on a Raspberry Pi 4 (the V4 kit first; one device for all Pi 4 kits): pmaports'
+# raspberry-pi4 (Alpine's linux-rpi, the Raspberry Pi firmware) with ZynthianOS' common boot
+# settings in usercfg.txt (I2C, I2S, SPI, i2s-mmap, MIDI on the UART instead of the serial
+# console, Bluetooth on the mini UART, USB gadget), the kit's overlays (sound card, display) in
+# /boot/zynthian-kit.txt, which the kit setup writes, and GPIO/I2C/SPI access for the session user
+# (groups gpio, i2c, spi). zynscreen-drm.dtbo: the V4 kit's SPI panel through the DRM driver
+# ili9486 (fbtft's piscreen2r gives only a framebuffer). Plan: docs/zynthian-rpi.md.
+pkgname=device-zynthian-rpi4
+pkgdesc="zynthian (Raspberry Pi 4)"
+pkgver=1
+pkgrel=19
+url="https://github.com/hjanetzek/nura-builds/blob/main/docs/zynthian-rpi.md"
+license="MIT AND GPL-3.0-or-later"
+arch="aarch64"
+options="!check !archcheck"
+# postmarketos-bootsplash: postmarketOS' boot splash (Plymouth in the initramfs) with ZynthianOS'
+# theme zynloganim (zynthian-sys plymouth/), so the kits boot as zynthian users know it. The kit
+# panel's modules are in the initramfs (90-device-zynthian-rpi4.modules) so its framebuffer appears
+# before the splash starts (r8-r11 had no splash: the fbtft panel registered only from the root
+# filesystem, and the initramfs waited 10 s for /dev/fb0); an initramfs hook switches the
+# backlight on.
+depends="
+	linux-firmware-brcm
+	postmarketos-base
+	postmarketos-bootsplash
+	raspberrypi-bootloader
+	"
+makedepends="devicepkg-dev dtc"
+# The kernel (pmbootstrap init asks): Alpine's linux-rpi, or linux-rpi-rt (nura-builds
+# aports/kernel: the same with PREEMPT_RT). Swap on the device with
+#   apk add device-zynthian-rpi4-kernel-rpi-rt '!device-zynthian-rpi4-kernel-rpi'
+subpackages="
+	$pkgname-kernel-rpi:kernel_rpi
+	$pkgname-kernel-rpi-rt:kernel_rpi_rt
+	"
+install="$pkgname.post-install $pkgname.post-upgrade"
+# zynthian-sys (the boot animation zynloganim), at the commit zynthian-ui's zynthian-data uses
+_sys_commit=c2eea576e528e451270b829aa114f504bd34ee90
+source="
+	zynthian-sys-$_sys_commit.tar.gz::https://github.com/zynthian/zynthian-sys/archive/$_sys_commit.tar.gz
+	deviceinfo
+	kernel-cmdline.conf
+	modules-initfs
+	usercfg.txt
+	zynthian-kit.txt
+	zynthian.txt
+	91-zynscreen-touch.rules
+	92-zynthian-backlight.rules
+	90-zynthian-backlight.sh
+	50-zynthian-no-quit.conf
+	zynthian-plymouth-quit
+	zynthian-plymouth-quit.service
+	piscreen2r-notouch.dts
+	piscreen2r-backlight.dts
+	goodix_z2.dts
+	90-zynthian-hw.rules
+	zynscreen-drm-overlay.dts
+	50-zynthian-rpi4-drm.sh
+	zynthian-hw-modules.conf
+	50-zynthian-rpi4.conf
+	50-zynthian-coredump.conf
+	50-zynthian-journal.conf
+	50-zynthian-realtime.conf
+	"
+
+build() {
+	devicepkg_build $startdir $pkgname
+	# The V4 kit's SPI panel as a DRM device (tiny DRM ili9486 instead of fbtft's piscreen2r)
+	dtc -@ -I dts -O dtb -o zynscreen-drm.dtbo "$srcdir"/zynscreen-drm-overlay.dts
+	# ZynthianOS' own overlays (zynthian-sys custom/display/*/boot/overlays, GPL-3.0, at 4913037),
+	# which the kits' configurations name (V4, V2: piscreen2r-notouch; the Z2's display: goodix_z2):
+	# they aren't in the kernel's overlays (sainsmart18 is: linux-rpi's own, not ours). Without them the V4's panel didn't appear at all.
+	local o
+	for o in piscreen2r-notouch piscreen2r-backlight goodix_z2; do
+		dtc -@ -I dts -O dtb -o $o.dtbo "$srcdir"/$o.dts
+	done
+}
+
+package() {
+	devicepkg_package $startdir $pkgname
+	install -Dm644 "$srcdir"/usercfg.txt "$pkgdir"/boot/usercfg.txt
+	install -Dm644 "$srcdir"/zynthian-kit.txt "$pkgdir"/usr/share/$pkgname/zynthian-kit.txt
+	# The kit choice on the FAT partition (zynthian-hw's zynthian-kit-boot reads it): the
+	# post-install script copies it to /boot once, the user edits it there
+	install -Dm644 "$srcdir"/zynthian.txt "$pkgdir"/usr/share/$pkgname/zynthian.txt
+	# The ZynScreen's ADS7846 touch is flipped on both axes (ZynthianOS has a calibration matrix
+	# in X): the same for libinput
+	install -Dm644 "$srcdir"/91-zynscreen-touch.rules -t "$pkgdir"/usr/lib/udev/rules.d/
+	# The panel's backlight on at boot (it came up powered down with fbtft), switchable by video
+	install -Dm644 "$srcdir"/92-zynthian-backlight.rules -t "$pkgdir"/usr/lib/udev/rules.d/
+	# The boot splash: ZynthianOS' Plymouth theme (selected by the post-install script: plymouth owns
+	# plymouthd.conf), the kit panel's modules in the initramfs, the backlight on in the initramfs
+	install -Dm644 "$srcdir"/zynthian-sys-$_sys_commit/plymouth/zynloganim/* \
+		-t "$pkgdir"/usr/share/plymouth/themes/zynloganim/
+	printf "%s\n" spi_bcm2835 backlight gpio_backlight fbtft fb_ili9486 |
+		install -Dm644 /dev/stdin "$pkgdir"/usr/share/mkinitfs/modules/90-$pkgname.modules
+	install -Dm755 "$srcdir"/90-zynthian-backlight.sh -t "$pkgdir"/usr/share/mkinitfs/hooks/
+	# The animation until zynthian's first frame (its Qt UI writes a marker): no Plymouth quit at
+	# the boot target (tinydm is ordered after plymouth-quit-wait), zynthian-plymouth-quit ends it
+	local u
+	for u in plymouth-quit plymouth-quit-wait; do
+		install -Dm644 "$srcdir"/50-zynthian-no-quit.conf -t "$pkgdir"/usr/lib/systemd/system/$u.service.d/
+	done
+	install -Dm755 "$srcdir"/zynthian-plymouth-quit -t "$pkgdir"/usr/libexec/
+	# No firewall on the kits, as on ZynthianOS: they sit in a home or studio network, and
+	# zynthian's services are meant to be reachable there (OSC on UDP 1370, RTP-MIDI, QmidiNet,
+	# Ableton Link, mDNS, webconf); postmarketOS' nftables (policy drop) blocked all but SSH and
+	# webconf. Masked (it is a dependency of the UI packages, postmarketos-base-nftables)
+	mkdir -p "$pkgdir"/etc/systemd/system
+	ln -s /dev/null "$pkgdir"/etc/systemd/system/nftables.service
+	install -Dm644 "$srcdir"/zynthian-plymouth-quit.service -t "$pkgdir"/usr/lib/systemd/system/
+	mkdir -p "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants
+	ln -s ../zynthian-plymouth-quit.service "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/
+	install -Dm644 "$srcdir"/90-zynthian-hw.rules "$pkgdir"/usr/lib/udev/rules.d/90-zynthian-hw.rules
+	install -Dm644 zynscreen-drm.dtbo "$pkgdir"/boot/overlays/zynscreen-drm.dtbo
+	local o
+	for o in piscreen2r-notouch piscreen2r-backlight goodix_z2; do
+		install -Dm644 $o.dtbo "$pkgdir"/boot/overlays/$o.dtbo
+	done
+	install -Dm644 "$srcdir"/zynthian-hw-modules.conf "$pkgdir"/usr/lib/modules-load.d/zynthian-hw.conf
+	install -Dm644 "$srcdir"/50-zynthian-rpi4-drm.sh \
+		"$pkgdir"/usr/share/tinydm/env-wayland.d/50-zynthian-rpi4-drm.sh
+	install -Dm644 "$srcdir"/50-zynthian-rpi4.conf \
+		"$pkgdir"/usr/share/wireplumber/wireplumber.conf.d/50-zynthian-rpi4.conf
+	install -Dm644 "$srcdir"/50-zynthian-journal.conf -t "$pkgdir"/usr/lib/systemd/journald.conf.d/
+	install -Dm644 "$srcdir"/50-zynthian-coredump.conf -t "$pkgdir"/usr/lib/systemd/coredump.conf.d/
+	install -Dm644 "$srcdir"/50-zynthian-realtime.conf \
+		"$pkgdir"/usr/lib/systemd/system/user@.service.d/50-zynthian-realtime.conf
+}
+kernel_rpi() {
+	pkgdesc="Alpine's Raspberry Pi kernel (PREEMPT)"
+	depends="linux-rpi"
+	devicepkg_subpackage_kernel $startdir $pkgname $subpkgname
+}
+
+kernel_rpi_rt() {
+	pkgdesc="The Raspberry Pi kernel with PREEMPT_RT (linux-rpi-rt), for low audio latency"
+	depends="linux-rpi-rt"
+	devicepkg_subpackage_kernel $startdir $pkgname $subpkgname
+}
+
+sha512sums="
+687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
+15526ab26d0ce1a9295ed5539e05de0c142aba15d3c113217058f22a6a1bd6180105e85027a1dc664a45a038334f81e5501af52c447521cfdeaa23b33bfd389a  deviceinfo
+09309847761b59cc17f58a119873c859814ed5c3c9399970b295cbb7da5cdf7502585c81bf49f4d0efd24d0407216984d3ec80647bbf4e91f6b44c7f77b124b6  kernel-cmdline.conf
+e3515cf9f41807917eac1f7663e0131bd18783824facf15f2bb0381635bf6d9a0c334f3786b6fb76d01469de6449878c871f8b747f45e9e3cee77699905cf319  modules-initfs
+673b33b43744690ab8f3fcaa37090c65e886a32bd7911d7a5abab90be293deeaa900c0cd4fddc789549eb93261963d9d4b69b5f52c666d70a881cc0a48b2929f  usercfg.txt
+cebaad0a22b3cca9ecc18c9bad85418d2f0b4a8298af58d8d52014d03bc7afffd616e1131a21244501942d6384f4ba1daaf1cff717c6af17cdf4751bdc3e9193  zynthian-kit.txt
+da2bb2b174fb5f3d3984cd69cf6c5d2349fed6e657eec9db3b3137a9fe035ee4cab92f8d1bea197892ac7c607b58e7e924022e8dc89333c2fc8536449b630d24  zynthian.txt
+efd70b1d319caa1e9c7a7a57704ca1a793aeb075f2122f756984a01175c53efe238ee6d99367a0d836afd0e5ed941af028929078f992ab3a2885ea8220fe3ef3  91-zynscreen-touch.rules
+9665a0a13a700d03190d1f5bbf645f913d11b8fb1602ba1307bcf24c57ac94e511c27b368429d95e081f8e188f602d1890cd888e4e0cedb15ce36779439c4e28  92-zynthian-backlight.rules
+7b886647e778bc23ece3100630bf1636585d1eabf33a4bc53f81d58609ce7799b43480b64827ee2583800cf5f9c1c70a313fb2b946797b78460b1b976f8fb21c  90-zynthian-backlight.sh
+a04342735ca32dfa86607251db19a6f01f3b0f0345ef2c78ef21ce33815cd4a8274feef3a2787a66320e219dc8e4c1aaccf226afc7c29181336176889a8dae80  50-zynthian-no-quit.conf
+3d56bdafc27ed45f165ceae49aca4731eadabfe9004e92f36a8ca2629b2fd3577165055e451fc1c9843dffb83fa0bd9212f0265e97b0d31b51fe9c8ca2b86d1f  zynthian-plymouth-quit
+9bf2f5c549323141897e55d227bd281c6d6db14acff6970fdd3f375e9b0790ceafd07cbd7dc605c9f426b40fe69c7611c358dfb3acbb1c325f270867a750b8fa  zynthian-plymouth-quit.service
+3d2e65b60e0a4fc20a51c27c881b25833b9a74847f2ab69df986279afa4129f3d27e7c2dfdcc68000976871ca18e79b88398c081c0c118f5456dadca16ac6ff1  piscreen2r-notouch.dts
+67293aac00e62cad118c02e06499ab2c6d1afafaa95f7a832dc43063997a644fd7c185867916565b04ac077758253253199424d214a25a5ab20a44b1cb31eb5c  piscreen2r-backlight.dts
+344bb1fbf6d48edf76b8ebacde6969f687e1ceefc9f016508180ce831b1cc1e4ec7450f84d56e143a1492e8aed8c2be253454d06543cf7f6e5064328de47a57f  goodix_z2.dts
+9a7fcd1fe663312122e5f960d52bc88bf44741628de288061f326936d56ca031c57a0e63f1eddf45033192236d73c67cba6f25dd3a7eac078c99cd47f2644429  90-zynthian-hw.rules
+6ab909e43569e720e1e344b9e40bd4572556ccb788c7928093102f4e346dee3b013499b5c2a4890b05d7392b0b02d61e67f91fc7f2871fb5cb670e8e10200f8d  zynscreen-drm-overlay.dts
+f7d160f2290fc84be4b502520c697a81a1994ca8f3876faab48d05fb07e22ef6995f8fa011aa32ada125a935324d71aba6f450194812189c4c7146f123a79c9f  50-zynthian-rpi4-drm.sh
+00fbddc74d63d110d6ca775abf4b7dcb802d6c515be850742ed703a987b8c24675733e0410794b5d9aea4f7550bdd25f01e3ab2d54c889b636f8abf37c5d1793  zynthian-hw-modules.conf
+d3a23905ab1f0f239887fe2a34fe20bb55942b2d59388e094ad61f8a2fb0a2982b2d8f2a11bc51110d738c291caf9c734b1c867828d66b911e49c39080ef8f29  50-zynthian-rpi4.conf
+03f08c741be7159b4368b2f7b931d8c045bcbbcff07a67c3f8d43613552c9e91207f29e72b15883d8b140622e90b773496beb3fb6c5d11658b54bbcd7a6fd3b3  50-zynthian-coredump.conf
+78c634a75a31e4dbe1ec84b0e64d8dddeb05bbd143771aea1121d596e1f9a08c014a7a1c7d9441c57aa850277ef378f7ab070df345bdd283cde6c8cde5978674  50-zynthian-journal.conf
+30d05a654c48cf98f9de12806ce2a57d29f2e97d8f0de5396fb8fff4a92e19ff49711ee97a8af5c78c8a1f1dd8e093c7c4e2f3953951fa40f6a4c5d6132f7d8d  50-zynthian-realtime.conf
+"

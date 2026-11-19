@@ -1,0 +1,107 @@
+KR-106 voice: precomputed DC-blocker coefficients, cached pitch/cutoff transcendentals
+
+Not upstream (nura-builds). DcBlockPost{Osc,Vcf}: G/(1+G) precomputed (2 divisions per
+oversampled sample less). ProcessSamplesAccumulating: powf(2, pitchMod) and, for J6/J60, the
+logf/powf/logf cutoff + key-tracking term are recomputed only when their inputs change
+(bit-identical output to the uncached code).
+
+diff --git a/Source/DSP/KR106Voice.h b/Source/DSP/KR106Voice.h
+index 6dc1ee2..646bfc8 100644
+--- a/Source/DSP/KR106Voice.h
++++ b/Source/DSP/KR106Voice.h
+@@ -106,13 +106,20 @@ public:
+   // VCA scales it, which would otherwise produce envelope-shaped DC
+   // excursions audible as thumps on extreme-PWM patches. Runs at
+   // oversampled rate (same as VCF input).
++  // KR106 perf caches (ProcessSamplesAccumulating); NaN never compares equal,
++  // so the first sample always computes
++  float mPerfPitchMod = NAN, mPerfBaseFreq = NAN, mPerfFreq = 0.f;
++  float mPerfVcfBaseHz = NAN, mPerfKbdBaseFreq = NAN, mPerfKbdPitch = NAN, mPerfKbdRef = NAN;
++  float mPerfVcfFreqOffset = NAN, mPerfVcfKbd = NAN, mPerfVcfFrqStatic = 0.f;
++
+   float mPostOscDcG = 0.f;
++  float mPostOscDcA = 0.f; // mPostOscDcG / (1 + mPostOscDcG)
+   float mPostOscDcS = 0.f;
+ 
+   // Apply post-DCO DC blocker. One-pole TPT high-pass
+   inline float DcBlockPostOsc(float in)
+   {
+-    const float v = (in - mPostOscDcS) * mPostOscDcG / (1.f + mPostOscDcG);
++    const float v = (in - mPostOscDcS) * mPostOscDcA; // A = G / (1 + G), precomputed
+     const float lp = mPostOscDcS + v;
+     mPostOscDcS = lp + v;
+     return in - lp;
+@@ -123,12 +130,13 @@ public:
+   // that the post-osc blocker hasn't yet removed and any DC the VCF
+   // might introduce, before the VCA scales the signal by the envelope.
+   float mPostVcfDcG = 0.f;
++  float mPostVcfDcA = 0.f; // mPostVcfDcG / (1 + mPostVcfDcG)
+   float mPostVcfDcS = 0.f;
+ 
+   // Apply post-VCF DC blocker. One-pole TPT high-pass at 1.59 Hz.
+   inline float DcBlockPostVcf(float in)
+   {
+-    const float v = (in - mPostVcfDcS) * mPostVcfDcG / (1.f + mPostVcfDcG);
++    const float v = (in - mPostVcfDcS) * mPostVcfDcA; // A = G / (1 + G), precomputed
+     const float lp = mPostVcfDcS + v;
+     mPostVcfDcS = lp + v;
+     return in - lp;
+@@ -1080,6 +1088,7 @@ public:
+       const float fs = mSampleRate * static_cast<float>(mOversample);
+       const float frq = 1.59f / (fs * 0.5f);   // was 0.16f
+       mPostOscDcG = std::tan(frq * static_cast<float>(M_PI) * 0.5f);
++      mPostOscDcA = mPostOscDcG / (1.f + mPostOscDcG);
+     }
+     mPostOscDcS = 0.f;
+ 
+@@ -1088,6 +1097,7 @@ public:
+       const float fs = mSampleRate * static_cast<float>(mOversample);
+       const float frq = 1.59f / (fs * 0.5f);
+       mPostVcfDcG = std::tan(frq * static_cast<float>(M_PI) * 0.5f);
++      mPostVcfDcA = mPostVcfDcG / (1.f + mPostVcfDcG);
+     }
+     mPostVcfDcS = 0.f;
+ 
+@@ -1234,7 +1244,15 @@ public:
+       float lfoSemitones = lfo * (mDcoLfo + mBenderModAmt * mBendLfo);
+       float pitchMod =
+           mOctTranspose / 12.f + mPitchOffset + lfoSemitones / 12.f + mRawBend * mBendDco;
+-      float freq = baseFreq * powf(2.f, pitchMod);
++      // KR106 perf: powf only when the pitch inputs changed (held notes with a
++      // stair-stepped or no LFO repeat the same value for many samples)
++      if (pitchMod != mPerfPitchMod || baseFreq != mPerfBaseFreq)
++      {
++        mPerfPitchMod = pitchMod;
++        mPerfBaseFreq = baseFreq;
++        mPerfFreq = baseFreq * powf(2.f, pitchMod);
++      }
++      float freq = mPerfFreq;
+       float cps  = freq / mSampleRate;
+ 
+       // Safety clamp — nothing to write, skip the inner 4× loop.
+@@ -1254,14 +1272,21 @@ public:
+                         : mVcfFreq; // J6 (J106 takes the other branch)
+         // J6: KBD tracks from C1 (32.7 Hz). J60 and J106: from C4 (261.6 Hz).
+         float kbdRef    = (mModel == kJ6) ? 32.703f : 261.626f;
+-        float vcfFrq = logf(vcfBaseHz) + mVcfFreqOffset;
+-
+         // J6: KBD tracking sees the pitch CV (octave switch + portamento)
+         // but not LFO or pitch bend. Bend modulates the VCF separately
+         // (line 608) -- the KBD tracking tap is before the bender summing point.
+         float kbdPitch = mOctTranspose / 12.f + mPitchOffset;
+-        float kbdFreq = baseFreq * powf(2.f, kbdPitch);
+-        vcfFrq += logf(kbdFreq / kbdRef) * mVcfKbd;
++        // KR106 perf: the cutoff + key-tracking part (two logf, one powf) only
++        // changes with the note, glide and sliders, not per sample
++        if (vcfBaseHz != mPerfVcfBaseHz || baseFreq != mPerfKbdBaseFreq || kbdPitch != mPerfKbdPitch
++            || kbdRef != mPerfKbdRef || mVcfFreqOffset != mPerfVcfFreqOffset || mVcfKbd != mPerfVcfKbd)
++        {
++          mPerfVcfBaseHz = vcfBaseHz; mPerfKbdBaseFreq = baseFreq; mPerfKbdPitch = kbdPitch;
++          mPerfKbdRef = kbdRef; mPerfVcfFreqOffset = mVcfFreqOffset; mPerfVcfKbd = mVcfKbd;
++          float kbdFreq = baseFreq * powf(2.f, kbdPitch);
++          mPerfVcfFrqStatic = logf(vcfBaseHz) + mVcfFreqOffset + logf(kbdFreq / kbdRef) * mVcfKbd;
++        }
++        float vcfFrq = mPerfVcfFrqStatic;
+         vcfFrq += env * mVcfEnv * envScale * float(mVcfEnvInvert);
+         vcfFrq += lfo * mVcfLfo * kSemiToLogFreq;
+         vcfFrq += 4.15888f * mRawBend * mBendVcf;

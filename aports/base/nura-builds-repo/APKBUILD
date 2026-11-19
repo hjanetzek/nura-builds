@@ -1,0 +1,20 @@
+# nura-builds' package repository as an apk source (apk-tools 3: /etc/apk/repositories.d), so
+# that `apk upgrade` updates zynthian, the device packages and the kernels on an installed image,
+# and more of nura-builds' packages can be installed. Installed into every image (scripts/image.sh).
+# The signing key comes from the image build (pmbootstrap copies it to /etc/apk/keys).
+pkgname=nura-builds-repo
+pkgver=1
+pkgrel=0
+pkgdesc="nura-builds' package repository as an apk source"
+url="https://github.com/hjanetzek/nura-builds"
+arch="noarch"
+license="MIT"
+options="!check"
+source="nura-builds.list"
+
+package() {
+	install -Dm644 "$srcdir"/nura-builds.list -t "$pkgdir"/etc/apk/repositories.d/
+}
+sha512sums="
+c00b47a3f86b233f3d5cee38857b1d6f92830f8038b3133ac64771a76b236d9e9011710338ae43e0655ac60afe8a6ee6808f8b2153f581632338280b5aef7ed6  nura-builds.list
+"
