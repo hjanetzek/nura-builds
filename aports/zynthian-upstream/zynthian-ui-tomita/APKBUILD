@@ -53,6 +53,7 @@ depends="
 	rubberband
 	sooperlooper
 	sox
+	vlc
 	zyncoder
 	zynthian-data
 	zynthian-jalv
