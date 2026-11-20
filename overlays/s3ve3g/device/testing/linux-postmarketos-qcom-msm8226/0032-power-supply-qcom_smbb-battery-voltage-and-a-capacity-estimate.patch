@@ -1,0 +1,119 @@
+From 9b95d795693051d7b883912621d731137a9c4def Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 12:43:00 +0100
+Subject: [PATCH] power: supply: qcom_smbb: battery voltage and a capacity
+ estimate
+
+The SMBB charger reports the battery's status but not its charge: on PM8226
+the fuel gauge is a separate block (BMS) without a mainline driver. With an
+optional "vbat" IIO channel (the PMIC's VADC, VBAT_SNS) the battery supply
+gets voltage_now, and with a monitored battery that has an OCV table also
+capacity, estimated from the voltage (it reads high while charging and low
+under load). User interfaces that show a battery only with a capacity
+(zynthian's) then show it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/power/supply/qcom_smbb.c | 56 +++++++++++++++++++++++++++++++-
+ 1 file changed, 55 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/power/supply/qcom_smbb.c b/drivers/power/supply/qcom_smbb.c
+index f33aab9619c4..fe5b033b9e4a 100644
+--- a/drivers/power/supply/qcom_smbb.c
++++ b/drivers/power/supply/qcom_smbb.c
+@@ -27,6 +27,7 @@
+ #include <linux/regmap.h>
+ #include <linux/slab.h>
+ #include <linux/extcon-provider.h>
++#include <linux/iio/consumer.h>
+ #include <linux/regulator/driver.h>
+ 
+ #define SMBB_CHG_VMAX		0x040
+@@ -121,6 +122,12 @@ struct smbb_charger {
+ 	struct power_supply *bat_psy;
+ 	struct regmap *regmap;
+ 
++	/* optional: the battery voltage (PMIC VADC, microvolts) and a capacity estimate from it */
++	struct iio_channel *vbat;
++	struct power_supply_battery_info *bat_info;
++	struct power_supply_desc bat_desc;
++	enum power_supply_property bat_props[10];
++
+ 	struct regulator_desc otg_rdesc;
+ 	struct regulator_dev *otg_reg;
+ };
+@@ -649,6 +656,26 @@ static int smbb_battery_get_property(struct power_supply *psy,
+ 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
+ 		val->intval = 3000000; /* single-cell li-ion low end */
+ 		break;
++	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
++		/* the Qualcomm VADC's processed values are microvolts */
++		rc = iio_read_channel_processed(chg->vbat, &val->intval);
++		if (rc > 0)
++			rc = 0;
++		break;
++	case POWER_SUPPLY_PROP_CAPACITY: {
++		int uv;
++
++		/*
++		 * An estimate from the voltage and the battery's open circuit voltage table (no fuel
++		 * gauge): reads high while charging, low under load
++		 */
++		rc = iio_read_channel_processed(chg->vbat, &uv);
++		if (rc < 0)
++			break;
++		val->intval = power_supply_batinfo_ocv2cap(chg->bat_info, uv, 25);
++		rc = val->intval < 0 ? val->intval : 0;
++		break;
++	}
+ 	default:
+ 		rc = -EINVAL;
+ 		break;
+@@ -879,16 +906,43 @@ static int smbb_charger_probe(struct platform_device *pdev)
+ 		}
+ 	}
+ 
++	/* optional: the battery voltage, and with a monitored battery's OCV table the capacity */
++	chg->vbat = devm_iio_channel_get(&pdev->dev, "vbat");
++	if (IS_ERR(chg->vbat)) {
++		rc = PTR_ERR(chg->vbat);
++		if (rc != -ENODEV)
++			return dev_err_probe(&pdev->dev, rc, "failed to get the vbat channel\n");
++		chg->vbat = NULL;
++	}
++
++	chg->bat_desc = bat_psy_desc;
++	memcpy(chg->bat_props, smbb_battery_properties, sizeof(smbb_battery_properties));
++	chg->bat_desc.properties = chg->bat_props;
++	chg->bat_desc.num_properties = ARRAY_SIZE(smbb_battery_properties);
++	if (chg->vbat) {
++		chg->bat_props[chg->bat_desc.num_properties++] = POWER_SUPPLY_PROP_VOLTAGE_NOW;
++		if (of_property_present(pdev->dev.of_node, "monitored-battery"))
++			chg->bat_props[chg->bat_desc.num_properties++] = POWER_SUPPLY_PROP_CAPACITY;
++	}
++
+ 	bat_cfg.drv_data = chg;
+ 	bat_cfg.fwnode = dev_fwnode(&pdev->dev);
+ 	chg->bat_psy = devm_power_supply_register(&pdev->dev,
+-						  &bat_psy_desc,
++						  &chg->bat_desc,
+ 						  &bat_cfg);
+ 	if (IS_ERR(chg->bat_psy)) {
+ 		dev_err(&pdev->dev, "failed to register battery\n");
+ 		return PTR_ERR(chg->bat_psy);
+ 	}
+ 
++	if (chg->vbat && of_property_present(pdev->dev.of_node, "monitored-battery")) {
++		rc = power_supply_get_battery_info(chg->bat_psy, &chg->bat_info);
++		if (rc)
++			return dev_err_probe(&pdev->dev, rc, "failed to get the battery info\n");
++		if (!chg->bat_info->ocv_table_size[0])
++			return dev_err_probe(&pdev->dev, -EINVAL, "the battery has no OCV table\n");
++	}
++
+ 	usb_cfg.drv_data = chg;
+ 	usb_cfg.supplied_to = smbb_bif;
+ 	usb_cfg.num_supplicants = ARRAY_SIZE(smbb_bif);
+-- 
+2.56.0
+

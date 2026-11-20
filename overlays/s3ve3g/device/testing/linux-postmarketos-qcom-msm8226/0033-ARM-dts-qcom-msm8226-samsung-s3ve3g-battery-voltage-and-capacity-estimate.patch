@@ -1,0 +1,102 @@
+From b8f8ecb64b9526ee9d74ce839eff614e5dafa393 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 12:43:01 +0100
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: battery voltage and
+ capacity estimate
+
+VPH_PWR (VADC_VSYS) as the charger's battery voltage (the VADC driver has no scaling for VBAT_SNS,
+whose raw value is the same), and the 2100 mAh battery with its open circuit voltage curve at
+25 degrees C from downstream's battery data (bms-batterydata-samsung-2100mah.c).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../dts/qcom/qcom-msm8226-samsung-s3ve3g.dts  | 55 +++++++++++++++++++
+ 1 file changed, 55 insertions(+)
+
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index 171b38a05cb7..70cad7cb559a 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -11,6 +11,7 @@
+ 
+ /dts-v1/;
+ 
++#include <dt-bindings/iio/qcom,spmi-vadc.h>
+ #include <dt-bindings/input/input.h>
+ #include <dt-bindings/leds/common.h>
+ #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+@@ -145,6 +146,51 @@ muic: usb-switch@25 {
+ 		};
+ 	};
+ 
++	/*
++	 * The 2100 mAh battery (EB-L1M7FLU, 4.35 V): its open circuit voltage at 25 degrees C from
++	 * downstream's bms-batterydata-samsung-2100mah.c (the capacity is estimated from the voltage:
++	 * there is no fuel gauge driver)
++	 */
++	battery: battery {
++		compatible = "simple-battery";
++		device-chemistry = "lithium-ion";
++		charge-full-design-microamp-hours = <2100000>;
++		voltage-min-design-microvolt = <3400000>;
++		voltage-max-design-microvolt = <4350000>;
++		ocv-capacity-celsius = <25>;
++		ocv-capacity-table-0 = <4322000 100>,
++					 <4252000 95>,
++					 <4193000 90>,
++					 <4137000 85>,
++					 <4084000 80>,
++					 <4038000 75>,
++					 <3983000 70>,
++					 <3950000 65>,
++					 <3912000 60>,
++					 <3860000 55>,
++					 <3828000 50>,
++					 <3806000 45>,
++					 <3790000 40>,
++					 <3776000 35>,
++					 <3767000 30>,
++					 <3759000 25>,
++					 <3739000 20>,
++					 <3710000 16>,
++					 <3683000 13>,
++					 <3676000 11>,
++					 <3674000 10>,
++					 <3672000 9>,
++					 <3669000 8>,
++					 <3667000 7>,
++					 <3662000 6>,
++					 <3649000 5>,
++					 <3613000 4>,
++					 <3554000 3>,
++					 <3473000 2>,
++					 <3352000 1>,
++					 <3000000 0>;
++	};
++
+ 	/*
+ 	 * The notification LED and the light/proximity sensor on bit-banged I2C, as downstream
+ 	 * (i2c@23: SDA GPIO 23, SCL GPIO 16)
+@@ -1199,6 +1245,14 @@ codec {
+  * battery
+  */
+ &smbb {
++	/*
++	 * the battery voltage, and from it a capacity estimate: VPH_PWR (VADC_VSYS), the battery's
++	 * voltage here (the VADC driver has no scaling for VBAT_SNS; both read the same)
++	 */
++	io-channels = <&pm8226_vadc VADC_VSYS>;
++	io-channel-names = "vbat";
++	monitored-battery = <&battery>;
++
+ 	qcom,fast-charge-safe-current = <1500000>;
+ 	qcom,fast-charge-current-limit = <1500000>;
+ 	qcom,fast-charge-safe-voltage = <4200000>;
+@@ -1208,3 +1262,4 @@ &smbb {
+ 
+ 	status = "okay";
+ };
++
+-- 
+2.56.0
+

@@ -84,6 +84,8 @@ source="
 	0029-drm-msm-mdss-MSM8226-splash-handover-as-a-black-border-fill.patch
 	0030-drm-msm-mdp5-black-interface-underflow-colour.patch
 	0031-ARM-dts-qcom-msm8226-samsung-s3ve3g-charger-LED-light-sensor-touch-keys-vibrator.patch
+	0032-power-supply-qcom_smbb-battery-voltage-and-a-capacity-estimate.patch
+	0033-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-capacity-estimate.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -166,5 +168,7 @@ faaf49f78ccc8b3a4112f60272fad6a4e5a153020b3289efce1533e8ef3c89e7aa6d13354b14e4a3
 6b6bfc5423f0188dcfffd312e19152fcbefd25f0a6063b1c664130a02ff1d3d8424a61adef4d146c98fc66d4aca11faeb653850461cec5144926be66fede9183  0029-drm-msm-mdss-MSM8226-splash-handover-as-a-black-border-fill.patch
 1060c101c46db268fd5ebef493202ce347c9cc90dfa77496e01959fc7ec0ece41b6c1df844aae1ab91c8fa122217827c89f4298937849a352d17e43c44b42de3  0030-drm-msm-mdp5-black-interface-underflow-colour.patch
 1e62ff2505b2f580ca80d56de25058858af1963220fe7c41486f54885457cacaacd48829fc130e102de33893c12ce1f55b2ad2aac01cf46fe645c81d1ec62483  0031-ARM-dts-qcom-msm8226-samsung-s3ve3g-charger-LED-light-sensor-touch-keys-vibrator.patch
+d575947b9c5938afb60915b932d0c1740ec7284eb611230e2276dbb93dafeeb5c5903390c3246d3333b88b5c81915be329976ff44d9e49c049ad5b8d6412617b  0032-power-supply-qcom_smbb-battery-voltage-and-a-capacity-estimate.patch
+441cb19801537c2ab0e4dbebebd403f31e50a2309f9057b0b434fd538f48e7f5ba61174fa0306b397e0c01bdfac380c7b2f1a51b7eea9c53971e3108c06f28de  0033-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-capacity-estimate.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
