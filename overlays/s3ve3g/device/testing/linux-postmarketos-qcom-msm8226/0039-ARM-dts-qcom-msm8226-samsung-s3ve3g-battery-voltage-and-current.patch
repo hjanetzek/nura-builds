@@ -1,0 +1,68 @@
+From 56b26e2faadbdef08ec0c2805562a44d5e333ef5 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 14:25:32 +0100
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: battery voltage and
+ current
+
+The charger's battery voltage from VBAT_SNS instead of the system rail, the
+battery current from the IADC (internal sense resistor), and the battery's
+internal resistance for the capacity estimate: 195 mOhm, measured on this
+phone (106 mV over 546 mA between charging and discharging at about half
+charge; downstream's default_rbatt_mohm for a new battery is 177 mOhm).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../dts/qcom/qcom-msm8226-samsung-s3ve3g.dts  | 25 ++++++++++++++++---
+ 1 file changed, 21 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index db05019942e4..53c561ae88da 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -155,6 +155,11 @@ battery: battery {
+ 		compatible = "simple-battery";
+ 		device-chemistry = "lithium-ion";
+ 		charge-full-design-microamp-hours = <2100000>;
++		/*
++		 * measured on this phone: 106 mV over 546 mA between charging and discharging at about
++		 * half charge (downstream's default_rbatt_mohm for a new battery: 177 mOhm)
++		 */
++		factory-internal-resistance-micro-ohms = <195000>;
+ 		voltage-min-design-microvolt = <3400000>;
+ 		voltage-max-design-microvolt = <4350000>;
+ 		ocv-capacity-celsius = <25>;
+@@ -1257,11 +1262,11 @@ codec {
+  */
+ &smbb {
+ 	/*
+-	 * the battery voltage, and from it a capacity estimate: VPH_PWR (VADC_VSYS), the battery's
+-	 * voltage here (the VADC driver has no scaling for VBAT_SNS; both read the same)
++	 * the battery voltage (VBAT_SNS) and current (the IADC's internal sense resistor), and
++	 * from them a capacity estimate
+ 	 */
+-	io-channels = <&pm8226_vadc VADC_VSYS>;
+-	io-channel-names = "vbat";
++	io-channels = <&pm8226_vadc VADC_VBAT_SNS>, <&pm8226_iadc 0>;
++	io-channel-names = "vbat", "ibat";
+ 	monitored-battery = <&battery>;
+ 
+ 	qcom,fast-charge-safe-current = <1500000>;
+@@ -1274,3 +1279,15 @@ &smbb {
+ 	status = "okay";
+ };
+ 
++
++&pm8226_vadc {
++	channel@6 {
++		reg = <VADC_VBAT_SNS>;
++		qcom,pre-scaling = <1 3>;
++		label = "vbat_sns";
++	};
++};
++
++&pm8226_iadc {
++	#io-channel-cells = <1>;
++};
+-- 
+2.56.0
+

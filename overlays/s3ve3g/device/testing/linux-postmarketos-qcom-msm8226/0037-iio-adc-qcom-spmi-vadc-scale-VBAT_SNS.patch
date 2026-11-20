@@ -1,0 +1,30 @@
+From c4445b680c7780f85fecba7ad3f1032019292990 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 14:25:32 +0100
+Subject: [PATCH] iio: adc: qcom-spmi-vadc: scale VBAT_SNS
+
+The battery voltage channel has the same 1/3 divider as VSYS but only a raw
+value: give it the default voltage scaling (processed microvolts), so
+the charger can read the battery's own voltage, not the system rail.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/iio/adc/qcom-spmi-vadc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iio/adc/qcom-spmi-vadc.c b/drivers/iio/adc/qcom-spmi-vadc.c
+index d7a2df3c810e..0e800d089215 100644
+--- a/drivers/iio/adc/qcom-spmi-vadc.c
++++ b/drivers/iio/adc/qcom-spmi-vadc.c
+@@ -563,7 +563,7 @@ static const struct vadc_channels vadc_chans[] = {
+ 	VADC_CHAN_NO_SCALE(SPARE1_03, 1)
+ 	VADC_CHAN_NO_SCALE(USB_ID_MV, 1)
+ 	VADC_CHAN_VOLT(VCOIN, 1, SCALE_DEFAULT)
+-	VADC_CHAN_NO_SCALE(VBAT_SNS, 1)
++	VADC_CHAN_VOLT(VBAT_SNS, 1, SCALE_DEFAULT)
+ 	VADC_CHAN_VOLT(VSYS, 1, SCALE_DEFAULT)
+ 	VADC_CHAN_TEMP(DIE_TEMP, 0, SCALE_PMIC_THERM)
+ 	VADC_CHAN_VOLT(REF_625MV, 0, SCALE_DEFAULT)
+-- 
+2.56.0
+

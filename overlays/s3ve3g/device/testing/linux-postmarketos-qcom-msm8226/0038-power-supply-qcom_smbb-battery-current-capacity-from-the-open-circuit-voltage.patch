@@ -1,0 +1,131 @@
+From cd09c5b77afa38157bed94c1f5736b3a324693e8 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 14:25:32 +0100
+Subject: [PATCH] power: supply: qcom_smbb: battery current, capacity from the
+ open circuit voltage
+
+With an optional "ibat" IIO channel (the PMIC's IADC) the battery supply gets
+current_now, and the capacity estimate corrects the voltage by the drop over
+the battery's internal resistance (simple-battery
+factory-internal-resistance-micro-ohms) before the OCV table lookup: the
+estimate no longer jumps between charging and discharging.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/power/supply/qcom_smbb.c | 58 +++++++++++++++++++++++++++++---
+ 1 file changed, 54 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/power/supply/qcom_smbb.c b/drivers/power/supply/qcom_smbb.c
+index 3c2ae1b11216..e58b01bf3373 100644
+--- a/drivers/power/supply/qcom_smbb.c
++++ b/drivers/power/supply/qcom_smbb.c
+@@ -28,6 +28,7 @@
+ #include <linux/slab.h>
+ #include <linux/extcon-provider.h>
+ #include <linux/iio/consumer.h>
++#include <linux/math64.h>
+ #include <linux/devm-helpers.h>
+ #include <linux/workqueue.h>
+ #include <linux/regulator/driver.h>
+@@ -130,9 +131,11 @@ struct smbb_charger {
+ 
+ 	/* optional: the battery voltage (PMIC VADC, microvolts) and a capacity estimate from it */
+ 	struct iio_channel *vbat;
++	/* optional: the battery current (PMIC IADC: milliamperes in IIO units, read scaled to microamperes; positive charging) */
++	struct iio_channel *ibat;
+ 	struct power_supply_battery_info *bat_info;
+ 	struct power_supply_desc bat_desc;
+-	enum power_supply_property bat_props[10];
++	enum power_supply_property bat_props[12];
+ 
+ 	struct regulator_desc otg_rdesc;
+ 	struct regulator_dev *otg_reg;
+@@ -620,6 +623,36 @@ static int smbb_charger_writable_property(struct power_supply *psy,
+ 	return psp == POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT;
+ }
+ 
++/*
++ * The battery's open circuit voltage, estimated: the voltage minus the drop over its internal
++ * resistance by the current (positive charging), both averaged over a few conversions (the load
++ * is bursty)
++ */
++#define SMBB_OCV_SAMPLES	4
++static int smbb_battery_ocv(struct smbb_charger *chg, int *ocv_uv)
++{
++	s64 uv = 0, ua = 0;
++	int i, v, rc;
++
++	for (i = 0; i < SMBB_OCV_SAMPLES; i++) {
++		rc = iio_read_channel_processed(chg->vbat, &v);
++		if (rc < 0)
++			return rc;
++		uv += v;
++		if (chg->ibat && chg->bat_info->factory_internal_resistance_uohm > 0) {
++			rc = iio_read_channel_processed_scale(chg->ibat, &v, 1000);
++			if (rc < 0)
++				return rc;
++			ua += v;
++		}
++	}
++	uv = div_s64(uv, SMBB_OCV_SAMPLES);
++	ua = div_s64(ua, SMBB_OCV_SAMPLES);
++	*ocv_uv = uv - div_s64(ua * chg->bat_info->factory_internal_resistance_uohm, 1000000);
++
++	return 0;
++}
++
+ static int smbb_battery_get_property(struct power_supply *psy,
+ 		enum power_supply_property psp,
+ 		union power_supply_propval *val)
+@@ -688,14 +721,21 @@ static int smbb_battery_get_property(struct power_supply *psy,
+ 		if (rc > 0)
+ 			rc = 0;
+ 		break;
++	case POWER_SUPPLY_PROP_CURRENT_NOW:
++		/* positive charging, as the power supply ABI has it */
++		rc = iio_read_channel_processed_scale(chg->ibat, &val->intval, 1000);
++		if (rc > 0)
++			rc = 0;
++		break;
+ 	case POWER_SUPPLY_PROP_CAPACITY: {
+ 		int uv;
+ 
+ 		/*
+-		 * An estimate from the voltage and the battery's open circuit voltage table (no fuel
+-		 * gauge): reads high while charging, low under load
++		 * An estimate from the open circuit voltage (no fuel gauge driver): the voltage minus
++		 * the drop over the battery's internal resistance by the measured current (charging
++		 * raises the voltage, a load lowers it), looked up in the battery's OCV table
+ 		 */
+-		rc = iio_read_channel_processed(chg->vbat, &uv);
++		rc = smbb_battery_ocv(chg, &uv);
+ 		if (rc < 0)
+ 			break;
+ 		val->intval = power_supply_batinfo_ocv2cap(chg->bat_info, uv, 25);
+@@ -949,6 +989,14 @@ static int smbb_charger_probe(struct platform_device *pdev)
+ 		chg->vbat = NULL;
+ 	}
+ 
++	chg->ibat = devm_iio_channel_get(&pdev->dev, "ibat");
++	if (IS_ERR(chg->ibat)) {
++		rc = PTR_ERR(chg->ibat);
++		if (rc != -ENODEV)
++			return dev_err_probe(&pdev->dev, rc, "failed to get the ibat channel\n");
++		chg->ibat = NULL;
++	}
++
+ 	chg->bat_desc = bat_psy_desc;
+ 	memcpy(chg->bat_props, smbb_battery_properties, sizeof(smbb_battery_properties));
+ 	chg->bat_desc.properties = chg->bat_props;
+@@ -958,6 +1006,8 @@ static int smbb_charger_probe(struct platform_device *pdev)
+ 		if (of_property_present(pdev->dev.of_node, "monitored-battery"))
+ 			chg->bat_props[chg->bat_desc.num_properties++] = POWER_SUPPLY_PROP_CAPACITY;
+ 	}
++	if (chg->ibat)
++		chg->bat_props[chg->bat_desc.num_properties++] = POWER_SUPPLY_PROP_CURRENT_NOW;
+ 
+ 	bat_cfg.drv_data = chg;
+ 	bat_cfg.fwnode = dev_fwnode(&pdev->dev);
+-- 
+2.56.0
+

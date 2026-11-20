@@ -88,6 +88,10 @@ source="
 	0033-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-capacity-estimate.patch
 	0034-ARM-dts-qcom-msm8226-samsung-s3ve3g-vibrator-on-a-PWM.patch
 	0035-power-supply-qcom_smbb-detect-the-charger-s-removal-reverse-boost.patch
+	0036-iio-adc-qcom-spmi-iadc-microamperes-and-the-sign.patch
+	0037-iio-adc-qcom-spmi-vadc-scale-VBAT_SNS.patch
+	0038-power-supply-qcom_smbb-battery-current-capacity-from-the-open-circuit-voltage.patch
+	0039-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-current.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -174,5 +178,9 @@ d575947b9c5938afb60915b932d0c1740ec7284eb611230e2276dbb93dafeeb5c5903390c3246d33
 441cb19801537c2ab0e4dbebebd403f31e50a2309f9057b0b434fd538f48e7f5ba61174fa0306b397e0c01bdfac380c7b2f1a51b7eea9c53971e3108c06f28de  0033-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-capacity-estimate.patch
 387e44634b92999ad1f1c9c5c1eebeac23d494658d68b77533d04d55cbe0ee50c83c6bf5cd7e3322264a770ad59c4dee81e6c1c9045efb845b65ead33c22b64b  0034-ARM-dts-qcom-msm8226-samsung-s3ve3g-vibrator-on-a-PWM.patch
 f6c1408e41d570e38e361bbefb089e55c115dedf4b722f586653ab8d37b4d5d0bc26b2afd65887e678a2329c058668cb44f59aa104577bb5803609757788aceb  0035-power-supply-qcom_smbb-detect-the-charger-s-removal-reverse-boost.patch
+f2d7517a31949a832045d947c3debe5e355ff5c89ea8520a88b017ea7bafe966447051989872f14a1d80f5d82bac9cb9e0aef5b8f0abb20ff11342e17a7e40da  0036-iio-adc-qcom-spmi-iadc-microamperes-and-the-sign.patch
+041119a885a51da4573489f13d95179547dd9a94853b4d77faf116d06fa357d6794934adfe884b3b10b5819630e8ae254a560055bcb88d6ba13694a85a1fc493  0037-iio-adc-qcom-spmi-vadc-scale-VBAT_SNS.patch
+4952fe22ce9aed4129afe376614e1a5f932ce837b82a98fe7a63b312fd038f6fca45286f6d011c1707bd4b5354bc3a3488d9e6f7fbb6d6429550babe4d10162c  0038-power-supply-qcom_smbb-battery-current-capacity-from-the-open-circuit-voltage.patch
+15cdffa5baa6d89fd09c6b68937ee04f8e7f3d6dc38140b806c0468c1cd3d4220b934ef571b929e2934722e3e18e44959b92c67f0c7ea359a14fcfb5a42378d2  0039-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-current.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
