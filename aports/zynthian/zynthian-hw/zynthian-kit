@@ -1,0 +1,207 @@
+#!/bin/sh
+# Select the zynthian kit (hardware) of this device: zynthian-hw on Nura.
+#
+#   zynthian-kit           show the kit in use
+#   zynthian-kit list      the kits zynthian-sys has a configuration for
+#   zynthian-kit KIT       use KIT (e.g. V4, V5, Z2, MINI_V2), then reboot
+#   zynthian-kit -n KIT    dry run: the user's settings only, print the boot files instead of
+#                          writing them (no sudo)
+#
+# Run as the user zynthian runs as (the kiosk session's user); root's work goes through sudo.
+# It does what ZynthianOS' kit setup does, from zynthian-sys' config/zynthian_envars_<KIT>.sh:
+# - the kit's hardware settings (ZYNTHIAN_KIT_VERSION, ZYNTHIAN_WIRING_*, SOUNDCARD_*, DISPLAY_*,
+#   the UI settings that depend on the display) into the user's zynthian_envars.sh, keeping the
+#   other settings; zyncore.py then loads the layout's build of zyncoder-hw;
+# - the sound card and display overlays to /boot/zynthian-kit.txt (included by usercfg.txt), with
+#   the additions of ZynthianOS' update_zynthian_sys.sh (the ZynScreen's backlight, the V5/Z2 RTC), and
+#   the onboard audio (headphone jack) unless the user's ZYNTHIAN_DISABLE_RBPI_AUDIO is 1;
+#   the display's kernel options to /etc/kernel-cmdline.d/90-zynthian-kit.conf (with ZynthianOS'
+#   fbcon=map:22 vt.global_cursor_default=0: no text console on the kit's display);
+# - the user into the groups gpio, i2c, spi (the kit's interfaces), audio, video and input;
+# - the kiosk session for the kit's display: zynthian-fb (Qt on a framebuffer, no compositor) for
+#   fbtft SPI panels, zynthian (cage) for HDMI and DSI;
+# - the Qt UI's theme for the display (ZYNTHIAN_QT_THEME in /etc/default/zynthian): v4 for 480x320
+#   panels (the V4 kits), the default otherwise.
+# At boot, zynthian-kit-boot applies the kit named in /boot/zynthian.txt (kit=V4), so the kit can be
+# chosen on the SD card's FAT partition before the first boot.
+# The boot settings take effect after a reboot.
+set -eu
+
+sys_config=${ZYNTHIAN_SYS_CONFIG:-/usr/share/zynthian/zynthian-sys/config}
+config_dir=${ZYNTHIAN_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zynthian}
+envars=$config_dir/zynthian_envars.sh
+boot_kit=/boot/zynthian-kit.txt
+cmdline_kit=/etc/kernel-cmdline.d/90-zynthian-kit.conf
+
+# The kit's settings that describe the hardware (the rest of its file is ZynthianOS' system)
+hw_vars='^(ZYNTHIAN_KIT_VERSION|ZYNTHIAN_WIRING_[A-Z0-9_]+|SOUNDCARD_(NAME|CONFIG|MIXER)|DISPLAY_[A-Z_]+|ZYNTHIAN_UI_(FONT_SIZE|TOUCH_NAVIGATION|ENABLE_CURSOR|VISIBLE_MIXER_STRIPS))$'
+
+usage() { sed -n '2,/^set -eu/{/^set -eu/d;s/^# \{0,1\}//;p}' "$0"; exit "${1:-0}"; }
+
+kits() {
+	for f in "$sys_config"/zynthian_envars_*.sh; do
+		[ -f "$f" ] || continue
+		k=${f##*/zynthian_envars_}
+		echo "${k%.sh}"
+	done
+}
+
+current() {
+	[ -f "$envars" ] && sed -n 's/^export ZYNTHIAN_KIT_VERSION="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$envars" | tail -n 1
+}
+
+dry=0
+[ "${1:-}" != -n ] || { dry=1; shift; }
+case ${1:-} in
+	"") echo "kit: $(current || true)"; exit 0 ;;
+	list) kits; exit 0 ;;
+	-h | --help) usage ;;
+	-*) usage 1 ;;
+esac
+kit=$1
+kit_file=$sys_config/zynthian_envars_$kit.sh
+[ -f "$kit_file" ] || { echo "no configuration for kit '$kit' (zynthian-kit list)" >&2; exit 1; }
+[ "$(id -u)" != 0 ] || { echo "run it as the user zynthian runs as, not as root" >&2; exit 1; }
+
+# 1. The user's zynthian_envars.sh: the kit's hardware lines replace the user's, the others stay
+# Without a config yet: zynthian's own setup first (what the launcher does at the first start:
+# the directories, zynthian_envars.sh, the MIDI profiles, ...), not only the envars template
+if [ ! -f "$envars" ]; then
+	ZYNTHIAN_DIR=${ZYNTHIAN_DIR:-/usr/share/zynthian} ZYNTHIAN_LIB_DIR=${ZYNTHIAN_LIB_DIR:-/usr/lib/zynthian} \
+		bash -c '. "$ZYNTHIAN_DIR/zynthian-ui/desktop/zynthian_desktop_env.sh" && "$ZYNTHIAN_UI_DIR/desktop/setup_desktop.sh" dirs' >/dev/null
+	[ -f "$envars" ] || { echo "zynthian's setup didn't create $envars" >&2; exit 1; }
+fi
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+grep -E '^export [A-Z0-9_]+=' "$kit_file" | while IFS= read -r line; do
+	var=${line#export }
+	var=${var%%=*}
+	if echo "$var" | grep -qE "$hw_vars"; then printf '%s\n' "$line"; fi
+done > "$tmp.kit"
+awk -v kitfile="$tmp.kit" '
+	BEGIN { while ((getline l < kitfile) > 0) { v = l; sub(/^export /, "", v); sub(/=.*/, "", v); kit[v] = l; order[++n] = v } }
+	/^export [A-Z0-9_]+=/ { v = $0; sub(/^export /, "", v); sub(/=.*/, "", v); if (v in kit) { if (!(v in done)) print kit[v]; done[v] = 1; next } }
+	{ print }
+	END { for (i = 1; i <= n; i++) if (!(order[i] in done)) print kit[order[i]] }
+' "$envars" > "$tmp"
+cp "$tmp" "$envars"
+rm -f "$tmp.kit"
+echo "kit $kit: hardware settings in $envars"
+
+# 2. Boot: the overlays and the kernel options (their \n are line breaks)
+soundcard=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${SOUNDCARD_CONFIG:-}"' sh "$kit_file")
+display=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_CONFIG:-}"' sh "$kit_file")
+cmdline=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_KERNEL_OPTIONS:-}"' sh "$kit_file")
+rbpi_audio_off=$(sed -n 's/^export ZYNTHIAN_DISABLE_RBPI_AUDIO="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$envars" | tail -n 1)
+# As ZynthianOS' update_zynthian_sys.sh adds to the kit's settings:
+# - the ZynScreen's backlight (GPIO 22, overlay piscreen2r-backlight): piscreen2r-notouch leaves it
+#   off, so the panel stayed dark;
+# - the V5 and Z2 main boards' RTC (RV3028 on I2C instead of the Pi's);
+# - the text console off the panel: ZynthianOS boots with "fbcon=map:22 vt.global_cursor_default=0"
+#   (no framebuffer console on the kit's display, no blinking cursor over the UI).
+case $display in
+	*piscreen2r-notouch*)
+		case $display in *piscreen2r-backlight*) ;; *) display="$display\ndtoverlay=piscreen2r-backlight" ;; esac ;;
+esac
+custom=
+case $kit in
+	V5*|Z2*) custom="dtparam=rtc=off\ndtoverlay=i2c-rtc,rv3028" ;;
+esac
+cmdline=$(printf '%s' "$cmdline fbcon=map:22 vt.global_cursor_default=0" | sed 's/^ //')
+
+# The kiosk session for the display: SPI panels driven by fbtft (piscreen2r: the ZynScreen 3.5 of
+# the V4 kits; other fbtft overlays) are framebuffers without DRM, so zynthian's Qt UI runs on them
+# without a compositor (zynthian-fb, Qt's linuxfb); HDMI and DSI panels are DRM (zynthian: cage).
+# ZYNTHIAN_KIT_SESSION in the environment overrides it.
+# The ZynScreen 3.5 through DRM (device-zynthian-rpi4's zynscreen-drm overlay, the kernel's ili9486
+# driver) only with ZYNTHIAN_KIT_DRM=1: the panel stays white with that driver's init sequence
+# (nura-builds docs/zynthian-rpi.md), so fbtft is the default.
+session=zynthian
+case $display in
+	*piscreen*|*waveshare*|*pitft*|*tft35*|*ili9*)
+		session=zynthian-fb
+		if [ "${ZYNTHIAN_KIT_DRM:-0}" = 1 ] && [ -e /boot/overlays/zynscreen-drm.dtbo ]; then
+			case $display in *piscreen2r*) display="dtoverlay=zynscreen-drm,rotation=0"; session=zynthian ;; esac
+		fi ;;
+esac
+session=${ZYNTHIAN_KIT_SESSION:-$session}
+# The Qt UI's theme for the kit's display: v4 for 480x320 panels (the V4 kits' ZynScreen 3.5:
+# controllers next to their knobs, 8 mixer strips, 4 x 4 pads; zynthian-ui docs/qt-theme-v4.md),
+# the default theme otherwise. ZYNTHIAN_KIT_QT_THEME in the environment overrides it.
+width=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_WIDTH:-}"' sh "$kit_file")
+height=$(sh -c '. "$1" >/dev/null 2>&1; printf "%s" "${DISPLAY_HEIGHT:-}"' sh "$kit_file")
+qt_theme=
+[ "${width}x${height}" != 480x320 ] || qt_theme=v4
+qt_theme=${ZYNTHIAN_KIT_QT_THEME:-$qt_theme}
+{
+	echo "# zynthian kit $kit (zynthian-kit, from zynthian-sys' zynthian_envars_$kit.sh)"
+	echo "# Sound card"
+	printf '%b\n' "$soundcard"
+	echo "# Display"
+	printf '%b\n' "$display"
+	# As ZynthianOS (update_zynthian_sys.sh): a user setting (webconf), not the kit's
+	if [ -n "$custom" ]; then
+		echo "# Main board"
+		printf '%b\n' "$custom"
+	fi
+	echo "# Onboard audio"
+	if [ "$rbpi_audio_off" = 1 ]; then
+		echo "dtparam=audio=off"
+	else
+		printf '%s\n' "dtparam=audio=on" "audio_pwm_mode=2"
+	fi
+} > "$tmp"
+if [ $dry = 1 ]; then
+	echo "--- $boot_kit"; cat "$tmp"
+	echo "--- $cmdline_kit"; printf '%s\n' "${cmdline:-(none)}"
+	echo "--- kiosk session: $session"
+	echo "--- Qt theme: ${qt_theme:-(default)}"
+	exit 0
+fi
+changed=0
+if ! cmp -s "$tmp" "$boot_kit"; then
+	sudo install -m644 "$tmp" "$boot_kit"
+	changed=1
+fi
+if [ -n "$cmdline" ]; then
+	printf '%s\n' "$cmdline" > "$tmp"
+	if ! cmp -s "$tmp" "$cmdline_kit"; then
+		sudo mkdir -p "${cmdline_kit%/*}"
+		sudo install -m644 "$tmp" "$cmdline_kit"
+		changed=1
+	fi
+elif [ -e "$cmdline_kit" ]; then
+	sudo rm -f "$cmdline_kit"
+	changed=1
+fi
+# boot-deploy (mkinitfs) writes cmdline.txt from /usr/lib and /etc/kernel-cmdline.d
+[ $changed = 0 ] || sudo mkinitfs >/dev/null
+
+# 3. The kit's interfaces for this user (udev rules of the device package)
+user=$(id -un)
+for g in gpio i2c spi audio video input; do
+	getent group "$g" >/dev/null || continue
+	id -nG "$user" | tr ' ' '\n' | grep -qx "$g" || { sudo addgroup "$user" "$g"; changed=1; }
+done
+
+# 4. The Qt theme for the kit's display, in /etc/default/zynthian (the kiosk sessions export it)
+defaults=/etc/default/zynthian
+if [ -f "$defaults" ]; then
+	grep -v '^ZYNTHIAN_QT_THEME=' "$defaults" > "$tmp" || true
+	[ -z "$qt_theme" ] || echo "ZYNTHIAN_QT_THEME=$qt_theme" >> "$tmp"
+	if ! cmp -s "$tmp" "$defaults"; then
+		sudo install -m644 "$tmp" "$defaults"
+		echo "Qt theme: ${qt_theme:-the default}"
+	fi
+fi
+
+# 5. The kiosk session for the kit's display (postmarketos-ui-zynthian's kiosk-session)
+if command -v kiosk-session >/dev/null; then
+	kiosk-session -n "$session" >/dev/null && echo "kiosk session: $session"
+fi
+
+if [ $changed = 1 ]; then
+	echo "boot settings changed: reboot (sudo reboot) for the kit's sound card, display and interfaces"
+else
+	echo "boot settings unchanged: restart zynthian (sudo systemctl restart tinydm)"
+fi

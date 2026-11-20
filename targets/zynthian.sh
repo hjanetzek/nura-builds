@@ -3,7 +3,7 @@
 # Source repositories: name, URL, branch (override with <NAME>_REF in the environment, e.g.
 # ZYNTHIAN_UI_REF=my-branch), recipe directory linked into pmaports ("-": none, sources only)
 REPOS="
-zynthian-ui https://github.com/hjanetzek/zynthian-ui main nura
+zynthian-ui https://github.com/hjanetzek/zynthian-ui main -
 zyncoder    https://github.com/hjanetzek/zyncoder    nura -
 drivenbymoss-rust https://github.com/hjanetzek/drivenbymoss-rust main nura
 zynthian-packages https://github.com/hjanetzek/zynthian-packages nura nura
@@ -36,7 +36,7 @@ STAGE_plugins="zynthian-jalv zynthian-lv2-plugins zynthian-puredata zynaddsubfx 
 # support in zynthian's process included) from its checkout too, first (no dependency on the others;
 # the Rust build fails early); its recipe fetches the Rust crates itself. The kiosk package depends on it.
 STAGE_zynthian="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
-SEED_zynthian="@zynthian-ui/nura/seed-distfiles.sh"
+SEED_zynthian="aports/zynthian/seed-distfiles.sh"
 # zynthian-ui from upstream's branches (vangelis, tomita) with the port patches, the Tk UI, for
 # those who want zynthian as upstream ships it (aports/zynthian-upstream, docs/zynthian-upstream.md).
 # After the zynthian stage: they need zyncoder, which is only built from its checkout there.
@@ -99,5 +99,5 @@ IMAGE_PACKAGES_armv7="zynthian-ui"
 DEVICES_armv7="qcom-msm8226"
 # Recipes of the other repositories whose arch= lacks armv7 (aarch64 x86_64): setup.sh adds it in
 # the checkouts until the recipes list armv7 themselves
-ADD_ARCH_armv7="@zynthian-ui/nura/zynthian-ui @zynthian-ui/nura/zyncoder @drivenbymoss-rust/nura/drivenbymoss
+ADD_ARCH_armv7="@drivenbymoss-rust/nura/drivenbymoss
 	aports/lv2/aida-x-lv2 aports/lv2/chow-centaur-lv2 aports/lv2/neural-amp-modeler-lv2 aports/lv2/ratatouille-lv2"

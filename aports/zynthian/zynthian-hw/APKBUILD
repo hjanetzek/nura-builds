@@ -1,0 +1,42 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# zynthian hardware on Nura (the zynthian kits on a Raspberry Pi, with device-zynthian-rpi4):
+# zynthian-kit selects the kit as ZynthianOS does (the kit's settings from zynthian-sys into the
+# user's zynthian_envars.sh, its overlays and kernel options to /boot, the interfaces' groups),
+# zyncoder-hw has the kits' builds of zyncoder, and the device user gets passwordless sudo for
+# what zynthian does as root on ZynthianOS (a first step). Plan: nura-builds docs/zynthian-rpi.md.
+pkgname=zynthian-hw
+pkgver=1
+pkgrel=7
+pkgdesc="zynthian hardware support: kit selection, zyncoder for the kits"
+url="https://github.com/hjanetzek/zynthian-ui"
+arch="aarch64"
+license="GPL-3.0-or-later"
+depends="
+	cmd:sudo
+	i2c-tools
+	zyncoder-hw
+	zynthian-sys-config
+	"
+options="!check"
+source="
+	zynthian-kit
+	zynthian-kit-boot
+	zynthian-kit-boot.service
+	sudoers
+	"
+
+package() {
+	install -Dm755 "$srcdir"/zynthian-kit "$pkgdir"/usr/bin/zynthian-kit
+	install -Dm440 "$srcdir"/sudoers "$pkgdir"/etc/sudoers.d/90-zynthian-hw
+	# The kit from /boot/zynthian.txt (the SD card's FAT partition) at boot, before the kiosk
+	install -Dm755 "$srcdir"/zynthian-kit-boot -t "$pkgdir"/usr/libexec/zynthian/
+	install -Dm644 "$srcdir"/zynthian-kit-boot.service -t "$pkgdir"/usr/lib/systemd/system/
+	mkdir -p "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants
+	ln -s ../zynthian-kit-boot.service "$pkgdir"/usr/lib/systemd/system/multi-user.target.wants/
+}
+sha512sums="
+6ddb8246556f75eab2bf88b19c1f2c35c8e6ac41512e933be66c98fba6bc7a0283ea51465a8ba8988ef7263f329d5d20a8cd9c19a2aa83d6f750786a8abb7eff  zynthian-kit
+eabce5dacbcbe758063aa6b3d93f47b9dffeb981f23999457db3cbad89c8b77014a864589b3b1347123448c20c1c0b48a1922e55f6f0b292cf1e51a4fd039afc  zynthian-kit-boot
+97e0c1a845d6a0b5eac1d3ed52b94c9b27c38381e179c86f6585eff45de0ef6a522c4ac3674afb9accba865122e67208d6e455dfd6aaa2c5318cab5c80eb5805  zynthian-kit-boot.service
+f7e3144d4366d2f0805a69b61803e44d42176b34970af57961a7c1b031aa94584f8e0bafc3ba9fff76f13cc3633a20ba61a3030622ff861265b5e70f66662b5c  sudoers
+"
