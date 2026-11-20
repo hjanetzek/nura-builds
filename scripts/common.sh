@@ -79,6 +79,9 @@ packages_dir() {
 }
 save_packages() {
 	mkdir -p "$NURA_OUT"
+	# a stage whose packages are all up to date in the binary repositories builds nothing:
+	# pmbootstrap then has made no local repository
+	sudo mkdir -p "$NURA_WORK/packages"
 	sudo tar -C "$NURA_WORK" -cf "$NURA_OUT/packages.tar" packages
 	sudo chown "$(id -u):$(id -g)" "$NURA_OUT/packages.tar"
 }
