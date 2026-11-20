@@ -1,0 +1,117 @@
+From 3de63ed182b72d83e68a071657c24bea0557e694 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 14:08:37 +0100
+Subject: [PATCH] power: supply: qcom_smbb: detect the charger's removal
+ (reverse boost)
+
+On PM8226 (Galaxy S III Neo) USBIN stays valid after the cable is pulled while
+charging: the buck keeps it up (reverse boost), no usb-valid or chg-gone
+interrupt comes, usbin stays online and the battery "charging". Enable the
+charger-gone detection in the USB path's REV_BST register, as downstream's
+qpnp-charger does at probe. The disabled entry for it also had the security
+unlock in the mask field: it would not have written the magic.
+
+On charger-gone stop charging and force the charger onto the battery, which
+ends the reverse boost, and re-arm it a second later, as downstream does
+(chg_gone handler, arb_stop_work).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/power/supply/qcom_smbb.c | 40 +++++++++++++++++++++++++++++---
+ 1 file changed, 37 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/power/supply/qcom_smbb.c b/drivers/power/supply/qcom_smbb.c
+index fe5b033b9e4a..3c2ae1b11216 100644
+--- a/drivers/power/supply/qcom_smbb.c
++++ b/drivers/power/supply/qcom_smbb.c
+@@ -28,6 +28,8 @@
+ #include <linux/slab.h>
+ #include <linux/extcon-provider.h>
+ #include <linux/iio/consumer.h>
++#include <linux/devm-helpers.h>
++#include <linux/workqueue.h>
+ #include <linux/regulator/driver.h>
+ 
+ #define SMBB_CHG_VMAX		0x040
+@@ -38,6 +40,7 @@
+ #define SMBB_CHG_VIN_MIN	0x047
+ #define SMBB_CHG_CTRL		0x049
+ #define CTRL_EN			BIT(7)
++#define CTRL_ON_BAT_FORCE	BIT(0)
+ #define SMBB_CHG_VBAT_WEAK	0x052
+ #define SMBB_CHG_IBAT_TERM_CHG	0x05b
+ #define IBAT_TERM_CHG_IEOC	BIT(7)
+@@ -122,6 +125,9 @@ struct smbb_charger {
+ 	struct power_supply *bat_psy;
+ 	struct regmap *regmap;
+ 
++	/* re-arms the charger a while after its removal stopped it (see smbb_chg_gone_handler) */
++	struct delayed_work chg_gone_work;
++
+ 	/* optional: the battery voltage (PMIC VADC, microvolts) and a capacity estimate from it */
+ 	struct iio_channel *vbat;
+ 	struct power_supply_battery_info *bat_info;
+@@ -445,11 +451,31 @@ static irqreturn_t smbb_chg_done_handler(int irq, void *_data)
+ 	return IRQ_HANDLED;
+ }
+ 
++static void smbb_chg_gone_work(struct work_struct *work)
++{
++	struct smbb_charger *chg = container_of(to_delayed_work(work), struct smbb_charger,
++						chg_gone_work);
++
++	/* charging back on: without a charger the buck has no input and stays off */
++	regmap_update_bits(chg->regmap, chg->addr + SMBB_CHG_CTRL,
++			   CTRL_EN | CTRL_ON_BAT_FORCE, CTRL_EN);
++}
++
+ static irqreturn_t smbb_chg_gone_handler(int irq, void *_data)
+ {
+ 	struct smbb_charger *chg = _data;
+ 
+ 	smbb_set_line_flag(chg, irq, STATUS_CHG_GONE);
++	/*
++	 * The charger was pulled while the buck ran: it keeps USBIN up (reverse boost) from the
++	 * battery. Stop charging and run on the battery, and re-arm the charger after a second, as
++	 * downstream's qpnp-charger does (chg_gone handler, arb_stop_work).
++	 */
++	if (chg->status & STATUS_CHG_GONE) {
++		regmap_update_bits(chg->regmap, chg->addr + SMBB_CHG_CTRL,
++				   CTRL_EN | CTRL_ON_BAT_FORCE, CTRL_ON_BAT_FORCE);
++		mod_delayed_work(system_wq, &chg->chg_gone_work, msecs_to_jiffies(1000));
++	}
+ 	power_supply_changed(chg->bat_psy);
+ 	power_supply_changed(chg->usb_psy);
+ 	if (!chg->dc_disabled)
+@@ -768,10 +794,14 @@ static const struct reg_off_mask_default {
+ 	/* Stop USB enumeration timer */
+ 	{ SMBB_USB_ENUM_TIMER_STOP, ENUM_TIMER_STOP, ENUM_TIMER_STOP },
+ 
+-#if 0 /* FIXME supposedly only to disable hardware ARB termination */
+-	{ SMBB_USB_SEC_ACCESS, SEC_ACCESS_MAGIC },
++	/*
++	 * Detect the charger's removal while the buck runs (reverse boost): without it USBIN stays
++	 * valid after the cable is pulled (the buck keeps it up), no usb-valid or chg-gone interrupt
++	 * comes and the charger keeps "charging" (PM8226 on the Galaxy S III Neo; downstream's
++	 * qpnp-charger writes the same at probe)
++	 */
++	{ SMBB_USB_SEC_ACCESS, 0xff, SEC_ACCESS_MAGIC },
+ 	{ SMBB_USB_REV_BST, 0xff, REV_BST_CHG_GONE },
+-#endif
+ 
+ 	/* Stop USB enumeration timer, again */
+ 	{ SMBB_USB_ENUM_TIMER_STOP, ENUM_TIMER_STOP, ENUM_TIMER_STOP },
+@@ -906,6 +936,10 @@ static int smbb_charger_probe(struct platform_device *pdev)
+ 		}
+ 	}
+ 
++	rc = devm_delayed_work_autocancel(&pdev->dev, &chg->chg_gone_work, smbb_chg_gone_work);
++	if (rc)
++		return rc;
++
+ 	/* optional: the battery voltage, and with a monitored battery's OCV table the capacity */
+ 	chg->vbat = devm_iio_channel_get(&pdev->dev, "vbat");
+ 	if (IS_ERR(chg->vbat)) {
+-- 
+2.56.0
+

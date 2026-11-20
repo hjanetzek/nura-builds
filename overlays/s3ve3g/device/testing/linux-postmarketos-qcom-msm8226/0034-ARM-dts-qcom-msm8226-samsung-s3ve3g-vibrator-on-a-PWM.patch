@@ -1,0 +1,93 @@
+From 0f835a0fc493bd5d0e41d65c1c569a38e777f95a Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 13:02:04 +0100
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: vibrator on a PWM
+
+The DRV2603 only gives a faint click with its PWM input held high: it needs the PWM. Downstream
+(immvibespi.c, tspdrv.c: MSM_MMSS_GP0_BASE for S3VE3G) feeds it from the camera block's GP0 clock
+on GPIO 33 (function gp0_clk) with the M/N divider's duty cycle as the strength. clk-pwm on
+CAMSS_GP0_CLK at 24 kHz (MMCC's table) and pwm-vibrator with the enable GPIO 111 instead of
+gpio-vibrator.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../dts/qcom/qcom-msm8226-samsung-s3ve3g.dts  | 51 +++++++++++--------
+ 1 file changed, 31 insertions(+), 20 deletions(-)
+
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index 70cad7cb559a..db05019942e4 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -303,14 +303,28 @@ reg_touchkey_led: regulator-touchkey-led {
+ 	};
+ 
+ 	/*
+-	 * The vibrator: a DRV2603 haptic driver, enabled by GPIO 111. Downstream feeds its PWM input
+-	 * with 25 kHz at 90 % on GPIO 33; held high here (full strength).
++	 * The vibrator: a DRV2603 haptic driver, enabled by GPIO 111, its strength the duty cycle of a
++	 * PWM on GPIO 33 (function gp0_clk: the camera block's GP0 clock, MSM_MMSS_GP0_BASE downstream). Downstream (immvibespi.c)
++	 * programs that clock from XO / 16 with its M/N divider; here clk-pwm at 24 kHz (MMCC's table:
++	 * XO / 16 * 1/50; a static level only gives a faint click).
+ 	 */
++	vib_pwm: pwm {
++		compatible = "clk-pwm";
++		#pwm-cells = <2>;
++		clocks = <&mmcc CAMSS_GP0_CLK>;
++
++		pinctrl-0 = <&vibrator_pwm_default>;
++		pinctrl-names = "default";
++	};
++
+ 	vibrator {
+-		compatible = "gpio-vibrator";
++		compatible = "pwm-vibrator";
++		/* 41667 ns: clk-pwm rounds the rate up, 24 kHz exactly */
++		pwms = <&vib_pwm 0 41667>;
++		pwm-names = "enable";
+ 		enable-gpios = <&tlmm 111 GPIO_ACTIVE_HIGH>;
+ 
+-		pinctrl-0 = <&vibrator_default>;
++		pinctrl-0 = <&vibrator_en_default>;
+ 		pinctrl-names = "default";
+ 	};
+ 
+@@ -901,23 +915,20 @@ touchkey_int_default: touchkey-int-default-state {
+ 		bias-disable;
+ 	};
+ 
+-	vibrator_default: vibrator-default-state {
+-		enable-pins {
+-			pins = "gpio111";
+-			function = "gpio";
+-			drive-strength = <2>;
+-			bias-disable;
+-			output-low;
+-		};
++	vibrator_en_default: vibrator-en-default-state {
++		pins = "gpio111";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-disable;
++		output-low;
++	};
+ 
+-		/* the DRV2603's PWM input: high, full strength */
+-		pwm-pins {
+-			pins = "gpio33";
+-			function = "gpio";
+-			drive-strength = <2>;
+-			bias-disable;
+-			output-high;
+-		};
++	/* downstream: function 3 (gp0_clk) while vibrating */
++	vibrator_pwm_default: vibrator-pwm-default-state {
++		pins = "gpio33";
++		function = "gp0_clk";
++		drive-strength = <2>;
++		bias-disable;
+ 	};
+ 
+ 	gpio_hall_sensor_default: gpio-hall-sensor-default-state {
+-- 
+2.56.0
+
