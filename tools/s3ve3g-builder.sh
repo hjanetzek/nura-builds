@@ -73,6 +73,8 @@ sync)
 	# shellcheck disable=SC2086
 	rsync -a --delete --exclude .git --exclude out -e "ssh $vm_opts" "$here/" user@127.0.0.1:/home/user/nura-builds/
 	vm "PMAPORTS=$pmaports WORKTREE=$pmaports /home/user/nura-builds/tools/s3ve3g-pmaports.sh $commit"
+	# the CPU baseline (armv7: NEON, VFPv4) into the build user's abuild.conf
+	vm "[ ! -d $work/config_abuild ] || /home/user/nura-builds/scripts/abuild-cpu.sh $work >/dev/null"
 	;;
 build)
 	[ $# -gt 0 ] || set -- linux-postmarketos-qcom-msm8226 device-samsung-s3ve3g

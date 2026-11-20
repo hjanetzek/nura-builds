@@ -52,6 +52,8 @@ stage_hash() {
 	# shellcheck disable=SC2154 # set by eval
 	{
 		echo "$builds"
+		# the compiler flags of every package
+		sha256sum < "$here/scripts/abuild-cpu.conf"
 		for p in $inputs; do
 			d=$(resolve "$p")
 			(cd "$d" && find . -type f ! -path "*/.git/*" | LC_ALL=C sort | xargs sha256sum)
