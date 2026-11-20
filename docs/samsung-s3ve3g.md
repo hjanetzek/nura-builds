@@ -359,10 +359,22 @@ whose post-install script enables `s3ve3g-firmware` (sysinit) and removes `nftab
 runlevel (after `postmarketos-base-nftables-openrc` added it). The `l24: unsupportable voltage range` warning is the
 iris driver's default for vdddig; downstream feeds vddrfa and vdddig from l24 too.
 
-Missing: battery and charging (no mainline driver for the PM8226 charger and fuel gauge), sound,
+Missing: the battery gauge (PM8226 BMS: no mainline driver; the charger works, see below),
 smart dimming for the panel (fixed gamma tables for brightness 0-24 work; see samsung-s3ve3g-gpu.md for the panel, GPU and
 display path), CPR and speed-bin reading for the CPU, SD card
-(the controller probes, untested with a card), vibrator, LED, light/proximity sensor, NFC, modem.
+(the controller probes, untested with a card), NFC, cameras, modem.
+
+Charger, LED, light sensor, touch keys, vibrator (2026-11-20, kernel 7.3.4, patch 0031, all with
+mainline drivers, wiring from the downstream device tree):
+
+| Part | Wiring | Driver | State |
+|---|---|---|---|
+| Charger (PM8226 SMBB) | | `qcom_smbb`, power supplies `smbb-bif`, `smbb-usbin`, `smbb-dcin` | charges from USB: "Charging", "Fast", battery present and good; limits as downstream: 4.2 V, recharge below 4.1 V, input minimum 4.3 V, 1.5 A (downstream doesn't override Qualcomm's defaults for the s3ve3g's 2100 mAh battery) |
+| Notification LED AN30259A | bit-banged I2C (SDA 23, SCL 16), 0x30 | `leds-an30259a`: `red:status`, `green:status`, `blue:status` | registers, brightness accepted; not seen yet |
+| Light/proximity CM36651 | same bus, 0x18 (and 0x0c, 0x19), interrupt GPIO 65, supply GPIO 110 (from L19) | `cm36651` (IIO): red, green, blue, clear, proximity | values read |
+| Touch keys (menu, back) | Cypress on bit-banged I2C (SDA 114, SCL 66), 0x20, interrupt GPIO 49, supply GPIO 67, key light GPIO 56 | `tm2-touchkey` as `cypress,midas-touchkey` (Samsung's Galaxy S III firmware: key state in register 0, LED commands 0x10/0x20, as downstream's cypress_touchkey_s3), KEY_BACK and KEY_MENU, LED `tm2-touchkey` | probes; key presses not tried yet |
+| Vibrator DRV2603 | enable GPIO 111, PWM input GPIO 33 (gp0_clk) | `gpio-vibrator` (force feedback), the PWM input held high | the enable line switches; whether the motor turns not checked yet. Downstream drives the PWM input at 25 kHz, 90 %: if a static level isn't enough, `clk-pwm` on GCC_GP1_CLK (GPIO 33 function gp0_clk; MSM8226's GP clock table needs a 25 kHz entry: 19.2 MHz / 16 * 1/48) and `pwm-vibrator` |
+
 Audio (WCD9306 codec on SLIMbus, no mainline driver): samsung-s3ve3g-audio.md.
 
 Screen: brightness is `/sys/class/backlight/fd922800.dsi.0/brightness` (0-24, gamma tables). Without msm

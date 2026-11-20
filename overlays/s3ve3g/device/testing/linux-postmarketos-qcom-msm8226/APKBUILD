@@ -83,6 +83,7 @@ source="
 	0028-drm-msm-mdp5-black-layer-mixer-border-colour.patch
 	0029-drm-msm-mdss-MSM8226-splash-handover-as-a-black-border-fill.patch
 	0030-drm-msm-mdp5-black-interface-underflow-colour.patch
+	0031-ARM-dts-qcom-msm8226-samsung-s3ve3g-charger-LED-light-sensor-touch-keys-vibrator.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -133,7 +134,7 @@ package() {
 
 sha512sums="
 db5508c3cf8b613b4680022eb785c036bcf8a5c952f8d0b2f3c2c7dc16779cf8bd954e0bca0b0b52451bac61430a687ae73205574f002f3b60de886640ebb9b0  linux-7.3.4.tar.xz
-e5800278eab5adf61f9660f495db8ca195c183d2bdb1192fe4e0b8a7a2549acc59dd6a37f122bbecb6a688f30daa09aeca9bd44be0d8a23ec4ae7693a2352046  config-postmarketos-qcom-msm8226.armv7
+759c050538edb3de534c6a8d36536abb17dc73fbcd71136fa025c388e4cf6cc0f6c891db2b9c295047e48fd7ceb272f8bfdd0d7a3ca505da5c9af3936f6e4f45  config-postmarketos-qcom-msm8226.armv7
 685d26394e13c2b88ae18671c89fe6dcb1db3809fbd6734700dedc6d467e746784743c3b94ffdc67cd31c3a023e0f816e90ec748028dbea27baa378f2561feac  0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.4.patch
 6d332d7e93027c5aee62b6497bd15be1cd20e38dbae884dc28f81b1f1983f818bc07c8751c1a8d2e2acdbbc790179e9f48e02a9fe15db9c6a0480f4a54dda736  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 54a64cacb2e06014f207bc824ae9731e5416e3ad594179f09721219567066140fc3feee7fd5e56926964164b8b9fb6ce593e1198b8b40d97aba9f69272d499dc  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
@@ -164,5 +165,6 @@ c5ceb698625a83073c9e4b88bb09888e421ab2319cc12e31002180e6cf28a370d16797909aba70b1
 faaf49f78ccc8b3a4112f60272fad6a4e5a153020b3289efce1533e8ef3c89e7aa6d13354b14e4a3e88ddd12420f7abea5f96ddcfec85a95652821343911ceeb  0028-drm-msm-mdp5-black-layer-mixer-border-colour.patch
 6b6bfc5423f0188dcfffd312e19152fcbefd25f0a6063b1c664130a02ff1d3d8424a61adef4d146c98fc66d4aca11faeb653850461cec5144926be66fede9183  0029-drm-msm-mdss-MSM8226-splash-handover-as-a-black-border-fill.patch
 1060c101c46db268fd5ebef493202ce347c9cc90dfa77496e01959fc7ec0ece41b6c1df844aae1ab91c8fa122217827c89f4298937849a352d17e43c44b42de3  0030-drm-msm-mdp5-black-interface-underflow-colour.patch
+1e62ff2505b2f580ca80d56de25058858af1963220fe7c41486f54885457cacaacd48829fc130e102de33893c12ce1f55b2ad2aac01cf46fe645c81d1ec62483  0031-ARM-dts-qcom-msm8226-samsung-s3ve3g-charger-LED-light-sensor-touch-keys-vibrator.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "
