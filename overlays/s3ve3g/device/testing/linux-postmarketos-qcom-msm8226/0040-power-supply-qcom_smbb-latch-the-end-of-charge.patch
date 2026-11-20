@@ -1,0 +1,108 @@
+From e80ee64550ab670dd78051a47ad0409a53120d2e Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Fri, 20 Nov 2026 21:47:53 +0100
+Subject: [PATCH] power: supply: qcom_smbb: latch the end of charge
+
+On PM8226 (Galaxy S III Neo) the end of charge is a pulse: the chg-done line
+is low again when the threaded handler reads its level, so the flag was never
+set and the battery went from Charging to Discharging with the charger in,
+never Full. Latch chg-done on its interrupt, and clear it when fast or trickle
+charging starts again or the charger goes, as downstream's qpnp-charger does.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/power/supply/qcom_smbb.c | 31 ++++++++++++++++++++++++++++++-
+ 1 file changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/power/supply/qcom_smbb.c b/drivers/power/supply/qcom_smbb.c
+index e58b01bf3373..43e427882bbc 100644
+--- a/drivers/power/supply/qcom_smbb.c
++++ b/drivers/power/supply/qcom_smbb.c
+@@ -126,6 +126,9 @@ struct smbb_charger {
+ 	struct power_supply *bat_psy;
+ 	struct regmap *regmap;
+ 
++	/* the interrupts are requested: chg-done from now on is an edge, latched */
++	bool irqs_ready;
++
+ 	/* re-arms the charger a while after its removal stopped it (see smbb_chg_gone_handler) */
+ 	struct delayed_work chg_gone_work;
+ 
+@@ -387,11 +390,20 @@ static void smbb_set_line_flag(struct smbb_charger *chg, int irq, int flag)
+ 	dev_dbg(chg->dev, "status = %03lx\n", chg->status);
+ }
+ 
++static void smbb_clear_chg_done(struct smbb_charger *chg)
++{
++	mutex_lock(&chg->statlock);
++	chg->status &= ~STATUS_CHG_DONE;
++	mutex_unlock(&chg->statlock);
++}
++
+ static irqreturn_t smbb_usb_valid_handler(int irq, void *_data)
+ {
+ 	struct smbb_charger *chg = _data;
+ 
+ 	smbb_set_line_flag(chg, irq, STATUS_USBIN_VALID);
++	if (!(chg->status & (STATUS_USBIN_VALID | STATUS_DCIN_VALID)))
++		smbb_clear_chg_done(chg);
+ 	extcon_set_state_sync(chg->edev, EXTCON_USB,
+ 				chg->status & STATUS_USBIN_VALID);
+ 	power_supply_changed(chg->usb_psy);
+@@ -448,7 +460,18 @@ static irqreturn_t smbb_chg_done_handler(int irq, void *_data)
+ {
+ 	struct smbb_charger *chg = _data;
+ 
+-	smbb_set_line_flag(chg, irq, STATUS_CHG_DONE);
++	/*
++	 * The end of charge is a pulse on PM8226 (the line is low again when the handler reads it):
++	 * latch it, until charging starts again or the charger goes (downstream's qpnp-charger
++	 * latches it the same way). At probe the line level.
++	 */
++	if (READ_ONCE(chg->irqs_ready)) {
++		mutex_lock(&chg->statlock);
++		chg->status |= STATUS_CHG_DONE;
++		mutex_unlock(&chg->statlock);
++	} else {
++		smbb_set_line_flag(chg, irq, STATUS_CHG_DONE);
++	}
+ 	power_supply_changed(chg->bat_psy);
+ 
+ 	return IRQ_HANDLED;
+@@ -475,6 +498,7 @@ static irqreturn_t smbb_chg_gone_handler(int irq, void *_data)
+ 	 * downstream's qpnp-charger does (chg_gone handler, arb_stop_work).
+ 	 */
+ 	if (chg->status & STATUS_CHG_GONE) {
++		smbb_clear_chg_done(chg);
+ 		regmap_update_bits(chg->regmap, chg->addr + SMBB_CHG_CTRL,
+ 				   CTRL_EN | CTRL_ON_BAT_FORCE, CTRL_ON_BAT_FORCE);
+ 		mod_delayed_work(system_wq, &chg->chg_gone_work, msecs_to_jiffies(1000));
+@@ -492,6 +516,8 @@ static irqreturn_t smbb_chg_fast_handler(int irq, void *_data)
+ 	struct smbb_charger *chg = _data;
+ 
+ 	smbb_set_line_flag(chg, irq, STATUS_CHG_FAST);
++	if (chg->status & STATUS_CHG_FAST)
++		smbb_clear_chg_done(chg);
+ 	power_supply_changed(chg->bat_psy);
+ 
+ 	return IRQ_HANDLED;
+@@ -502,6 +528,8 @@ static irqreturn_t smbb_chg_trkl_handler(int irq, void *_data)
+ 	struct smbb_charger *chg = _data;
+ 
+ 	smbb_set_line_flag(chg, irq, STATUS_CHG_TRKL);
++	if (chg->status & STATUS_CHG_TRKL)
++		smbb_clear_chg_done(chg);
+ 	power_supply_changed(chg->bat_psy);
+ 
+ 	return IRQ_HANDLED;
+@@ -1078,6 +1106,7 @@ static int smbb_charger_probe(struct platform_device *pdev)
+ 		if (rc)
+ 			return rc;
+ 	}
++	WRITE_ONCE(chg->irqs_ready, true);
+ 
+ 	/*
+ 	 * otg regulator is used to control VBUS voltage direction
+-- 
+2.56.0
+
