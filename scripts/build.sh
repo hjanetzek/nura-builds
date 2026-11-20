@@ -22,6 +22,14 @@ if [ -n "$seed" ]; then
 	"$(resolve "$seed")" "$CFG"
 fi
 
+# The stage's extra compiler flags (CFLAGS_<stage>[_<arch>]) into abuild.conf, for its builds only
+cflags=$(stage_cflags "$stage")
+if [ -n "$cflags" ]; then
+	"$here/scripts/abuild-cpu.sh" "$NURA_WORK" "$cflags"
+	trap '"$here/scripts/abuild-cpu.sh" "$NURA_WORK" >/dev/null' EXIT
+	echo "$stage: CFLAGS/CXXFLAGS +$cflags"
+fi
+
 status=0
 eval "keepgoing=\${KEEPGOING_${stage}_$ARCH:-\${KEEPGOING_$stage:-}}"
 failed=$(mktemp)

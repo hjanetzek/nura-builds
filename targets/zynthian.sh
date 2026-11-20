@@ -85,6 +85,10 @@ INPUTS_mesa="aports/mesa"
 # so that a long run doesn't hold up the rest; the inputs are those of the aarch64 plugins stage.
 STAGE_plugins_armv7="libgig;puredata;fluid-soundfont;linuxsampler;setbfree;abgate-lv2;aether-lv2;aida-x-lv2;ams-lv2;artyfx-lv2;avldrums-lv2;bolliedelay-lv2;chow-centaur-lv2;dexed-lv2;dpf-plugins-lv2;dragonfly-reverb-lv2;eq10q-lv2;fabla-lv2;foo-yc20-lv2;granulator-lv2;gula-plugins-lv2;gxplugins-lv2;infamous-lv2;invada-lv2;lv2-examples;mimid-lv2;miniopl3-lv2;mod-arpeggiator-lv2;mod-distortion-lv2;neural-amp-modeler-lv2;padthv1-lv2;punk-console-lv2;qmidiarp-lv2;ratatouille-lv2;regrader-lv2;samplv1-lv2;shiro-lv2;string-machine-lv2;swh-lv2;synthv1-lv2;talentedhack-lv2;triceratops-lv2;ykchorus-lv2;zynmi-lv2;pd-abl-link;pd-clocker;pd-freeverb;pd-ggee;pd-grids;pd-hcs;pd-iemlib;pd-midifile;pd-osc;pd-plaits;pd-tb-peakcomp;pd-unauthorized"
 KEEPGOING_plugins_armv7=1
+# armv7 is a playground (what the old phone can do): GCC vectorises float code with armv7 NEON only
+# with -funsafe-math-optimizations (NEON flushes denormals; it reassociates float maths). Measured
+# on the S III Neo (lv2bench, artyfx): 1.22x over the bundle, up to 3.1x
+CFLAGS_plugins_armv7="-funsafe-math-optimizations"
 INPUTS_engines="aports/zynthian-jalv aports/engines/aeolus aports/engines/sooperlooper"
 STAGE_zynthian_armv7="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none

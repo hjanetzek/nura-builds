@@ -45,14 +45,26 @@ stage_builds() {
 
 # Hash of a stage's inputs, for the package cache key: what it builds (STAGE_<stage>, so adding a
 # package to the list invalidates the cache) and its recipe directories (INPUTS_<stage>)
+# Extra compiler flags of a stage: CFLAGS_<stage>[_<arch>] in the target file (C and C++; scripts/build.sh
+# writes them into abuild.conf for the stage)
+stage_cflags() {
+	eval "printf '%s' \"\${CFLAGS_$1_$ARCH:-\${CFLAGS_$1:-}}\""
+}
+
 stage_hash() {
 	builds=$(stage_builds "$1")
 	eval "inputs=\${INPUTS_$1:-}"
 	# shellcheck disable=SC2154 # set by eval
 	{
 		echo "$builds"
-		# the compiler flags of every package
-		sha256sum < "$here/scripts/abuild-cpu.conf"
+		# the compiler flags: a change rebuilds the stage. Not the stages rebuilt from scratch by
+		# hand or weekly (REBUILD_STAGES: Qt, PySide; hours under emulation, everything waits for
+		# them): they take new flags with their next rebuild
+		case " ${REBUILD_STAGES:-} " in
+		*" $1 "*) ;;
+		*) sha256sum < "$here/scripts/abuild-cpu.conf" ;;
+		esac
+		c=$(stage_cflags "$1"); [ -z "$c" ] || echo "cflags: $c"
 		for p in $inputs; do
 			d=$(resolve "$p")
 			(cd "$d" && find . -type f ! -path "*/.git/*" | LC_ALL=C sort | xargs sha256sum)
