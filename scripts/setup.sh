@@ -111,6 +111,9 @@ if [ ! -f "$NURA_WORK/version" ]; then
 	[ -f "$NURA_WORK/version" ] || { echo "pmbootstrap init failed" >&2; exit 1; }
 fi
 
+# The CPU baseline per architecture (armv7: NEON, VFPv4) into the build user's abuild.conf
+"$here/scripts/abuild-cpu.sh" "$NURA_WORK"
+
 # Recipe directories into pmaports
 aports=$(pmbootstrap -c "$CFG" config aports)
 ln -sfn "$here/aports" "$aports/nura-builds"
