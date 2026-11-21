@@ -9,7 +9,9 @@ pkgver=26.3.1
 pkgrel=1
 pkgdesc="Mesa DRI OpenGL library"
 url="https://www.mesa3d.org"
-arch="all"
+# nura-builds: only armv7 (the Adreno 3xx phones): elsewhere Alpine's mesa. With "all", pmbootstrap
+# built this recipe (pkgrel 1 > Alpine's r0) as a dependency on aarch64/x86_64 too.
+arch="armv7"
 license="MIT AND SGI-B-2.0 AND BSL-1.0"
 subpackages="
 	$pkgname-dbg
