@@ -156,6 +156,19 @@ scripts/image.sh google-kukui
 If Zrythm's `tools/nura` is linked into the same pmaports checkout as a whole, its Qt recipes and
 these are duplicates: the target zrythm links its recipe directories without `qt6`.
 
+To try a branch on a device without pmbootstrap or sudo on the host, `tools/vm-deploy.sh` builds in
+the builder VM (zynthian-ui's `tools/run_qemu.sh`, SSH port 2240) with these same scripts and
+installs the result over SSH, then restarts zynthian checked (zynthian-ui's `tools/restart_ui.py`):
+
+```sh
+tools/vm-deploy.sh -d duet -U ../zynthian-ui-mybranch            # zynthian-ui from a worktree
+tools/vm-deploy.sh -d s3 zynthian-ui zyncoder                   # armv7, both checkouts
+tools/vm-deploy.sh -d pi zynthian-data                          # a recipe of aports/
+```
+
+Devices `duet`, `pi`, `pixel`, `s3`, `vm` (or `-H HOST -a ARCH`); the first build of an
+architecture sets up pmbootstrap in the VM and downloads the architecture's release as the base.
+
 ## Adding a target
 
 Write `targets/<name>.sh` (repositories with their recipe directories, stages, UI, devices) and a

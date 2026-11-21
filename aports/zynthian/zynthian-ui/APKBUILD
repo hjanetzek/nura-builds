@@ -49,6 +49,7 @@ depends="
 	rubberband
 	sooperlooper
 	sox
+	vlc
 	so:libasound.so.2
 	so:libjack.so.0
 	so:libsndfile.so.1

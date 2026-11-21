@@ -14,7 +14,7 @@
 pkgname=zynthian-ui-vangelis
 _commit=fcbd1694bcf08b04c19afd2ddd1d68d14fc4e400
 pkgver=0_git20261106
-pkgrel=4
+pkgrel=5
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream vangelis, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
 arch="aarch64 armv7 x86_64"
@@ -53,6 +53,7 @@ depends="
 	rubberband
 	sooperlooper
 	sox
+	vlc
 	zyncoder
 	zynthian-data
 	zynthian-jalv

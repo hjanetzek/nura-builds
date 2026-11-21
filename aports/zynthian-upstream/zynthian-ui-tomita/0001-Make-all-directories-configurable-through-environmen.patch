@@ -1,0 +1,1105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Mon, 2 Nov 2026 21:35:37 +0100
+Subject: [PATCH] Make all directories configurable through environment
+ variables
+
+New zynconf/zynthian_paths.py computes every directory once: each can be
+set with its ZYNTHIAN_*_DIR variable, unset ones derive from ZYNTHIAN_DIR
+(default "/zynthian", the ZynthianOS layout) and ZYNTHIAN_UI_DIR defaults
+to the directory the code runs from. The values are written back to
+os.environ, so code reading the variables directly and child processes
+see the same.
+
+Replace the hardcoded "/zynthian/..." paths and the scattered
+os.environ.get() defaults with it. On ZynthianOS nothing changes.
+
+zynthian_lv2.py adds the UI directory to sys.path when run as a script
+(first boot), so it can import zynconf.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+(cherry picked from commit ede9c3fc5f41b72143c663ab51bb946b44499053)
+---
+ zynconf/zynthian_config.py                    |  9 ++--
+ zynconf/zynthian_paths.py                     | 54 +++++++++++++++++++
+ ...ctrldev_akai_apc_key25_mk2_sooperlooper.py |  3 +-
+ zyngine/zynthian_audio_recorder.py            |  5 +-
+ zyngine/zynthian_ctrldev_manager.py           |  3 +-
+ zyngine/zynthian_engine.py                    | 11 ++--
+ zyngine/zynthian_engine_aeolus.py             |  7 +--
+ zyngine/zynthian_engine_alsa_mixer.py         |  3 +-
+ zyngine/zynthian_engine_audioplayer.py        |  3 +-
+ zyngine/zynthian_engine_clippy.py             |  5 +-
+ zyngine/zynthian_engine_inet_radio.py         |  3 +-
+ zyngine/zynthian_engine_jalv.py               |  7 +--
+ zyngine/zynthian_engine_pianoteq.py           |  5 +-
+ zyngine/zynthian_engine_puredata.py           |  3 +-
+ zyngine/zynthian_engine_sooperlooper.py       |  3 +-
+ zyngine/zynthian_engine_tempo.py              |  3 +-
+ zyngine/zynthian_lv2.py                       | 17 +++---
+ zyngine/zynthian_midi_filter.py               |  3 +-
+ zyngine/zynthian_processor.py                 |  7 +--
+ zyngine/zynthian_state_manager.py             | 15 +++---
+ zyngine/zynthian_tts.py                       |  3 +-
+ zyngui/zynthian_gui.py                        |  5 +-
+ zyngui/zynthian_gui_admin.py                  |  5 +-
+ zyngui/zynthian_gui_arranger.py               |  4 +-
+ zyngui/zynthian_gui_base.py                   |  3 +-
+ zyngui/zynthian_gui_config.py                 |  3 +-
+ zyngui/zynthian_gui_control.py                |  3 +-
+ zyngui/zynthian_gui_help.py                   |  3 +-
+ zyngui/zynthian_gui_keybinding.py             |  5 +-
+ zyngui/zynthian_gui_midi_config.py            |  3 +-
+ zyngui/zynthian_gui_midi_profile.py           |  4 +-
+ zyngui/zynthian_gui_midi_recorder.py          |  9 ++--
+ zyngui/zynthian_gui_mixer.py                  |  3 +-
+ zyngui/zynthian_gui_pated_base.py             |  5 +-
+ zyngui/zynthian_gui_splash.py                 |  3 +-
+ .../zynthian_gui_touchscreen_calibration.py   |  6 +--
+ zyngui/zynthian_gui_wifi.py                   |  3 +-
+ zyngui/zynthian_widget_euclidseq.py           |  3 +-
+ zynlibs/zynmixer/zynmixer.py                  |  5 +-
+ zynlibs/zynseq/zynseq.py                      |  3 +-
+ zynthian_headless.py                          |  3 +-
+ 41 files changed, 174 insertions(+), 79 deletions(-)
+ create mode 100644 zynconf/zynthian_paths.py
+
+diff --git a/zynconf/zynthian_config.py b/zynconf/zynthian_config.py
+index 467ee8759..c266c061b 100644
+--- a/zynconf/zynthian_config.py
++++ b/zynconf/zynthian_config.py
+@@ -21,6 +21,7 @@
+ #
+ # ********************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import socket
+@@ -166,9 +167,9 @@ ServerPort = {
+ # Global variables
+ # -------------------------------------------------------------------------------
+ 
+-sys_dir = os.environ.get('ZYNTHIAN_SYS_DIR', "/zynthian/zynthian-sys")
+-config_dir = os.environ.get('ZYNTHIAN_CONFIG_DIR', '/zynthian/config')
+-my_data_dir = os.environ.get("ZYNTHIAN_MY_DATA_DIR", "/zynthian/zynthian-my-data")
++sys_dir = zynthian_paths.sys_dir
++config_dir = zynthian_paths.config_dir
++my_data_dir = zynthian_paths.my_data_dir
+ config_fpath = config_dir + "/zynthian_envars.sh"
+ 
+ # -------------------------------------------------------------------------------
+@@ -309,7 +310,7 @@ def load_plain_envars(fpath, set_env=True):
+ def update_sys():
+     try:
+         os.environ['ZYNTHIAN_FLAG_MASTER'] = "NONE"
+-        check_output([os.environ.get('ZYNTHIAN_SYS_DIR') + "/scripts/update_zynthian_sys.sh"])
++        check_output(zynthian_paths.sys_dir + "/scripts/update_zynthian_sys.sh", shell=True)
+     except Exception as e:
+         logging.error("Updating Sytem Config: %s" % e)
+ 
+diff --git a/zynconf/zynthian_paths.py b/zynconf/zynthian_paths.py
+new file mode 100644
+index 000000000..432db653d
+--- /dev/null
++++ b/zynconf/zynthian_paths.py
+@@ -0,0 +1,54 @@
++# -*- coding: utf-8 -*-
++# ******************************************************************************
++# ZYNTHIAN PROJECT: Zynthian directory layout
++#
++# One place for all the directories zynthian uses.
++#
++# Every directory can be set with its environment variable. Unset ones are
++# derived from ZYNTHIAN_DIR (default "/zynthian", the ZynthianOS layout), except
++# ZYNTHIAN_UI_DIR, which defaults to the directory this code runs from.
++# The results are written back into os.environ, so code that reads the
++# variables directly and child processes (scripts, engines) see the same values.
++#
++# This module must stay light: only the standard library, no zynthian imports.
++#
++# This program is free software; you can redistribute it and/or
++# modify it under the terms of the GNU General Public License as
++# published by the Free Software Foundation; either version 2 of
++# the License, or any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++# GNU General Public License for more details.
++#
++# For a full copy of the GNU General Public License see the LICENSE.txt file.
++#
++# ******************************************************************************
++
++import os
++
++
++def _env(name, default):
++    value = os.environ.get(name)
++    if not value:
++        value = default
++        os.environ[name] = value
++    return value
++
++
++zynthian_dir = _env("ZYNTHIAN_DIR", "/zynthian")
++ui_dir = _env("ZYNTHIAN_UI_DIR", os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
++sys_dir = _env("ZYNTHIAN_SYS_DIR", f"{zynthian_dir}/zynthian-sys")
++config_dir = _env("ZYNTHIAN_CONFIG_DIR", f"{zynthian_dir}/config")
++data_dir = _env("ZYNTHIAN_DATA_DIR", f"{zynthian_dir}/zynthian-data")
++my_data_dir = _env("ZYNTHIAN_MY_DATA_DIR", f"{zynthian_dir}/zynthian-my-data")
++ex_data_dir = _env("ZYNTHIAN_EX_DATA_DIR", "/media/root")
++sw_dir = _env("ZYNTHIAN_SW_DIR", f"{zynthian_dir}/zynthian-sw")
++plugins_dir = _env("ZYNTHIAN_PLUGINS_DIR", f"{zynthian_dir}/zynthian-plugins")
++help_dir = _env("ZYNTHIAN_HELP_DIR", f"{zynthian_dir}/zynthian-help")
++venv_dir = _env("ZYNTHIAN_VENV_DIR", f"{zynthian_dir}/venv")
++recipe_dir = _env("ZYNTHIAN_RECIPE_DIR", f"{sys_dir}/scripts/recipes")
++
++# Writable LV2 directory where zynthian installs plugins and presets
++lv2_dir = _env("ZYNTHIAN_LV2_DIR", f"{plugins_dir}/lv2")
+diff --git a/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py b/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py
+index ad8b8d521..9ad4efcc8 100644
+--- a/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py
++++ b/zyngine/ctrldev/zynthian_ctrldev_akai_apc_key25_mk2_sooperlooper.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import logging
+ import time
+ import random
+@@ -790,7 +791,7 @@ class looper_handler(
+     # OSC_SL_PORT = ServerPort["sooperlooper_osc"] # 9951
+     # OSC_SL_HOST = "127.0.0.1"; # Unnecessary
+ 
+-    SL_SESSION_PATH = "/zynthian/zynthian-my-data/presets/sooperlooper/"
++    SL_SESSION_PATH = f"{zynthian_paths.my_data_dir}/presets/sooperlooper/"
+ 
+     def __init__(self, state_manager, leds: FeedbackLEDs, idev_in=None, idev_out=None, parent=None):
+         """Initialize the controller with required parameters"""
+diff --git a/zyngine/zynthian_audio_recorder.py b/zyngine/zynthian_audio_recorder.py
+index 694197b3b..4cf9a5766 100644
+--- a/zyngine/zynthian_audio_recorder.py
++++ b/zyngine/zynthian_audio_recorder.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import logging
+ from subprocess import Popen
+@@ -38,8 +39,8 @@ from zyngui import zynthian_gui_config
+ 
+ class zynthian_audio_recorder:
+ 
+-    capture_dir_sdc = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/capture"
+-    ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
++    capture_dir_sdc = zynthian_paths.my_data_dir + "/capture"
++    ex_data_dir = zynthian_paths.ex_data_dir
+ 
+     def __init__(self, state_manager):
+         self.rec_proc = None
+diff --git a/zyngine/zynthian_ctrldev_manager.py b/zyngine/zynthian_ctrldev_manager.py
+index 4c87cf571..a99976421 100644
+--- a/zyngine/zynthian_ctrldev_manager.py
++++ b/zyngine/zynthian_ctrldev_manager.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import glob
+ import logging
+@@ -45,7 +46,7 @@ DRIVER_DEVELOPMENT = False
+ 
+ class zynthian_ctrldev_manager():
+ 
+-    ctrldev_path_base = os.environ.get('ZYNTHIAN_UI_DIR', "/zynthian/zynthian-ui") + "/zyngine"
++    ctrldev_path_base = zynthian_paths.ui_dir + "/zyngine"
+     ctrldev_dirnames = ["ctrldev_user", "ctrldev"]
+ 
+     # Function to initialise class
+diff --git a/zyngine/zynthian_engine.py b/zyngine/zynthian_engine.py
+index 248f708d7..4501df4be 100644
+--- a/zyngine/zynthian_engine.py
++++ b/zyngine/zynthian_engine.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import subprocess
+ import re
+@@ -48,11 +49,11 @@ class zynthian_basic_engine:
+     # Data dirs
+     # ---------------------------------------------------------------------------
+ 
+-    ui_dir = os.environ.get('ZYNTHIAN_UI_DIR', "/zynthian/zynthian-ui")
+-    config_dir = os.environ.get('ZYNTHIAN_CONFIG_DIR', "/zynthian/config")
+-    data_dir = os.environ.get('ZYNTHIAN_DATA_DIR', "/zynthian/zynthian-data")
+-    my_data_dir = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data")
+-    ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
++    ui_dir = zynthian_paths.ui_dir
++    config_dir = zynthian_paths.config_dir
++    data_dir = zynthian_paths.data_dir
++    my_data_dir = zynthian_paths.my_data_dir
++    ex_data_dir = zynthian_paths.ex_data_dir
+ 
+     # ---------------------------------------------------------------------------
+     # Initialization
+diff --git a/zyngine/zynthian_engine_aeolus.py b/zyngine/zynthian_engine_aeolus.py
+index 62a135b3d..4050c957e 100644
+--- a/zyngine/zynthian_engine_aeolus.py
++++ b/zyngine/zynthian_engine_aeolus.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import copy
+ import json
+ import logging
+@@ -242,9 +243,9 @@ class zynthian_engine_aeolus(zynthian_engine):
+     # ----------------------------------------------------------------------------
+ 
+     # TODO: Use paths from global config
+-    stops_fpath = "/zynthian/zynthian-data/aeolus/stops"
+-    user_presets_fpath = "/zynthian/zynthian-my-data/presets/aeolus.json"
+-    default_presets_fpath = "/zynthian/zynthian-data/presets/aeolus.json"
++    stops_fpath = f"{zynthian_paths.data_dir}/aeolus/stops"
++    user_presets_fpath = f"{zynthian_paths.my_data_dir}/presets/aeolus.json"
++    default_presets_fpath = f"{zynthian_paths.data_dir}/presets/aeolus.json"
+ 
+     stop_cc_num = 98
+ 
+diff --git a/zyngine/zynthian_engine_alsa_mixer.py b/zyngine/zynthian_engine_alsa_mixer.py
+index d593cdf3b..db92900e3 100644
+--- a/zyngine/zynthian_engine_alsa_mixer.py
++++ b/zyngine/zynthian_engine_alsa_mixer.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import copy
+@@ -40,7 +41,7 @@ from zyngine.zynthian_controller import zynthian_controller
+ 
+ class zynthian_engine_alsa_mixer(zynthian_engine):
+ 
+-    sys_dir = os.environ.get('ZYNTHIAN_SYS_DIR', "/zynthian/zynthian-sys")
++    sys_dir = zynthian_paths.sys_dir
+     soundcard_name = os.environ.get('SOUNDCARD_NAME', "Unknown")
+ 
+     # ---------------------------------------------------------------------------
+diff --git a/zyngine/zynthian_engine_audioplayer.py b/zyngine/zynthian_engine_audioplayer.py
+index 325f1657e..6f65f9217 100644
+--- a/zyngine/zynthian_engine_audioplayer.py
++++ b/zyngine/zynthian_engine_audioplayer.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import copy
+ import shutil
+@@ -74,7 +75,7 @@ class zynthian_engine_audioplayer(zynthian_engine):
+         self.dur = 0.0
+         self.zoom = 1.0
+ 
+-        self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_audio_file.py"
++        self.custom_gui_fpath = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_audio_file.py"
+ 
+         self.allow_preset_preload = False
+ 
+diff --git a/zyngine/zynthian_engine_clippy.py b/zyngine/zynthian_engine_clippy.py
+index e2fa15965..f3ab1572a 100644
+--- a/zyngine/zynthian_engine_clippy.py
++++ b/zyngine/zynthian_engine_clippy.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import ctypes
+@@ -78,7 +79,7 @@ class zynthian_engine_clippy(zynthian_engine):
+         self.samplerate = zynautoconnect.get_jackd_samplerate()
+ 
+         self.monitors_dict = {}
+-        self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_audio_file.py"
++        self.custom_gui_fpath = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_audio_file.py"
+ 
+         self.libclippy =  None
+         self.start()
+@@ -88,7 +89,7 @@ class zynthian_engine_clippy(zynthian_engine):
+     # ---------------------------------------------------------------------------
+ 
+     def start(self):
+-        self.libclippy = ctypes.cdll.LoadLibrary("/zynthian/zynthian-ui/zynlibs/zynclippy/build/libzynclippy.so")
++        self.libclippy = ctypes.cdll.LoadLibrary(f"{zynthian_paths.ui_dir}/zynlibs/zynclippy/build/libzynclippy.so")
+         self.libclippy.init()
+         self.libclippy.getGain.restype = ctypes.c_float
+         self.libclippy.getJackname.restype = ctypes.c_char_p
+diff --git a/zyngine/zynthian_engine_inet_radio.py b/zyngine/zynthian_engine_inet_radio.py
+index 759323682..f4d28b898 100644
+--- a/zyngine/zynthian_engine_inet_radio.py
++++ b/zyngine/zynthian_engine_inet_radio.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import copy
+ import json
+ import socket
+@@ -556,7 +557,7 @@ class zynthian_engine_inet_radio(zynthian_engine):
+             "artwork": "",
+             'reset': False
+         }
+-        self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_inet_radio.py"
++        self.custom_gui_fpath = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_inet_radio.py"
+         self.last_info = 0
+ 
+         self.command = ["vlc",
+diff --git a/zyngine/zynthian_engine_jalv.py b/zyngine/zynthian_engine_jalv.py
+index 364111f45..65233dedc 100644
+--- a/zyngine/zynthian_engine_jalv.py
++++ b/zyngine/zynthian_engine_jalv.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import sys
+@@ -668,9 +669,9 @@ class zynthian_engine_jalv(zynthian_engine_jalv_base):
+     }
+ 
+     plugin2native_presets_dir = {
+-        "TAL U-No-LX-V2": "/zynthian/zynthian-my-data/presets/TAL-U-No-LX",
+-        "Vavra": "/zynthian/zynthian-my-data/presets/Vavra",
+-        "Xenia": "/zynthian/zynthian-my-data/presets/Xenia"
++        "TAL U-No-LX-V2": f"{zynthian_paths.my_data_dir}/presets/TAL-U-No-LX",
++        "Vavra": f"{zynthian_paths.my_data_dir}/presets/Vavra",
++        "Xenia": f"{zynthian_paths.my_data_dir}/presets/Xenia"
+     }
+ 
+     # ---------------------------------------------------------------------------
+diff --git a/zyngine/zynthian_engine_pianoteq.py b/zyngine/zynthian_engine_pianoteq.py
+index 673520491..5b5ff390f 100644
+--- a/zyngine/zynthian_engine_pianoteq.py
++++ b/zyngine/zynthian_engine_pianoteq.py
+@@ -23,6 +23,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import shutil
+@@ -296,7 +297,7 @@ def create_pianoteq_config():
+                                                            info['version'][0], info['version'][1]),
+                             PIANOTEQ_CONFIG_FILE)
+             except:
+-                shutil.copy(os.environ.get('ZYNTHIAN_DATA_DIR', "/zynthian/zynthian-data") +
++                shutil.copy(zynthian_paths.data_dir +
+                             "/pianoteq/Pianoteq.prefs", PIANOTEQ_CONFIG_FILE)
+ 
+ 
+@@ -520,7 +521,7 @@ def save_midi_mapping(file):
+ # Pianoteq module constants & parameter configuration/initialization
+ # ------------------------------------------------------------------------------
+ 
+-PIANOTEQ_SW_DIR = os.environ.get('ZYNTHIAN_SW_DIR', '/zynthian/zynthian-sw') + '/pianoteq'
++PIANOTEQ_SW_DIR = zynthian_paths.sw_dir + '/pianoteq'
+ PIANOTEQ_BINARY = PIANOTEQ_SW_DIR + '/pianoteq'
+ PIANOTEQ_CONFIG_DIR = os.path.expanduser('~') + '/.config/Modartt'
+ PIANOTEQ_DATA_DIR = os.path.expanduser('~') + '/.local/share/Modartt/Pianoteq'
+diff --git a/zyngine/zynthian_engine_puredata.py b/zyngine/zynthian_engine_puredata.py
+index 37c758693..d55ba6390 100644
+--- a/zyngine/zynthian_engine_puredata.py
++++ b/zyngine/zynthian_engine_puredata.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import queue
+ import shutil
+@@ -226,7 +227,7 @@ class zynthian_engine_puredata(zynthian_engine):
+                 self.zctrl_config = self.default_organelle_zctrl_config
+         elif self.preset_config and self.preset_config.get('use_euclidseq_widget', False):
+             # Use EuclidSeq widget when flag is set
+-            self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_euclidseq.py"
++            self.custom_gui_fpath = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_euclidseq.py"
+         else:
+             # Don't use custom widget for other pd patches
+             self.custom_gui_fpath = None
+diff --git a/zyngine/zynthian_engine_sooperlooper.py b/zyngine/zynthian_engine_sooperlooper.py
+index 27cf5e72a..a8a9cbe05 100644
+--- a/zyngine/zynthian_engine_sooperlooper.py
++++ b/zyngine/zynthian_engine_sooperlooper.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import logging
+ from glob import glob
+@@ -366,7 +367,7 @@ class zynthian_engine_sooperlooper(zynthian_engine):
+         self.channels = 2
+         self.selected_loop_cc_binding = True # True for MIDI CC to control selected loop. False to target all loops
+ 
+-        ui_dir = os.environ.get('ZYNTHIAN_UI_DIR', "/zynthian/zynthian-ui")
++        ui_dir = zynthian_paths.ui_dir
+         self.custom_gui_fpath = f"{ui_dir}/zyngui/zynthian_widget_sooperlooper.py"
+         self.monitors_dict = {
+             "state": 0,
+diff --git a/zyngine/zynthian_engine_tempo.py b/zyngine/zynthian_engine_tempo.py
+index ef963b99c..5bfb36ae4 100644
+--- a/zyngine/zynthian_engine_tempo.py
++++ b/zyngine/zynthian_engine_tempo.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import logging
+ from time import monotonic
+ from collections import deque
+@@ -61,7 +62,7 @@ class zynthian_engine_tempo(zynthian_engine):
+         self.type = "Tempo"
+         self.name = "Tempo"
+         self.nickname = "TP"
+-        self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_tempo.py"
++        self.custom_gui_fpath = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_tempo.py"
+         self.processor = proc
+ 
+         self.audio_out = []
+diff --git a/zyngine/zynthian_lv2.py b/zyngine/zynthian_lv2.py
+index a84ca844d..2afab8173 100755
+--- a/zyngine/zynthian_lv2.py
++++ b/zyngine/zynthian_lv2.py
+@@ -25,6 +25,11 @@
+ import os
+ import re
+ import sys
++
++# Also run as a script from zyngine/ (first boot, plugin cache regeneration)
++if __name__ == "__main__":
++    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
++from zynconf import zynthian_paths
+ import json
+ import lilv
+ import copy
+@@ -190,13 +195,13 @@ try:
+ except:
+     rbpi_version_number = 4
+ 
+-ENGINE_DEFAULT_CONFIG_FILE = "{}/config/engine_config.json".format(os.environ.get('ZYNTHIAN_SYS_DIR'))
+-ENGINE_CONFIG_FILE = "{}/engine_config.json".format(os.environ.get('ZYNTHIAN_CONFIG_DIR'))
+-JALV_LV2_CONFIG_FILE = "{}/jalv/plugins.json".format(os.environ.get('ZYNTHIAN_CONFIG_DIR'))
++ENGINE_DEFAULT_CONFIG_FILE = "{}/config/engine_config.json".format(zynthian_paths.sys_dir)
++ENGINE_CONFIG_FILE = "{}/engine_config.json".format(zynthian_paths.config_dir)
++JALV_LV2_CONFIG_FILE = "{}/jalv/plugins.json".format(zynthian_paths.config_dir)
++LV2_DIR = zynthian_paths.lv2_dir
+ # Touch this file after updating files inside an existing LV2 bundle (e.g. a widget's manifest),
+ # so the UI reloads the LV2 data. Adding or removing bundles is detected without it.
+-LV2_STAMP_FILE = "{}/lv2.stamp".format(os.environ.get('ZYNTHIAN_CONFIG_DIR'))
+-LV2_DIR = "/zynthian/zynthian-plugins/lv2"
++LV2_STAMP_FILE = "{}/lv2.stamp".format(zynthian_paths.config_dir)
+ 
+ engines = None
+ engines_by_type = None
+@@ -913,7 +918,7 @@ def generate_plugin_presets_cache(plugin_url, refresh=True):
+ 
+ 
+ def _get_plugin_preset_cache_fpath(plugin_name):
+-    return "{}/jalv/presets_{}.json".format(os.environ.get('ZYNTHIAN_CONFIG_DIR'), sanitize_fname(plugin_name))
++    return "{}/jalv/presets_{}.json".format(zynthian_paths.config_dir, sanitize_fname(plugin_name))
+ 
+ 
+ def _generate_plugin_presets_cache(plugin):
+diff --git a/zyngine/zynthian_midi_filter.py b/zyngine/zynthian_midi_filter.py
+index 85ac6208b..961323bb1 100644
+--- a/zyngine/zynthian_midi_filter.py
++++ b/zyngine/zynthian_midi_filter.py
+@@ -50,8 +50,9 @@ import logging
+ 
+ import unittest
+ from zyncoder.zyncore import lib_zyncore
++from zynconf import zynthian_paths
+ 
+-sys.path.append(os.environ.get('ZYNTHIAN_UI_DIR'))
++sys.path.append(zynthian_paths.ui_dir)
+ 
+ # Zynthian specific modules
+ 
+diff --git a/zyngine/zynthian_processor.py b/zyngine/zynthian_processor.py
+index e4811cbf4..1a8712701 100644
+--- a/zyngine/zynthian_processor.py
++++ b/zyngine/zynthian_processor.py
+@@ -22,6 +22,7 @@
+ #
+ # *****************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import copy
+@@ -38,9 +39,9 @@ class zynthian_processor:
+     # Data dirs
+     # ---------------------------------------------------------------------------
+ 
+-    data_dir = os.environ.get('ZYNTHIAN_DATA_DIR', "/zynthian/zynthian-data")
+-    my_data_dir = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data")
+-    ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/usb0")
++    data_dir = zynthian_paths.data_dir
++    my_data_dir = zynthian_paths.my_data_dir
++    ex_data_dir = zynthian_paths.ex_data_dir
+ 
+     # ------------------------------------------------------------------------
+     # Initialization
+diff --git a/zyngine/zynthian_state_manager.py b/zyngine/zynthian_state_manager.py
+index 4266f5a4f..9782c6480 100644
+--- a/zyngine/zynthian_state_manager.py
++++ b/zyngine/zynthian_state_manager.py
+@@ -23,6 +23,7 @@
+ # ****************************************************************************
+ 
+ import os
++from zynconf import zynthian_paths
+ import ctypes
+ import logging
+ import traceback
+@@ -63,10 +64,10 @@ from zyngui import zynthian_gui_config
+ # ----------------------------------------------------------------------------
+ 
+ 
+-zynthian_dir = os.environ.get('ZYNTHIAN_DIR', "/zynthian")
+-ui_dir = os.environ.get('ZYNTHIAN_UI_DIR', "/zynthian/zynthian-ui")
+-my_data_dir = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data")
+-ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
++zynthian_dir = zynthian_paths.zynthian_dir
++ui_dir = zynthian_paths.ui_dir
++my_data_dir = zynthian_paths.my_data_dir
++ex_data_dir = zynthian_paths.ex_data_dir
+ capture_dir_sdc = my_data_dir + "/capture"
+ 
+ MAIN_MIXBUS_ID = -1
+@@ -95,7 +96,7 @@ class zynthian_state_manager:
+         self.busy_ts = None
+         self.start_busy("zynthian_state_manager")
+ 
+-        self.snapshot_dir = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/snapshots"
++        self.snapshot_dir = zynthian_paths.my_data_dir + "/snapshots"
+         self.default_snapshot_fpath = join(self.snapshot_dir, "default.zss")
+         self.last_state_snapshot_fpath = join(self.snapshot_dir, "last_state.zss")
+         # Increments each time a snapshot is loaded - modules may use to update if required
+@@ -2970,7 +2971,7 @@ class zynthian_state_manager:
+                 if os.environ.get('ZYNTHIAN_STABLE_TAG', "") == "last":
+                     stable_branch = os.environ.get('ZYNTHIAN_STABLE_BRANCH', "oram")
+                     for repo in repos:
+-                        path = f"/zynthian/{repo}"
++                        path = f"{zynthian_paths.zynthian_dir}/{repo}"
+                         branch = get_repo_branch(path)
+                         # Get last tag release
+                         check_output(["git", "-C", path, "remote", "update", "origin", "--prune"],
+@@ -2986,7 +2987,7 @@ class zynthian_state_manager:
+                 # else => Check for commits to pull
+                 else:
+                     for repo in repos:
+-                        path = f"/{zynthian_dir}/{repo}"
++                        path = f"{zynthian_dir}/{repo}"
+                         branch = get_repo_branch(path)
+                         local_hash = check_output(["git", "-C", path, "rev-parse", "HEAD"],
+                                                   encoding="utf-8", stderr=STDOUT).strip()
+diff --git a/zyngine/zynthian_tts.py b/zyngine/zynthian_tts.py
+index 53b2ff0f3..f70b539da 100644
+--- a/zyngine/zynthian_tts.py
++++ b/zyngine/zynthian_tts.py
+@@ -22,6 +22,7 @@
+ #
+ # ****************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import math
+@@ -38,7 +39,7 @@ import zynconf
+ import zynautoconnect
+ from zyngui import zynthian_gui_config
+ 
+-TTS_DATA_PATH = f"{os.environ.get('ZYNTHIAN_DATA_DIR', '/zynthian/zynthian-data')}/tts"
++TTS_DATA_PATH = f"{zynthian_paths.data_dir}/tts"
+ TTS_FLITE_LEX_PATH = f"{TTS_DATA_PATH}/lexicon"
+ TTS_FLITE_VOICES_PATH = f"{TTS_DATA_PATH}/voices"
+ TTS_DICT = {
+diff --git a/zyngui/zynthian_gui.py b/zyngui/zynthian_gui.py
+index 4b0aee05a..dddd2a432 100644
+--- a/zyngui/zynthian_gui.py
++++ b/zyngui/zynthian_gui.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import sys
+ import json
+@@ -168,8 +169,8 @@ class zynthian_gui:
+     SCREEN_HMODE_RESET = 3
+ 
+     def __init__(self):
+-        self.capture_dir_sdc = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/capture"
+-        self.ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
++        self.capture_dir_sdc = zynthian_paths.my_data_dir + "/capture"
++        self.ex_data_dir = zynthian_paths.ex_data_dir
+ 
+         self.ignore_next_touch_release = False
+ 
+diff --git a/zyngui/zynthian_gui_admin.py b/zyngui/zynthian_gui_admin.py
+index 797f07eb4..b791942d4 100644
+--- a/zyngui/zynthian_gui_admin.py
++++ b/zyngui/zynthian_gui_admin.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import signal
+@@ -45,8 +46,8 @@ from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
+ 
+ class zynthian_gui_admin(zynthian_gui_selector_info):
+ 
+-    data_dir = os.environ.get('ZYNTHIAN_DATA_DIR', "/zynthian/zynthian-data")
+-    sys_dir = os.environ.get('ZYNTHIAN_SYS_DIR', "/zynthian/zynthian-sys")
++    data_dir = zynthian_paths.data_dir
++    sys_dir = zynthian_paths.sys_dir
+ 
+     def __init__(self):
+         self.commands = None
+diff --git a/zyngui/zynthian_gui_arranger.py b/zyngui/zynthian_gui_arranger.py
+index f004d4178..28754a9cb 100644
+--- a/zyngui/zynthian_gui_arranger.py
++++ b/zyngui/zynthian_gui_arranger.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import tkinter
+ import logging
+ import tkinter.font as tkfont
+@@ -341,8 +342,7 @@ class zynthian_gui_arranger(zynthian_gui_base.zynthian_gui_base):
+ 
+     # Function to import SMF
+     def select_smf(self, params=None):
+-        file_list = zynthian_engine.get_filelist(os.environ.get(
+-            'ZYNTHIAN_MY_DATA_DIR', '/zynthian/zynthian-my-data') + '/capture', 'mid')
++        file_list = zynthian_engine.get_filelist(zynthian_paths.my_data_dir + '/capture', 'mid')
+         options = {}
+         for i in file_list:
+             options[i[4]] = i[0]
+diff --git a/zyngui/zynthian_gui_base.py b/zyngui/zynthian_gui_base.py
+index 2b7a80ed2..5f05ba373 100644
+--- a/zyngui/zynthian_gui_base.py
++++ b/zyngui/zynthian_gui_base.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import time
+ import logging
+@@ -40,7 +41,7 @@ from zyngui.zynthian_gui_dpm import zynthian_gui_dpm, run_script
+ 
+ class zynthian_gui_base(tkinter.Frame):
+ 
+-    ui_dir = os.environ.get('ZYNTHIAN_UI_DIR', "/zynthian/zynthian-ui")
++    ui_dir = zynthian_paths.ui_dir
+ 
+     def __init__(self, parent=None, topbar=None):
+         if parent:
+diff --git a/zyngui/zynthian_gui_config.py b/zyngui/zynthian_gui_config.py
+index 656140e48..d5853fe61 100644
+--- a/zyngui/zynthian_gui_config.py
++++ b/zyngui/zynthian_gui_config.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import sys
+ import logging
+@@ -600,7 +601,7 @@ if touch_navigation:
+     wiring_layout_custom_profile = os.environ.get("ZYNTHIAN_WIRING_LAYOUT_CUSTOM_PROFILE", "")
+     if len(zynswitches_pins) < 24:
+         #not wiring_layout_custom_profile.lower().startswith("v5") and not wiring_layout_custom_profile.lower().endswith("v5"):
+-        config_dir = os.environ.get("ZYNTHIAN_CONFIG_DIR", "/zynthian/config")
++        config_dir = zynthian_paths.config_dir
+         zynconf.load_plain_envars(f"{config_dir}/wiring-profiles/v5", True)
+         # Modify zynswitches wiring configuration to work with V5 keypad
+         if len(zynswitches_pins) >= 4:
+diff --git a/zyngui/zynthian_gui_control.py b/zyngui/zynthian_gui_control.py
+index eb01d8aaa..52db7a200 100644
+--- a/zyngui/zynthian_gui_control.py
++++ b/zyngui/zynthian_gui_control.py
+@@ -22,6 +22,7 @@
+ # ******************************************************************************
+ 
+ import os
++from zynconf import zynthian_paths
+ import logging
+ import importlib
+ from pathlib import Path
+@@ -319,7 +320,7 @@ class zynthian_gui_control(zynthian_gui_selector):
+         self.purge_widgets()
+ 
+         if self.screen_type:
+-            module_path = f"/zynthian/zynthian-ui/zyngui/zynthian_widget_{self.screen_type}.py"
++            module_path = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_{self.screen_type}.py"
+         else:
+             # Widget files can be added, removed or updated while running
+             processor.engine.refresh_custom_gui()
+diff --git a/zyngui/zynthian_gui_help.py b/zyngui/zynthian_gui_help.py
+index 662c458b6..ac5ac9d81 100644
+--- a/zyngui/zynthian_gui_help.py
++++ b/zyngui/zynthian_gui_help.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import logging
+ import tkinter
+@@ -77,7 +78,7 @@ def is_in_dir(fpath, dpath):
+ 
+ class zynthian_gui_help(HtmlFrame):
+ 
+-    help_dir = os.environ.get('ZYNTHIAN_HELP_DIR', "/zynthian/zynthian-help")
++    help_dir = zynthian_paths.help_dir
+ 
+     # Scale for touch swipe action after-roll
+     touch_swipe_roll_scale = [1, 0, 1, 1, 2, 2, 2, 4, 4, 4, 4, 4]  # 1, 0, 1, 0, 1, 0, 1, 0,
+diff --git a/zyngui/zynthian_gui_keybinding.py b/zyngui/zynthian_gui_keybinding.py
+index 43a768cea..ec781e2bc 100644
+--- a/zyngui/zynthian_gui_keybinding.py
++++ b/zyngui/zynthian_gui_keybinding.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import json
+ import logging
+ from subprocess import run, PIPE
+@@ -225,7 +226,7 @@ def load(config="keybinding"):
+     Returns : True on success
+     """
+ 
+-    config_fpath = f"{environ.get('ZYNTHIAN_CONFIG_DIR', '/zynthian/config')}/{config}.json"
++    config_fpath = f"{zynthian_paths.config_dir}/{config}.json"
+     try:
+         with open(config_fpath, "r") as fh:
+             j = fh.read()
+@@ -279,7 +280,7 @@ def save(config="keybinding"):
+     Returns : True on success
+     """
+ 
+-    config_fpath = f"{environ.get('ZYNTHIAN_CONFIG_DIR', '/zynthian/config')}/{config}.json"
++    config_fpath = f"{zynthian_paths.config_dir}/{config}.json"
+     try:
+         with open(config_fpath, "w") as fh:
+             fh.write(json.dumps(get_html_map(), indent=4))
+diff --git a/zyngui/zynthian_gui_midi_config.py b/zyngui/zynthian_gui_midi_config.py
+index 4bf50676e..a6ab4e133 100644
+--- a/zyngui/zynthian_gui_midi_config.py
++++ b/zyngui/zynthian_gui_midi_config.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re
+ import logging
+@@ -295,7 +296,7 @@ class zynthian_gui_midi_config(zynthian_gui_selector_info):
+                     append_service("qmidinet", "QmidiNet",
+                                    "QmidiNet. Provides MIDI over an IP connection using UDP/IP multicast (ipMIDI).", "midi_network.png")
+ 
+-                if os.path.isfile("/zynthian/venv/bin/touchosc2midi"):
++                if os.path.isfile(f"{zynthian_paths.venv_dir}/bin/touchosc2midi"):
+                     append_service("touchosc2midi", "TouchOSC",
+                                    "Interface with Hexler TouchOSC modular control surface.", "midi_network.png")
+ 
+diff --git a/zyngui/zynthian_gui_midi_profile.py b/zyngui/zynthian_gui_midi_profile.py
+index 5933126a7..8f2559fa3 100644
+--- a/zyngui/zynthian_gui_midi_profile.py
++++ b/zyngui/zynthian_gui_midi_profile.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import sys
+ import logging
+@@ -39,8 +40,7 @@ from zyngui.zynthian_gui_selector import zynthian_gui_selector
+ class zynthian_gui_midi_profile(zynthian_gui_selector):
+ 
+     def __init__(self):
+-        self.midi_profiles_dir = os.environ.get(
+-            'ZYNTHIAN_CONFIG_DIR', "/zynthian/config") + "/midi-profiles"
++        self.midi_profiles_dir = zynthian_paths.config_dir + "/midi-profiles"
+         super().__init__('Profile', True)
+ 
+     def get_profile_fpath(self, f):
+diff --git a/zyngui/zynthian_gui_midi_recorder.py b/zyngui/zynthian_gui_midi_recorder.py
+index ed4b71470..f828516db 100644
+--- a/zyngui/zynthian_gui_midi_recorder.py
++++ b/zyngui/zynthian_gui_midi_recorder.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import logging
+ import tkinter
+@@ -44,10 +45,10 @@ from zyngine.zynthian_signal_manager import zynsigman
+ 
+ class zynthian_gui_midi_recorder(zynthian_gui_selector_info):
+ 
+-    system_dir_sdc = os.environ.get('ZYNTHIAN_DATA_DIR', "/zynthian/zynthian-data") + "/files/Midi"
+-    capture_dir_sdc = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/capture"
+-    user_dir_sdc = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data") + "/files/Midi"
+-    ex_data_dir = os.environ.get('ZYNTHIAN_EX_DATA_DIR', "/media/root")
++    system_dir_sdc = zynthian_paths.data_dir + "/files/Midi"
++    capture_dir_sdc = zynthian_paths.my_data_dir + "/capture"
++    user_dir_sdc = zynthian_paths.my_data_dir + "/files/Midi"
++    ex_data_dir = zynthian_paths.ex_data_dir
+ 
+     def __init__(self):
+         super().__init__('MIDI file', default_icon="file_midi.png", tiny_ctrls=False, zsel_hidden=False)
+diff --git a/zyngui/zynthian_gui_mixer.py b/zyngui/zynthian_gui_mixer.py
+index b48006cef..9204f724a 100644
+--- a/zyngui/zynthian_gui_mixer.py
++++ b/zyngui/zynthian_gui_mixer.py
+@@ -23,6 +23,7 @@
+ # ******************************************************************************
+ 
+ 
++from zynconf import zynthian_paths
+ import copy
+ import tkinter
+ import logging
+@@ -1421,7 +1422,7 @@ class zynthian_gui_mixer(zynthian_gui_base):
+         self.mode_icons = {}
+         for f in ("empty", "loopsync", "oneshot", "oneshotall"):
+             try:
+-                img = Image.open(f"/zynthian/zynthian-ui/icons/zynpad_mode_{f}.png")
++                img = Image.open(f"{zynthian_paths.ui_dir}/icons/zynpad_mode_{f}.png")
+                 self.mode_icons[f] = ImageTk.PhotoImage(img.resize(iconsize))
+             except:
+                 self.mode_icons[f] = empty_icon
+diff --git a/zyngui/zynthian_gui_pated_base.py b/zyngui/zynthian_gui_pated_base.py
+index 6eb4f02df..a4fd658d2 100644
+--- a/zyngui/zynthian_gui_pated_base.py
++++ b/zyngui/zynthian_gui_pated_base.py
+@@ -22,6 +22,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import copy
+ import tkinter
+@@ -48,7 +49,7 @@ GRID_LINE_XTRONG = "#FFFFFF"
+ PLAYHEAD_BACKGROUND = zynthian_gui_config.color_variant(zynthian_gui_config.color_panel_bd, 40)
+ PLAYHEAD_LINE = zynthian_gui_config.color_tx_off
+ PLAYHEAD_HEIGHT = 12
+-CONFIG_ROOT = "/zynthian/zynthian-data/zynseq"
++CONFIG_ROOT = f"{zynthian_paths.data_dir}/zynseq"
+ 
+ DRAG_SENSIBILITY = 1.5
+ SAVE_SNAPSHOT_DELAY = 10
+@@ -241,7 +242,7 @@ class zynthian_gui_pated_base(zynthian_gui_base):
+     # Function to initialise class
+     def __init__(self):
+         super().__init__()
+-        self.my_data_dpath = os.environ.get('ZYNTHIAN_MY_DATA_DIR', "/zynthian/zynthian-my-data")
++        self.my_data_dpath = zynthian_paths.my_data_dir
+         self.my_patterns_dpath =  self.my_data_dpath + "/files/Patterns"
+         self.my_capture_dpath = self.my_data_dpath + "/capture"
+         self.my_smf_dpath = self.my_data_dpath + "/files/Midi/patterns"
+diff --git a/zyngui/zynthian_gui_splash.py b/zyngui/zynthian_gui_splash.py
+index add509af5..230b3a079 100644
+--- a/zyngui/zynthian_gui_splash.py
++++ b/zyngui/zynthian_gui_splash.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import tkinter
+ from PIL import Image, ImageDraw, ImageFont
+ import logging
+@@ -58,7 +59,7 @@ class zynthian_gui_splash(zynthian_gui_fullscreen_modal):
+         pos_x = self.width / 2 - strlen / 2
+         pos_y = int(self.height / 10)
+         try:
+-            config_dir = os.environ.get("ZYNTHIAN_CONFIG_DIR")
++            config_dir = zynthian_paths.config_dir
+             boot_file = f"{config_dir}/img/fb_zynthian_boot.jpg"
+             fpath = f"{config_dir}/img/fb_zynthian_message.jpg"
+ 
+diff --git a/zyngui/zynthian_gui_touchscreen_calibration.py b/zyngui/zynthian_gui_touchscreen_calibration.py
+index 82605e177..4cd13c5e9 100644
+--- a/zyngui/zynthian_gui_touchscreen_calibration.py
++++ b/zyngui/zynthian_gui_touchscreen_calibration.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import tkinter
+ import logging
+ import tkinter.font as tkFont
+@@ -389,11 +390,10 @@ class zynthian_gui_touchscreen_calibration(zynthian_gui_fullscreen_modal):
+                 # If we got here then we need to append this device to config
+                 # For the record it is with deep reservation that I code this duplicate writing of files - I was only follwing orders!
+                 try:
+-                    os.mkdir(os.environ.get(
+-                        "ZYNTHIAN_CONFIG_DIR") + "/touchscreen/")
++                    os.mkdir(zynthian_paths.config_dir + "/touchscreen/")
+                 except:
+                     pass  # directory already exists
+-                with open(os.environ.get("ZYNTHIAN_CONFIG_DIR") + "/touchscreen/" + os.environ.get("DISPLAY_NAME"), "w") as f:
++                with open(zynthian_paths.config_dir + "/touchscreen/" + os.environ.get("DISPLAY_NAME"), "w") as f:
+                     f.write('Section "InputClass" # Created %s\n' %
+                             (datetime.now()))
+                     f.write('	Identifier "calibration"\n')
+diff --git a/zyngui/zynthian_gui_wifi.py b/zyngui/zynthian_gui_wifi.py
+index cca1e3029..7ac9effc4 100644
+--- a/zyngui/zynthian_gui_wifi.py
++++ b/zyngui/zynthian_gui_wifi.py
+@@ -21,6 +21,7 @@
+ #
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import logging
+ from time import sleep
+@@ -38,7 +39,7 @@ from zyngui.zynthian_gui_selector_info import zynthian_gui_selector_info
+ 
+ class zynthian_gui_wifi(zynthian_gui_selector_info):
+ 
+-    sys_dir = os.environ.get('ZYNTHIAN_SYS_DIR', "/zynthian/zynthian-sys")
++    sys_dir = zynthian_paths.sys_dir
+ 
+     def __init__(self):
+         super().__init__('Connection', default_icon="wifi.png")
+diff --git a/zyngui/zynthian_widget_euclidseq.py b/zyngui/zynthian_widget_euclidseq.py
+index 9b5478c81..e0e9ba9b8 100644
+--- a/zyngui/zynthian_widget_euclidseq.py
++++ b/zyngui/zynthian_widget_euclidseq.py
+@@ -18,6 +18,7 @@
+ # For a full copy of the GNU General Public License see the LICENSE.txt file.
+ # ******************************************************************************
+ 
++from zynconf import zynthian_paths
+ import os
+ import re # NEW: Import regex for path parsing
+ import sys
+@@ -27,7 +28,7 @@ import pyliblo3 as liblo
+ from tkinter import font as tkFont
+ 
+ # Zynthian specific modules
+-sys.path.append("/zynthian/zynthian-ui/")
++sys.path.append(f"{zynthian_paths.ui_dir}/")
+ from zyngui import zynthian_gui_config, zynthian_widget_base
+ 
+ 
+diff --git a/zynlibs/zynmixer/zynmixer.py b/zynlibs/zynmixer/zynmixer.py
+index fc79feec6..956406d0d 100644
+--- a/zynlibs/zynmixer/zynmixer.py
++++ b/zynlibs/zynmixer/zynmixer.py
+@@ -21,6 +21,7 @@
+ #
+ # ********************************************************************
+ 
++from zynconf import zynthian_paths
+ import math
+ import ctypes
+ import logging
+@@ -53,10 +54,10 @@ class ZynMixer():
+         self.mixbus = is_mixbus
+         if is_mixbus:
+             self.lib_zynmixer = ctypes.cdll.LoadLibrary(
+-                f"/zynthian/zynthian-ui/zynlibs/zynmixer/build/libzynmixer_mixbus.so")
++                f"{zynthian_paths.ui_dir}/zynlibs/zynmixer/build/libzynmixer_mixbus.so")
+         else:
+             self.lib_zynmixer = ctypes.cdll.LoadLibrary(
+-                f"/zynthian/zynthian-ui/zynlibs/zynmixer/build/libzynmixer.so")
++                f"{zynthian_paths.ui_dir}/zynlibs/zynmixer/build/libzynmixer.so")
+ 
+         self.lib_zynmixer.addStrip.restype = ctypes.c_int8
+         self.lib_zynmixer.removeStrip.argtypes = [ctypes.c_uint8]
+diff --git a/zynlibs/zynseq/zynseq.py b/zynlibs/zynseq/zynseq.py
+index ca6532b9e..475ce1fd1 100644
+--- a/zynlibs/zynseq/zynseq.py
++++ b/zynlibs/zynseq/zynseq.py
+@@ -21,6 +21,7 @@
+ #
+ # ********************************************************************
+ 
++from zynconf import zynthian_paths
+ import ctypes
+ import logging
+ from os.path import dirname, realpath
+@@ -186,7 +187,7 @@ class zynseq(zynthian_engine):
+     def __init__(self, state_manager=None, proc=None):
+         self.state_manager = state_manager
+         self.proc = proc
+-        self.custom_gui_fpath = "/zynthian/zynthian-ui/zyngui/zynthian_widget_tempo.py"
++        self.custom_gui_fpath = f"{zynthian_paths.ui_dir}/zyngui/zynthian_widget_tempo.py"
+ 
+         try:
+             self.libseq = ctypes.cdll.LoadLibrary(dirname(realpath(__file__))+"/build/libzynseq.so")
+diff --git a/zynthian_headless.py b/zynthian_headless.py
+index b231aa747..3cb7b7e4d 100644
+--- a/zynthian_headless.py
++++ b/zynthian_headless.py
+@@ -1,3 +1,4 @@
++from zynconf import zynthian_paths
+ from zyncoder.zyncore import lib_zyncore_init
+ from zyngui import zynthian_gui_config
+ from zyngine import zynthian_state_manager
+@@ -32,7 +33,7 @@ class zyn_headless:
+ 
+         if zynthian_gui_config.restore_last_state:
+             snapshot_loaded = self.state_manager.load_snapshot(
+-                "/zynthian/zynthian-my-data/snapshots/last_state.zss")
++                f"{zynthian_paths.my_data_dir}/snapshots/last_state.zss")
+ 
+         self.state_manager.init_midi()
+         self.state_manager.init_midi_services()

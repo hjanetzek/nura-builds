@@ -1,16 +1,21 @@
 # zynthian's factory data, help pages and configuration templates for postmarketOS/Nura.
-# Built from the upstream repositories (vangelis branch), unchanged.
+# Built from the upstream repositories (vangelis branch), unchanged. zynthian-lv2-custom applies
+# lv2-custom/ (TTLs with lv2:designation and port groups for zynthian's envelope/filter widgets) to
+# the installed plugin bundles as ZynthianOS does, but only where the ports match our builds: at
+# install/upgrade and, by the trigger, whenever a plugin package changes its bundle.
 pkgname=zynthian-data
 pkgver=2610_git20261030
-pkgrel=1
+pkgrel=2
 pkgdesc="zynthian factory data: presets, soundfonts, snapshots, sample files"
 url="https://github.com/zynthian/zynthian-data"
 arch="noarch"
 license="GPL-3.0-or-later AND custom"
 options="!check"
 # TimGM6mb (Alpine's soundfont-timgm, also pulled in by fluidsynth-libs): linked below
-depends="soundfont-timgm"
+depends="soundfont-timgm python3 py3-rdflib"
 subpackages="zynthian-help:_help zynthian-sys-config:_sys_config"
+install="$pkgname.post-install $pkgname.post-upgrade"
+triggers="$pkgname.trigger=/usr/lib/lv2/*:/usr/local/lib/lv2/*"
 _data_commit=271e9188cc6bcbd5ff89ba27d1b312a8c68a3417
 _help_commit=510e768852648f1ea11d5f2d3a94a3c818f6368d
 _sys_commit=c2eea576e528e451270b829aa114f504bd34ee90
@@ -18,6 +23,7 @@ source="
 	zynthian-data-$_data_commit.tar.gz::https://github.com/zynthian/zynthian-data/archive/$_data_commit.tar.gz
 	zynthian-help-$_help_commit.tar.gz::https://github.com/zynthian/zynthian-help/archive/$_help_commit.tar.gz
 	zynthian-sys-$_sys_commit.tar.gz::https://github.com/zynthian/zynthian-sys/archive/$_sys_commit.tar.gz
+	zynthian-lv2-custom
 	"
 builddir="$srcdir"
 
@@ -37,6 +43,8 @@ package() {
 	# lists soundfonts (System banks), as nura-builds' fluid-soundfont does for FluidR3
 	ln -s /usr/share/soundfonts/TimGM6mb.sf2 \
 		"$pkgdir"/usr/share/zynthian/zynthian-data/soundfonts/sf2/TimGM6mb.sf2
+
+	install -Dm755 "$srcdir"/zynthian-lv2-custom "$pkgdir"/usr/bin/zynthian-lv2-custom
 }
 
 _help() {
@@ -61,4 +69,5 @@ sha512sums="
 1fdc591c80244485954a0d826667a268240d3ab5aa01203e6f81455d1ca3a2f394fe1b231439e6c8b0f50ef829a02591dbbe6d68cccbe8e05c586e280b46852a  zynthian-data-271e9188cc6bcbd5ff89ba27d1b312a8c68a3417.tar.gz
 d6d8ad9dbac17d3db09aac14e9d62bfbc0a0a300b80aca878b6f576406e5cf317bf322ee28d5f595c30a55ddf0c2eb5547b0c9afd0a8255f9f45d49141f3edd8  zynthian-help-510e768852648f1ea11d5f2d3a94a3c818f6368d.tar.gz
 687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
+7a73440c1f4ca21d22f9d1444facd89f8232800fa8eb3983a7bdb2fd80928a084694a01b2be928d2144029f20617a85b1518e8e1de363c29188740aa8168854f  zynthian-lv2-custom
 "

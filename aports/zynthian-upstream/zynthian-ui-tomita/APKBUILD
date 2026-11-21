@@ -12,9 +12,9 @@
 # Installs where zynthian-ui does and provides it, so the kiosk package (postmarketos-ui-zynthian)
 # works with it (it falls back to the Tk UI); excludes the other zynthian-ui packages.
 pkgname=zynthian-ui-tomita
-_commit=322e9079ac44ed31a1473ba765d5f7c80a9bdf5f
-pkgver=0_git20261107
-pkgrel=4
+_commit=a94037ec6f6a198023dad5141734684542376e12
+pkgver=0_git20261119
+pkgrel=0
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream tomita, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
 arch="aarch64 armv7 x86_64"
@@ -53,6 +53,7 @@ depends="
 	rubberband
 	sooperlooper
 	sox
+	vlc
 	zyncoder
 	zynthian-data
 	zynthian-jalv
@@ -110,36 +111,35 @@ source="
 	https://files.pythonhosted.org/packages/3d/a2/d8e0d8fd7abf509ead4a2cb0fb24e5758b5330166bf9223d5cb9f98a7e8d/sox-1.5.0.tar.gz
 	https://files.pythonhosted.org/packages/3d/3c/d1f552e63b2c1f4ea462c1f788801f88a64a22f3c59275a8596564abb5fe/hwmon-1.0.tar.gz
 	pyliblo3-$_pyliblo3_commit.tar.gz::https://github.com/gesellkammer/pyliblo3/archive/$_pyliblo3_commit.tar.gz
-	0001-autoconnect-keep-port-aliases-locally-when-the-JACK-.patch
-	0002-Make-all-directories-configurable-through-environmen.patch
-	0003-Add-desktop-mode-ZYNTHIAN_DESKTOP-1.patch
-	0004-Run-without-Raspberry-Pi-hardware.patch
-	0005-Add-desktop-Linux-setup-and-launcher.patch
-	0006-Load-native-libraries-from-ZYNTHIAN_LIB_DIR-when-set.patch
-	0007-ctrldev-load-user-drivers-without-a-link-in-the-code.patch
-	0008-Desktop-mode-don-t-run-update_zynthian_sys.sh.patch
-	0009-Add-install-script-and-installed-mode-for-packages.patch
-	0010-zynclippy-fix-printf-formats-for-64-bit-sizes.patch
-	0011-Help-viewer-optional-run-without-tkinterweb-and-bs4.patch
-	0012-Desktop-mode-don-t-look-for-the-RBPi-audio-device.patch
-	0013-install.sh-bundled-Python-path-and-fonts-launcher-fu.patch
-	0014-setup_desktop.sh-copy-factory-files-without-preservi.patch
-	0015-Desktop-mode-hide-engines-whose-program-isn-t-instal.patch
-	0016-Engines-run-interactive-engine-shells-with-TERM-dumb.patch
-	0017-Audio-player-no-crash-at-exit-after-playing-a-file.patch
-	0018-Snapshots-map-ZynthianOS-data-paths-to-this-system-s.patch
-	0019-puredata-engine-find-the-Organelle-abstractions-wher.patch
-	0020-ALSA-mixer-skip-controls-the-mixer-list-can-t-match-.patch
-	0021-Main-output-under-PipeWire-hardware-outputs-found-by.patch
-	0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
-	0023-Audio-recorder-find-jack_capture-in-PATH.patch
-	0024-desktop-launcher-environment-setup-and-install-scrip.patch
-	0025-zynseq-read-uint8_t-results-as-unsigned.patch
-	0026-zynseq-bool-results-read-as-bool.patch
-	0027-Touch-keypad-LEDs-skip-unchanged-colors-cache-recolo.patch
-	0028-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
-	0029-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
-	0030-zynlibs-printf-formats-for-32-bit-size_t-uint64_t-th.patch
+	0001-Make-all-directories-configurable-through-environmen.patch
+	0002-Add-desktop-mode-ZYNTHIAN_DESKTOP-1.patch
+	0003-Run-without-Raspberry-Pi-hardware.patch
+	0004-Add-desktop-Linux-setup-and-launcher.patch
+	0005-Load-native-libraries-from-ZYNTHIAN_LIB_DIR-when-set.patch
+	0006-ctrldev-load-user-drivers-without-a-link-in-the-code.patch
+	0007-Desktop-mode-don-t-run-update_zynthian_sys.sh.patch
+	0008-Add-install-script-and-installed-mode-for-packages.patch
+	0009-zynclippy-fix-printf-formats-for-64-bit-sizes.patch
+	0010-Help-viewer-optional-run-without-tkinterweb-and-bs4.patch
+	0011-Desktop-mode-don-t-look-for-the-RBPi-audio-device.patch
+	0012-install.sh-bundled-Python-path-and-fonts-launcher-fu.patch
+	0013-setup_desktop.sh-copy-factory-files-without-preservi.patch
+	0014-Desktop-mode-hide-engines-whose-program-isn-t-instal.patch
+	0015-Engines-run-interactive-engine-shells-with-TERM-dumb.patch
+	0016-Audio-player-no-crash-at-exit-after-playing-a-file.patch
+	0017-Snapshots-map-ZynthianOS-data-paths-to-this-system-s.patch
+	0018-puredata-engine-find-the-Organelle-abstractions-wher.patch
+	0019-ALSA-mixer-skip-controls-the-mixer-list-can-t-match-.patch
+	0020-Main-output-under-PipeWire-hardware-outputs-found-by.patch
+	0021-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
+	0022-Audio-recorder-find-jack_capture-in-PATH.patch
+	0023-desktop-launcher-environment-setup-and-install-scrip.patch
+	0024-zynseq-read-uint8_t-results-as-unsigned.patch
+	0025-zynseq-bool-results-read-as-bool.patch
+	0026-Touch-keypad-LEDs-skip-unchanged-colors-cache-recolo.patch
+	0027-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
+	0028-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
+	0029-zynlibs-printf-formats-for-32-bit-size_t-uint64_t-th.patch
 	"
 builddir="$srcdir/zynthian-ui-$_commit"
 
@@ -188,7 +188,7 @@ package() {
 }
 
 sha512sums="
-4b713022e69d132f839b866e3f286926ebcde08a1e166c34fc8c14c2fced0ceab766659fd507cff9d078309e5022cbf454c7ba38dcbc2cfe6dcee8077d142f41  zynthian-ui-322e9079ac44ed31a1473ba765d5f7c80a9bdf5f.tar.gz
+b6ebf404cddf8b886a35aa0c1f39896afbe2ac334000e729986d707d034992cecfb8b81a4efcb41dc78230baf90080f4f526a4ea786a13c5f8cd1a7119bf871c  zynthian-ui-a94037ec6f6a198023dad5141734684542376e12.tar.gz
 43bae9f9891d0359f0c840891ef12834aa2172917587fe028273636d5fc9160efc44f203827feda7fb603d1a237175f1ba5412611cb556288ce51101981c85a9  jack_client-0.5.7-py3-none-any.whl
 bdbe5e7d7d7271aceb92f15e256d8708c10aa53221d8f2a72b96c30346d943184a8400edb61e5eb72e96a1dd6bad98885d9a598a0f8e0dcf5aa8c2bcb0205b0f  soundfile-0.14.0-py2.py3-none-any.whl
 75301069d039ed0a6ba5b050a707b122fffb7072206a992f0a67287ed79e11cce8e6489daa9e340beaf7b2871e870f0127b0282a0ada26a62de5e535b0bd9616  alsa_midi-1.0.4-py3-none-any.whl
@@ -201,34 +201,33 @@ d130bfa136bd171b9972b5c281c578545f2a84a909fdf18a6d2d71dd12fb3d512a7a1fa5cf730043
 32e25b411c62a2c7d1b2e9351052707938c7f8ae39c7df80fc01a6509ee4fb908f4abeba8a4e6040b36cd04a9099b1f5d160b7f2b1854a9362cf13b2f0c1a284  sox-1.5.0.tar.gz
 fd06e30c529cef41f6b5746b341fdd33735c8c9bb09b68f71407f855ae193cd2a21fa396b26801a610d069635ac8a63b09dc8b1482fb692545dc0db454cef16b  hwmon-1.0.tar.gz
 89a5586f2eac5155877954c05febbb6ef7304dc8dd0b38b813cceac0dbd82a0779b1e6c869381dce95db63ca5945acd222508de1c8ee0fef2ba2babe83eab5cb  pyliblo3-029b83a03b4f24d905f818591903411753901273.tar.gz
-248d579ddf9ecd1b085c25f9822ec74235f1edc4434b4869ad81919592f7af517ebd29faa4455db29c75df51d641753d4eaee9f14d41733d02ea1a0e442db30d  0001-autoconnect-keep-port-aliases-locally-when-the-JACK-.patch
-dc80c336832dfd627d0804e9a4b9f591375548600c309c5e6253f4f847c22b70a8de58c09547145998a7b6a2205af3b44a403618e9903cc35522d8d53004982e  0002-Make-all-directories-configurable-through-environmen.patch
-8736704b08e5f16c972687218870bfa3dea219df3a1a3a32b837a267cdd67bbc81997a15c9756cf2064c8d937f12df8799ef11d1e72ae4186f6d3c8b1cbf4440  0003-Add-desktop-mode-ZYNTHIAN_DESKTOP-1.patch
-b8974ad31137a974eb8bcca705abc6d5f936018c7fe15d3458bdc386fac7fae5e6e63d6abebfc990facdad3ff4eb42b32291b4f3bff71c4104cc66de2a705f7e  0004-Run-without-Raspberry-Pi-hardware.patch
-387ee886a8d63800ea1cf58ab105db8f3693e1eb946c152e3cdeda37672d53b831718977dbbf5cdfd140b0595c741392293dcd6abdea9dfb293670a7efd021ad  0005-Add-desktop-Linux-setup-and-launcher.patch
-a1e2963082cc94a7375758ac4e88b698227c80fe4d9909511d3411f6478fb10c0ef2de55ab8fc4bacb993f5a5ec7aa44a8d40e80dbdf9d47b8ccd2fe679c81ec  0006-Load-native-libraries-from-ZYNTHIAN_LIB_DIR-when-set.patch
-6bd230c9960c8a42d09b23052a45033a9d143101aedac6b94618fa30d63d9bf7ed3bcac7beef53adca2514526436f99036f02c3a320137afe51a85fcb7d5167b  0007-ctrldev-load-user-drivers-without-a-link-in-the-code.patch
-9529a63ce337246dd8eb20623ad9ff37e9b9115af38875afefd821c91105b8b1c54f60d3424d20eacf293000f074c7b65d686d4b351983e5339bacf864364c76  0008-Desktop-mode-don-t-run-update_zynthian_sys.sh.patch
-a5d9a745bd14cfd1ae5bdd04681fb80aa06aaad35123f700598d385096083569fc8ed1e946f4a5b2de0de984a7cecb74c264359eb640d7342bc82032b8e36174  0009-Add-install-script-and-installed-mode-for-packages.patch
-add9ec14680e9a8ea524fe9fca4162dae3d69ac8a3c696925d2cd4e89566b9c507ad08e453d44fd2e5d4fdd355cccb1a82b527531577f61844e8c22191fdabf1  0010-zynclippy-fix-printf-formats-for-64-bit-sizes.patch
-9c239a9fb0fb53dd2b9d23745d5d75e84f0e805e897843b4749b73927021400f81b51d029e9a53ee0971676b4639f1fe98aa2baab2cb23ac35c8b025b69b4216  0011-Help-viewer-optional-run-without-tkinterweb-and-bs4.patch
-4aa37c7f345782c0567738407ddb3eb8ef5bfa7f80547cddd18dc58e8c4d92a1a7e1fb0f2a464aa32cc0d1ee98490eda4d04702011a94c46c538cd93a0854008  0012-Desktop-mode-don-t-look-for-the-RBPi-audio-device.patch
-305b8c57a1551e79b6181b3ac0e0b8ef0b44e86e17100bca0a95818a04f2348b89a57b79966377e5d63a99bb951690372e3280754ae3ca6e8c7dadb196ff4e03  0013-install.sh-bundled-Python-path-and-fonts-launcher-fu.patch
-ee4eba948d74be5864670e219d8beeeb671bf8350d4a63a0c8aa45f0644b66a616982ee1c6c43b956036e526548bfa9a7228234120415c9981ed1dd322bda08c  0014-setup_desktop.sh-copy-factory-files-without-preservi.patch
-a6a5211b81dbef176a7012d1fd44bbadd65b3642f6708d988241bb91b535031013062372a97440fc23d74ff0a8728d9955bd90aa661728f426d5e134c19ca5c1  0015-Desktop-mode-hide-engines-whose-program-isn-t-instal.patch
-e1c1b99364040216da4875492ab2be8a5cab142cfc564c15344c40e75f128e8030c69d0bc0b0ec7d543bfc259a342811dc601a641296ad4186d56286add81fe5  0016-Engines-run-interactive-engine-shells-with-TERM-dumb.patch
-4f52d9e6465f66e0dfa4522529b50133f0f31245ee9239733ec1fbc9a97f1d37d18c7e048afc19234ea40a61f05f5996c0e5bfefa29bd07f1f4c1a3c658f6c51  0017-Audio-player-no-crash-at-exit-after-playing-a-file.patch
-e1cc3b6668121fa7316712907438e2092deaec768692d43cc615b137aca34eecdec515ac1ff4a910733390ff50c62635eb2aa8426a8cdd413d8fd66774037b44  0018-Snapshots-map-ZynthianOS-data-paths-to-this-system-s.patch
-8f35ba015364070a5b9050adaf3b217788a16eb7bc7b972a7e7d4347fc54186c5901575cb999368ba0716d71038c7e9883a946ea47e677fb7041ba6ae1a623ac  0019-puredata-engine-find-the-Organelle-abstractions-wher.patch
-521e50708212878df0768e20dd230438ff004029c9888c9a4bd4c01eaa4863004939a4b2955e2131f22d7859e1790a5fc35a901fc9a514b2f7cf618c7ded0444  0020-ALSA-mixer-skip-controls-the-mixer-list-can-t-match-.patch
-bffefe7d323f2e69794a6d5339231d91b571ad32b6af2b9a1a64cc2467a430b45e0099d5ee5609da237b14d8a66e2c3888da82e325d17c7705a1685c6582d5ce  0021-Main-output-under-PipeWire-hardware-outputs-found-by.patch
-9cdc2bc9362b0a9f43e5ddcbd554e0814c4edc3a5bd3ee7b2e2cb7c9f416ebe53b80c2fe95e30c96a22dc11176e0cbcab35e8048c2334315e81329eda13aef45  0022-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
-89c6f675d95fc61f7b5f09e8e8843e05c1283607f5ad7fc39278a353012348496a4b7a03b73bfb9e39a96a8af724bef58739c18723a68b2550e18d0598c4db42  0023-Audio-recorder-find-jack_capture-in-PATH.patch
-32ee3b544a54aab154c3ebad34ca29fdbe1c435e973866daaaadb56e3b337fcca92704ceecbe0eeb5937c2cc7e93b158bf7b3886ff9a63b645c225e0230310a0  0024-desktop-launcher-environment-setup-and-install-scrip.patch
-d0f170ebfcb841ac1c706ac5d5c137343265f49fc1e689f7a52512dc9cb05d0ec6809c65f8eaa0c4c6c0ab210643b4b83da8f42679f67566a29dc155ccab0f3f  0025-zynseq-read-uint8_t-results-as-unsigned.patch
-4b6cc3339040645dc970bbd7b0e4b61b14e8cc692e5c10ea5c7bd6053ceaeaefc2c393d6dd37c84e4d9d89a5225f3b6670be6c6326ae824816ac895b93e8e627  0026-zynseq-bool-results-read-as-bool.patch
-cb2fb712b04a3568b1aac73541cea12f9b640d6024abec8f513413a52e413b577c268a9d44c5b31271f624b7aa5bb1d9fca4ff3ace3ec3ea50a02ce7936c1e55  0027-Touch-keypad-LEDs-skip-unchanged-colors-cache-recolo.patch
-24030b8f80c8f4ab5366c6aa83c822859b9aeaca9d70b1d4815cc5cb47d21cb30553125a0bec26c4e584783f84f8d760d3d2debdfab036b87c8326e5ec9cda07  0028-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
-77a4b8d46e5db5444a196b2a5d4bb02eae012c534ba159ef984ea48388cd8ebe5017c4ef34b8e715619f0b4ca8616acd5b792e17caecb0492553cedcaf2c42bc  0029-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
-4221825328e90dc09ba02b381d2f28fe52f23e7c48c8a45d3f4a00b336442ffa7af790b3f784aec67fc35ea8fb703e48daf23d37ddcfe22464e6e9d5fac9d1ca  0030-zynlibs-printf-formats-for-32-bit-size_t-uint64_t-th.patch
+37e89766d6ea760e53e5f2f8bf78667418d6f74f4cbfa7ce006eb0ed4e02a615999a0b351aea7f09a36407364fae3863d67f91b2cf91b55ae301e431b976c5d3  0001-Make-all-directories-configurable-through-environmen.patch
+f5e5bb456f0e3a3c52587e84c2a13d0dff176fb5fe61ae14dc1c2bab938b5c6e813e87702129fb9bb9ccff67f6b3e4891a520a49364b3a7ef790f8a197cf51d4  0002-Add-desktop-mode-ZYNTHIAN_DESKTOP-1.patch
+fbd55f241022d165bb511b73dc3dd9332ffa857c8f5f0d6f612b406a5dfe63d03f4540fea5deceb48373ea01cf3695820d21d54d18d87c20ebfcc0fe40014e6c  0003-Run-without-Raspberry-Pi-hardware.patch
+56fb231e3648b204c205d473c9d2307128939064563de3227d45739d49276fe64268ee45bc3bc69f6f396eb4c5441a6b15493ab20ec937b7c5340272b88c97f5  0004-Add-desktop-Linux-setup-and-launcher.patch
+bad38fc7bca858ac908b51342854fdc18f30fed08fa8c2b7460eddfeadf555f86cc542f32b28cd7d19e5f97280fc86898b1ddf0bdc26aa5ac0fd9d83e3c430c7  0005-Load-native-libraries-from-ZYNTHIAN_LIB_DIR-when-set.patch
+0b1a922f2dca5e2f9609b25f21101875a2ebae90441629f47e9ea9088ed7f938171e2defb39930d38e324ecdb0dbdb837dc1a62cb40cf7a3a59784be354950ad  0006-ctrldev-load-user-drivers-without-a-link-in-the-code.patch
+697d21d94b010b398b09f56ac4556f1629b6bd26fd31c8360f1a60349705ddb94a5f06ec471c1cdef075d4542088eb3925c9c67977fb90ca9671da2a2d92530d  0007-Desktop-mode-don-t-run-update_zynthian_sys.sh.patch
+08e20deac0be6db76fd600b2982fc5c242811017b14bb86c69b6244962e1227b5a0a8268e81297b997eaa263cb20b3787b6c9336550b7faac0f060d6584820c4  0008-Add-install-script-and-installed-mode-for-packages.patch
+c86aa92fe463fcbdf5de9ffdf1377f318b19ec0cf7aaf12e0d820a85f8882e85fc346011d437c71b4d3a16c1cbc9825098b225866ec25e76c4c1291de9deab26  0009-zynclippy-fix-printf-formats-for-64-bit-sizes.patch
+8f385b972fdb86a3b6ecba5d5bc59790658bf700bdcd5289a39c617b7490231c70672ae87737cd486fc8d8c680d719a09254fe96de456d994d464c4f207106e2  0010-Help-viewer-optional-run-without-tkinterweb-and-bs4.patch
+5986f9ca4ac5af13442d59d52ca75825348c78ae7847dfa71bcd3ccbf600419ef36929ccc76e7130f4680aca2263c461de56a19e5ee4442519cfcb4c94567494  0011-Desktop-mode-don-t-look-for-the-RBPi-audio-device.patch
+887ad293a7ed10d776e94eba2a9fd2c5cbdf68df0241904c9039ab0f3fb61e3ade7b6c3178a01b1aa5cf000baaa9946560bf8ad04653111438c30eee47eec4ca  0012-install.sh-bundled-Python-path-and-fonts-launcher-fu.patch
+fee1070b27b2ff80283118fb78a42ad8460e8cab08cb8876df60c3c0d04619b4f9beb9012e0496bff68001590cccf98383bc356723cdd62a00bc49dbd6c36d52  0013-setup_desktop.sh-copy-factory-files-without-preservi.patch
+eec0099e1602807a60abf05a703aa52df3b48b2fed6b7490c37b9b9dde62086a71f83d0f3b52f1e3e141f129c7a979fa139d0169efb207267272c2f16eb831b3  0014-Desktop-mode-hide-engines-whose-program-isn-t-instal.patch
+0527f79c7c4912c4c688edfc9f3ef89a1f271a857e3d8256e306b928f24e6263529ad64978a2d0a4cc5990a43529b519eb85b1904993c30b3cb7877d6efcce1d  0015-Engines-run-interactive-engine-shells-with-TERM-dumb.patch
+79f6fcf8208e2dc641dc596f55cd0dca0537e66c2998a5c83af059315083eb043a2111418dc46ce6314a76f1ab638dec9bb6d692fe5ac81244cd143bd0aa9ebd  0016-Audio-player-no-crash-at-exit-after-playing-a-file.patch
+180f2f90730e0a731b29729d3e255e1d9f066d46bfe4ce8dcfa37ee6d0570530171aaa00e892ae64f66de26af08ef38c80d41997ab1327c3b5266200a37a89a2  0017-Snapshots-map-ZynthianOS-data-paths-to-this-system-s.patch
+0202c7998ad3f73b293575c65106a87fcc7132189714447a2d1d3afc4a9c749a857df1cac2c0fb2df8a6e2fb15c553633d241613826104d8142603f917ac40bd  0018-puredata-engine-find-the-Organelle-abstractions-wher.patch
+dc6d0d5f0fe80236024335b3a65fe3295da8213b05bb18f59d2e2a25f549930585066ad0aeca430ae831712895f9c9c66b8794b7fb002851c3ed9d4fbd4334e3  0019-ALSA-mixer-skip-controls-the-mixer-list-can-t-match-.patch
+496d06a38786dd0a1b68f0c75caded9441521e9a903c9113a051369bd5c19f58cf208b04af4f0c5d63f53e822fbd285b14e011319fd2a6a7563e6dbe8a171e20  0020-Main-output-under-PipeWire-hardware-outputs-found-by.patch
+e671769837c8559bec3b048287439d53628f58f31ca2e3a321e4cef6185c59db385a1fe8e860b0dc6aefdc1c8072d53c4f3ef3baf253d8489f840d8802fecb68  0021-UI-scale-ZYNTHIAN_UI_SCALE-factor-or-auto-for-the-fo.patch
+264735b0f00b57d4400c9ab9654b3151a316d3a65145ab5466362148424f95466c7311f5e94c582096b3f2d60aac2b8e6be828b60e59c9eaafb0352a411cc94d  0022-Audio-recorder-find-jack_capture-in-PATH.patch
+e9253852e8b17bb28e100f3acd72d0e633285b24853ec5557ff16aa2a92d4b355e573e9cb4717f28eb8ab31f10524370388273c1404db8acdbe9ae9c6c5c4250  0023-desktop-launcher-environment-setup-and-install-scrip.patch
+2ba820b5d33628a2db8bf89e0c194a462064512bb2281d8c1bb5b611ce5bb6a031d28e6202645f2e318b7fd0121d6f3ef0ca6cf02d977ed5bb92e8b92cdc8e84  0024-zynseq-read-uint8_t-results-as-unsigned.patch
+0205f8335551c75aabaa3b16b1b00f56b65179dc3ec46f1dde0d07ad075fa9b08725c15a5e97156d8ebed31d74c75e6ac41bd9c1f271f52cc0e4bf9931d519d0  0025-zynseq-bool-results-read-as-bool.patch
+fe406a0ec1652f35992772fcbe29445430cc9a8741362277d535b9339f2e2d1e302224278b575a012e86c2d1966077840ebf9e3ff79304992a6c36a089df3f69  0026-Touch-keypad-LEDs-skip-unchanged-colors-cache-recolo.patch
+2c688293a99601658f4b4a85ac498dc35eb57e297616c9617b39dea8bdbb620a73acb4b12925cc945a962b8213834f31987411bcf2316b5d714b1418b24a0fa6  0027-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
+d2b67337b12e7cce3e7bafba13a38e550dc131a8cd47399fe1ed156546de53b2f8a8786ea9cf14d41db44d790013e5ee2a3023c1fd2784ef8923d665f2cda8e3  0028-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
+29630f993725f7084d23ffea703997c9822c7ea40a7a2caf95f4262ccd6d04742088c38b97371036a64a8246dc2cf97d524f251bc672142db52c047e59f0b646  0029-zynlibs-printf-formats-for-32-bit-size_t-uint64_t-th.patch
 "

@@ -1,0 +1,310 @@
+#!/usr/bin/python3
+"""zynthian-lv2-custom: apply zynthian-data's lv2-custom TTLs to the installed plugin bundles.
+
+ZynthianOS copies zynthian-data/lv2-custom/<bundle>/* over its plugin bundles (zynthian-sys
+scripts/update_zynthian_data.sh): the files add lv2:designation (param:attack, cutoffFrequency,
+...) and port groups, which drive zynthian's envelope/filter/drawbar widgets and page layout.
+Here the same, but checked, because Nura's plugins are other builds or versions:
+- bundles matched by directory name, case-insensitive (lv2-custom's Helm.lv2 is helm.lv2 here)
+- a custom .ttl replaces the installed file of the same name, else the file the bundle's
+  manifest names for the same plugin URI (DISTRHO-Ports name theirs <Name>-lv2.ttl)
+- only if its ports (lv2:index -> lv2:symbol, per plugin) are the installed ones: a TTL written
+  for another version of the plugin would make hosts connect the wrong ports
+- UIs it names that the installed plugin doesn't have (ZynthianOS' builds have GUIs, Nura's JUCE
+  and DPF builds often not) are left out of the written file; lilv would call them corrupt
+- a manifest only if it declares the installed plugin URIs, every file it refers to exists, and
+  no plugin TTL of the bundle was skipped
+- other files (e.g. jv880's preset_names.txt) are copied, as ZynthianOS does
+The package's file is kept in /var/lib/zynthian/lv2-custom-orig/ first, and the decisions are
+made against it; a package upgrade that rewrites the file makes that the new original. Run by
+zynthian-data's install scripts and its apk trigger (when a plugin package changes its bundle).
+
+Usage: zynthian-lv2-custom [-n] [-q] [--revert] [BUNDLE_DIR...]
+  -n        dry run: print what would be done
+  -q        only print changes and problems
+  --revert  put the package's files back (all bundles, or the given ones)
+  BUNDLE_DIR  only these installed bundle directories (the trigger passes the changed ones)
+"""
+import hashlib
+import os
+import sys
+import urllib.parse
+
+import rdflib
+from rdflib.namespace import RDF, RDFS
+
+CUSTOM = "/usr/share/zynthian/zynthian-data/lv2-custom"
+LV2_DIRS = ["/usr/lib/lv2", "/usr/local/lib/lv2"]
+ORIG = "/var/lib/zynthian/lv2-custom-orig"
+LV2 = rdflib.Namespace("http://lv2plug.in/ns/lv2core#")
+UIN = rdflib.Namespace("http://lv2plug.in/ns/extensions/ui#")
+# Namespace is a str: LV2.index would be str.index, so the terms by subscript
+LV2_PORT, LV2_INDEX, LV2_SYMBOL, LV2_BINARY, LV2_PLUGIN = (
+    LV2[t] for t in ("port", "index", "symbol", "binary", "Plugin"))
+UI_UI, UI_BINARY = UIN["ui"], UIN["binary"]
+
+
+def file_uri(path):
+    return "file://" + urllib.parse.quote(os.path.abspath(path))
+
+
+def parse(path, base=None):
+    g = rdflib.Graph()
+    # base: the file's place in the bundle, so <Name.ttl> and <plugin.so> resolve inside it
+    g.parse(path, format="turtle", publicID=file_uri(base or path))
+    return g
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def read(path):
+    with open(path, "rb") as f:
+        return f.read()
+
+
+def orig_paths(dst):
+    o = ORIG + os.path.abspath(dst)
+    return o, o + ".applied"
+
+
+def ours(dst):
+    """The file in place is what this tool wrote (its sha recorded)"""
+    o, a = orig_paths(dst)
+    return (os.path.exists(o) and os.path.exists(a) and os.path.exists(dst)
+            and read(a).decode().strip() == sha(read(dst)))
+
+
+def base_path(dst):
+    """The package's version of an installed file: the kept original while ours is in place"""
+    return orig_paths(dst)[0] if ours(dst) else dst
+
+
+def plugin_ports(g):
+    """{plugin URI: {index: symbol}} for the subjects with lv2:port in the graph"""
+    plugins = {}
+    for plugin in set(g.subjects(LV2_PORT, None)):
+        ports = {}
+        for port in g.objects(plugin, LV2_PORT):
+            index = g.value(port, LV2_INDEX)
+            symbol = g.value(port, LV2_SYMBOL)
+            if index is not None:
+                ports[int(index)] = str(symbol) if symbol is not None else None
+        plugins[str(plugin)] = ports
+    return plugins
+
+
+def in_bundle(uri, bundle):
+    """Path of a file:// URI if it is inside the bundle directory, else None"""
+    if not uri.startswith("file://"):
+        return None
+    path = os.path.normpath(urllib.parse.unquote(uri[len("file://"):]))
+    return path if os.path.dirname(path) == os.path.normpath(bundle) else None
+
+
+def installed_graph(dst):
+    return parse(base_path(dst), base=dst)
+
+
+def manifest_files(bundle, plugin_uri):
+    """Files the installed manifest names for a plugin (rdfs:seeAlso)"""
+    manifest = os.path.join(bundle, "manifest.ttl")
+    if not os.path.exists(manifest):
+        return []
+    g = installed_graph(manifest)
+    files = []
+    for f in g.objects(rdflib.URIRef(plugin_uri), RDFS.seeAlso):
+        path = in_bundle(str(f), bundle)
+        if path and os.path.exists(path):
+            files.append(path)
+    return files
+
+
+def plan_ttl(src, bundle):
+    """(destination, data, reason) for a custom .ttl with ports, or (None, None, reason)"""
+    name = os.path.basename(src)
+    candidates = []
+    same = os.path.join(bundle, name)
+    if os.path.exists(same):
+        candidates.append(same)
+    cports = plugin_ports(parse(src, base=same))
+    for uri in cports:
+        for f in manifest_files(bundle, uri):
+            if f not in candidates:
+                candidates.append(f)
+    for dst in candidates:
+        try:
+            ig = installed_graph(dst)
+        except Exception:
+            continue
+        iports = plugin_ports(ig)
+        common = set(cports) & set(iports)
+        if not common:
+            continue
+        for uri in common:
+            if cports[uri] != iports[uri]:
+                diff = sorted(i for i in set(cports[uri]) | set(iports[uri])
+                              if cports[uri].get(i) != iports[uri].get(i))
+                return None, None, (f"ports differ from {os.path.basename(dst)} "
+                                    f"({len(iports[uri])} installed, {len(cports[uri])} custom; "
+                                    f"indices {diff[:6]}{'...' if len(diff) > 6 else ''})")
+        if set(cports) - set(iports):
+            return None, None, f"plugins missing in {os.path.basename(dst)}"
+        # parsed again with the destination as base (relative IRIs resolve in the bundle)
+        cg = parse(src, base=dst)
+        missing = set(cg.objects(None, UI_UI)) - set(ig.objects(None, UI_UI))
+        nports = sum(len(p) for p in cports.values())
+        if not missing:
+            return dst, read(src), f"ports match ({nports})"
+        for ui in missing:
+            cg.remove((None, UI_UI, ui))
+            cg.remove((ui, None, None))
+        data = cg.serialize(format="turtle", base=file_uri(os.path.dirname(dst)) + "/")
+        data = data.encode() if isinstance(data, str) else data
+        names = ", ".join(sorted(str(u).rsplit("#", 1)[-1] for u in missing))
+        return dst, data, f"ports match ({nports}), without UIs not built here ({names})"
+    return None, None, "no installed file describes its plugin"
+
+
+def plan_manifest(src, bundle, pending, skipped):
+    dst = os.path.join(bundle, os.path.basename(src))
+    if skipped:
+        return None, "a plugin TTL of this bundle was skipped"
+    cg = parse(src, base=dst)
+    installed = os.path.join(bundle, "manifest.ttl")
+    if os.path.exists(installed):
+        ig = installed_graph(installed)
+        if set(cg.subjects(RDF.type, LV2_PLUGIN)) != set(ig.subjects(RDF.type, LV2_PLUGIN)):
+            return None, "declares other plugin URIs than the installed manifest"
+    for pred in (RDFS.seeAlso, LV2_BINARY, UI_BINARY):
+        for f in cg.objects(None, pred):
+            path = in_bundle(str(f), bundle)
+            if path and not os.path.exists(path) and os.path.basename(path) not in pending:
+                return None, f"refers to {os.path.basename(path)}, not in the bundle"
+    return dst, "references present"
+
+
+def write_file(dst, data):
+    tmp = dst + ".zynthian-lv2-custom.tmp"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, dst)
+
+
+def apply(dst, data, dry):
+    """Write data to dst, keeping the package's file first. True if something changed."""
+    if os.path.exists(dst) and read(dst) == data:
+        return False
+    if dry:
+        return True
+    o, a = orig_paths(dst)
+    if os.path.exists(dst) and not ours(dst):
+        os.makedirs(os.path.dirname(o), exist_ok=True)
+        with open(o, "wb") as f:
+            f.write(read(dst))
+    write_file(dst, data)
+    os.makedirs(os.path.dirname(a), exist_ok=True)
+    with open(a, "w") as f:
+        f.write(sha(data) + "\n")
+    return True
+
+
+def restore(dst, dry):
+    """Put the package's file back if ours is in place. True if something changed."""
+    if not ours(dst):
+        return False
+    if not dry:
+        o, a = orig_paths(dst)
+        write_file(dst, read(o))
+        os.remove(o)
+        os.remove(a)
+    return True
+
+
+def main(argv):
+    dry = "-n" in argv
+    quiet = "-q" in argv
+    revert = "--revert" in argv
+    only = [os.path.normpath(a) for a in argv if not a.startswith("-")]
+    changed = set()
+
+    def say(msg, important=True):
+        if important or not quiet:
+            print(msg)
+
+    def wanted(bundle):
+        return not only or os.path.normpath(bundle) in only
+
+    if revert:
+        for root, dirs, files in os.walk(ORIG):
+            for f in files:
+                if f.endswith(".applied"):
+                    dst = os.path.join(root, f[:-len(".applied")])[len(ORIG):]
+                    if wanted(os.path.dirname(dst)) and restore(dst, dry):
+                        changed.add(os.path.dirname(os.path.dirname(dst)))
+                        say(f"{'would restore' if dry else 'restored'} {dst}")
+    elif os.path.isdir(CUSTOM):
+        installed = {}
+        for d in LV2_DIRS:
+            if os.path.isdir(d):
+                for b in os.listdir(d):
+                    installed.setdefault(b.lower(), os.path.join(d, b))
+        for cb in sorted(os.listdir(CUSTOM)):
+            bundle = installed.get(cb.lower())
+            if not bundle or not wanted(bundle):
+                continue
+            cdir = os.path.join(CUSTOM, cb)
+            plan, skip, manifests = [], [], []
+            skipped_ports = False
+            for f in sorted(os.listdir(cdir)):
+                src = os.path.join(cdir, f)
+                if not f.endswith(".ttl"):
+                    plan.append((os.path.join(bundle, f), read(src), "copied as ZynthianOS does"))
+                    continue
+                try:
+                    if not plugin_ports(parse(src)):
+                        manifests.append(src)
+                        continue
+                    dst, data, why = plan_ttl(src, bundle)
+                except Exception as e:
+                    dst, data, why = None, None, f"can't parse ({e})"
+                if dst:
+                    plan.append((dst, data, why))
+                else:
+                    skip.append((os.path.join(bundle, f), why))
+                    skipped_ports = True
+            pending = {os.path.basename(d) for d, x, w in plan}
+            for src in manifests:
+                try:
+                    dst, why = plan_manifest(src, bundle, pending, skipped_ports)
+                except Exception as e:
+                    dst, why = None, f"can't parse ({e})"
+                if dst:
+                    plan.append((dst, read(src), why))
+                else:
+                    skip.append((os.path.join(bundle, os.path.basename(src)), why))
+            for dst, why in skip:
+                say(f"skip  {os.path.relpath(dst, os.path.dirname(bundle))}: {why}")
+                # a custom file applied before (an older zynthian-data or plugin) that no
+                # longer fits: the package's file back
+                if restore(dst, dry):
+                    changed.add(os.path.dirname(bundle))
+                    say(f"{'would restore' if dry else 'restored'} {dst}")
+            for dst, data, why in plan:
+                rel = os.path.relpath(dst, os.path.dirname(bundle))
+                if apply(dst, data, dry):
+                    changed.add(os.path.dirname(bundle))
+                    say(f"{'would apply' if dry else 'apply'} {rel}: {why}")
+                else:
+                    say(f"ok    {rel}: already applied", False)
+    # zynthian reloads its LV2 data when an LV2 directory's mtime changes
+    if not dry:
+        for d in changed:
+            os.utime(d)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
