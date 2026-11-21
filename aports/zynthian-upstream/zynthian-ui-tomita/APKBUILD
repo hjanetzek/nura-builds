@@ -14,7 +14,7 @@
 pkgname=zynthian-ui-tomita
 _commit=a94037ec6f6a198023dad5141734684542376e12
 pkgver=0_git20261119
-pkgrel=0
+pkgrel=1
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream tomita, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
 arch="aarch64 armv7 x86_64"
@@ -91,6 +91,7 @@ _pywheels="
 	pyrubberband-0.4.0-py3-none-any.whl
 	abletonparsing-0.1.3-py3-none-any.whl
 	future-1.0.0-py3-none-any.whl
+	websocket_server-0.6.4-py3-none-any.whl
 	"
 _pysdists="
 	sox-1.5.0.tar.gz
@@ -108,6 +109,7 @@ source="
 	https://files.pythonhosted.org/packages/d8/88/238aa67e353012d8dd999372aedada3f627bc9895d5d2a5305e7ffb1affd/pyrubberband-0.4.0-py3-none-any.whl
 	https://files.pythonhosted.org/packages/cf/5e/f8e31535f6483801d8790c65871ea8416429234a578d46aee7e898b0166d/abletonparsing-0.1.3-py3-none-any.whl
 	https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl
+	https://files.pythonhosted.org/packages/8e/9e/510086a9ed0dee3830da838f9207f5c787487813d5eb74eb19fe306e6a3e/websocket_server-0.6.4-py3-none-any.whl
 	https://files.pythonhosted.org/packages/3d/a2/d8e0d8fd7abf509ead4a2cb0fb24e5758b5330166bf9223d5cb9f98a7e8d/sox-1.5.0.tar.gz
 	https://files.pythonhosted.org/packages/3d/3c/d1f552e63b2c1f4ea462c1f788801f88a64a22f3c59275a8596564abb5fe/hwmon-1.0.tar.gz
 	pyliblo3-$_pyliblo3_commit.tar.gz::https://github.com/gesellkammer/pyliblo3/archive/$_pyliblo3_commit.tar.gz
@@ -198,6 +200,7 @@ d33a3743b9d4c9cdf95ec2f5a55c3cb50f392b4775d3e94169f069805ee72e757b68758c7a12d914
 17ac98370b9d3b9f8f827453589b70f6713b781227a362d4cc34d79293de3701ea0319224be456505aaa06dd0dd8f619b09c6bec89d22476fe01f8be7c543cb2  pyrubberband-0.4.0-py3-none-any.whl
 d6e2c8d2321a2fae547be662a9a1f6f7cd5de076209d6747da588395a3a6bbb621dd989f45f669a56f2031dc4dbcc7450563eee2f9cc87ab117fe3d403a1dbd7  abletonparsing-0.1.3-py3-none-any.whl
 d130bfa136bd171b9972b5c281c578545f2a84a909fdf18a6d2d71dd12fb3d512a7a1fa5cf7300433adece1d306eb2f22d7278f4c90e744e04dc67ba627a82c0  future-1.0.0-py3-none-any.whl
+7682b602b2ff5e11e209b489f84788fb05db1669d24fa1e6b3a962b0f10cb1ba7d7be265569b308501c53fe9c2dc9da3aef13a72da2ff9c3c7634314062ed1a7  websocket_server-0.6.4-py3-none-any.whl
 32e25b411c62a2c7d1b2e9351052707938c7f8ae39c7df80fc01a6509ee4fb908f4abeba8a4e6040b36cd04a9099b1f5d160b7f2b1854a9362cf13b2f0c1a284  sox-1.5.0.tar.gz
 fd06e30c529cef41f6b5746b341fdd33735c8c9bb09b68f71407f855ae193cd2a21fa396b26801a610d069635ac8a63b09dc8b1482fb692545dc0db454cef16b  hwmon-1.0.tar.gz
 89a5586f2eac5155877954c05febbb6ef7304dc8dd0b38b813cceac0dbd82a0779b1e6c869381dce95db63ca5945acd222508de1c8ee0fef2ba2babe83eab5cb  pyliblo3-029b83a03b4f24d905f818591903411753901273.tar.gz
