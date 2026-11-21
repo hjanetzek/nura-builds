@@ -103,6 +103,20 @@ case $display in
 	*piscreen2r-notouch*)
 		case $display in *piscreen2r-backlight*) ;; *) display="$display\ndtoverlay=piscreen2r-backlight" ;; esac ;;
 esac
+# The ZynScreen's SPI clock: 83.3 MHz (the Pi 4's 500 MHz core clock / 6) instead of zynthian-sys'
+# 64 MHz (/ 8, 62.5 MHz in fact): full frames a third faster, fine on a V4 kit with its ribbon cable;
+# 125 MHz (/ 4) leaves the panel white. ZYNSCREEN_SPEED in the environment overrides it (empty:
+# zynthian-sys' setting). Only the panel's overlay, not the touch controller's (ads7846, speed=).
+zynscreen_speed=${ZYNSCREEN_SPEED-83333333}
+case $display in
+	*piscreen2r-notouch*)
+		seg=$(printf '%s' "$display" | sed 's/.*\(dtoverlay=piscreen2r-notouch[^\\]*\).*/\1/')
+		case $seg in
+			*speed=*) ;;
+			*) [ -z "$zynscreen_speed" ] ||
+				display=$(printf '%s' "$display" | sed "s/\(dtoverlay=piscreen2r-notouch[^\\]*\)/\1,speed=$zynscreen_speed/") ;;
+		esac ;;
+esac
 custom=
 case $kit in
 	V5*|Z2*) custom="dtparam=rtc=off\ndtoverlay=i2c-rtc,rv3028" ;;

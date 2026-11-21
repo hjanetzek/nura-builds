@@ -88,6 +88,15 @@ OzzMaker PiScreen (`ozzmaker,piscreen`), which `piscreen2r` suggests the panel i
 overlay of our own binding that driver (same SPI pins, DC/reset GPIOs, rotation), checked on the
 kit. The V5's DSI panel and HDMI screens are DRM already.
 
+**The ZynScreen's SPI clock** (V4 kit, Pi 4 at core_freq=500, measured 2026-11-22): the SPI
+controller divides the core clock by an even number, so zynthian-sys' 64 MHz is 62.5 MHz (/ 8),
+the next steps 83.3 MHz (/ 6) and 125 MHz (/ 4). 83.3 MHz works over the kit's ribbon cable (no
+visible errors; a full frame in about 29 ms instead of 39), 125 MHz leaves the panel white.
+zynthian-kit sets 83.3 MHz since zynthian-hw r8 (ZYNSCREEN_SPEED overrides it, empty: 64 MHz).
+The panel's TE signal (FMARK, pin 37 of its FFC) isn't connected on the ZynScreen (zynthian-hw:
+ZynScreen v1.3 and v1.5, a NoConn), and the panel sits on a 16-bit bus behind a CPLD (EPM3032A):
+no way to sync updates to the panel's refresh.
+
 **How to drive the 480x320 SPI panel** (to measure on the V4 kit): a full frame over SPI takes tens
 of milliseconds (about 15-30 fps), a fullscreen copy in memory (600 KB at 32 bit) well under one:
 what counts is how much goes over SPI (partial updates of the changed regions: fbtft's deferred I/O
