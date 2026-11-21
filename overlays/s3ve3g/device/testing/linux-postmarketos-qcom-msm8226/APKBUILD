@@ -93,6 +93,7 @@ source="
 	0038-power-supply-qcom_smbb-battery-current-capacity-from-the-open-circuit-voltage.patch
 	0039-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-current.patch
 	0040-power-supply-qcom_smbb-latch-the-end-of-charge.patch
+	0041-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-throttling-from-60-degrees-C.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -184,5 +185,6 @@ f2d7517a31949a832045d947c3debe5e355ff5c89ea8520a88b017ea7bafe966447051989872f14a
 4952fe22ce9aed4129afe376614e1a5f932ce837b82a98fe7a63b312fd038f6fca45286f6d011c1707bd4b5354bc3a3488d9e6f7fbb6d6429550babe4d10162c  0038-power-supply-qcom_smbb-battery-current-capacity-from-the-open-circuit-voltage.patch
 15cdffa5baa6d89fd09c6b68937ee04f8e7f3d6dc38140b806c0468c1cd3d4220b934ef571b929e2934722e3e18e44959b92c67f0c7ea359a14fcfb5a42378d2  0039-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-current.patch
 b99cdb48c1f04368119daff0a4a4fe198796184283923807e5d32bd300f933da70e2a3b0b09df8729907ed62fba18ff92672b2ae490b95a335c017b8cb2a662c  0040-power-supply-qcom_smbb-latch-the-end-of-charge.patch
+1e98e7580b031ffd7c74c7502739fd35c1a6a6899d03c9b8c4a9b780c8772bbc281a758219fb81057c84dfb51f4f7dc2bd3393ca07657552afe9806311b8665c  0041-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-throttling-from-60-degrees-C.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "

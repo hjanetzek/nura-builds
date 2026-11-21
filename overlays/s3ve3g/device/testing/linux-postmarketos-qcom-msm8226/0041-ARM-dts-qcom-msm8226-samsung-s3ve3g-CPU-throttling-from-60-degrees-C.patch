@@ -1,0 +1,40 @@
+From f4c130140650e082dbd6fe443b079649ed324f69 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Sat, 21 Nov 2026 15:43:03 +0100
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: CPU throttling from
+ 60 degrees C
+
+The SoC's thermal zones throttle the CPU from 75 degrees C. Downstream's
+msm-thermal limits it from 60 (qcom,limit-temp = <60>): the battery sits
+right behind the SoC, and no driver reads its temperature while it
+discharges (the charger only stops charging when it is hot). Both CPU zones'
+passive trips at 60 degrees C; the critical ones stay at 110.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts    | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index 53c561ae88da..457f67d3a608 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -1291,3 +1291,15 @@ channel@6 {
+ &pm8226_iadc {
+ 	#io-channel-cells = <1>;
+ };
++
++/*
++ * CPU throttling from 60 degrees C, as downstream (msm-thermal: qcom,limit-temp = <60>), not the SoC's
++ * 75: the battery sits right behind the SoC, and nothing reads its temperature while it discharges
++ */
++&cpu_alert0 {
++	temperature = <60000>;
++};
++
++&cpu_alert1 {
++	temperature = <60000>;
++};
+-- 
+2.56.0
+
