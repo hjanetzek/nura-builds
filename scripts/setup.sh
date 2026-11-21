@@ -138,6 +138,10 @@ fi
 # The CPU baseline per architecture (armv7: NEON, VFPv4) into the build user's abuild.conf
 "$here/scripts/abuild-cpu.sh" "$NURA_WORK"
 
+# pmbootstrap's apk.static pinned to an older apk-tools while the newest can't install systemd
+# 262 into the build chroots (scripts/apk-static-pin.sh)
+"$here/scripts/apk-static-pin.sh" "$NURA_WORK"
+
 # Recipe directories into pmaports
 aports=$(pmbootstrap -c "$CFG" config aports)
 ln -sfn "$here/aports" "$aports/nura-builds"
