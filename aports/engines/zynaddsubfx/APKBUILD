@@ -5,14 +5,18 @@
 # zynthian-data's zynbanks symlink points.
 pkgname=zynaddsubfx
 pkgver=3.0.6
-pkgrel=0
+pkgrel=1
 pkgdesc="ZynAddSubFX software synthesizer (no GUI)"
 url="https://zynaddsubfx.sourceforge.io"
 arch="all"
 license="GPL-2.0-or-later"
 makedepends="cmake samurai fftw-dev mxml-dev liblo-dev zlib-dev jack-dev alsa-lib-dev linux-headers"
 subpackages="$pkgname-doc"
-source="https://downloads.sourceforge.net/project/zynaddsubfx/zynaddsubfx/$pkgver/zynaddsubfx-$pkgver.tar.bz2"
+# watchpoint-skip-empty.patch: WatchManager::active() compared every watch slot with strcmp()
+# per voice and buffer, empty ones too (10 % of a playing ZynAddSubFX on a Cortex-A7)
+source="https://downloads.sourceforge.net/project/zynaddsubfx/zynaddsubfx/$pkgver/zynaddsubfx-$pkgver.tar.bz2
+	watchpoint-skip-empty.patch
+	"
 options="!check" # tests need the GUI-less build's test targets, not built
 
 build() {
@@ -33,4 +37,5 @@ package() {
 }
 sha512sums="
 86311f00d97e20c7eb22a46c99736c56765ed9737e728ef380a324e4a92c731086ed74f5d7bfeae104b690ab1ee1b40bfb8f240bc4c46f8afd47308ec48cbcea  zynaddsubfx-3.0.6.tar.bz2
+7ff9046312e08db4b6402e59fd5416e045af55dd161fc173df45ebd3c90dd53853940fe89f91fed684905fb5c4bd70e58b5b4447e9cdb439fcab8dc065843eec  watchpoint-skip-empty.patch
 "

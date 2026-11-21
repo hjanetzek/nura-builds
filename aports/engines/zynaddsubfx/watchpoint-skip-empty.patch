@@ -1,0 +1,24 @@
+--- a/src/Synth/WatchPoint.cpp
++++ b/src/Synth/WatchPoint.cpp
+@@ -150,9 +150,11 @@
+ {
+     assert(this);
+     assert(id);
++    // Asked per voice and buffer: empty slots (no watch, the usual case) without a strcmp() call
++    // (10 % of a playing ZynAddSubFX on a Cortex-A7 went into these comparisons)
+     if(new_active || true)
+         for(int i=0; i<MAX_WATCH; ++i)
+-            if(!strcmp(active_list[i], id))
++            if(active_list[i][0] == id[0] && !strcmp(active_list[i], id))
+                 return true;
+ 
+     return false;
+@@ -161,7 +163,7 @@
+ bool WatchManager::trigger_active(const char *id) const
+ {
+     for(int i=0; i<MAX_WATCH; ++i)
+-        if(!strcmp(active_list[i], id))
++        if(active_list[i][0] == id[0] && !strcmp(active_list[i], id))
+             return trigger[i];
+     return false;
+ }
