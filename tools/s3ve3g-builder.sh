@@ -8,6 +8,11 @@
 #   setup         once: pmbootstrap, a pmaports clone, the config (OpenRC, edge), pmbootstrap init
 #   sync          this repository to the VM and the overlays into its pmaports (after changes)
 #   build [PKG..] sync, then pmbootstrap build --force (default: the kernel and the device package)
+#                 (--arch armv7 for packages that aren't the device's). For these builds only:
+#                 CFLAGS_EXTRA="..." more C/C++ flags, as a CI stage's (the armv7 plugins:
+#                 "-funsafe-math-optimizations -O3"); DBG=1 a -dbg subpackage for every package
+#                 (the same code, symbols in /usr/lib/debug: install it and musl-dbg on the phone
+#                 for perf record --call-graph dwarf). Local profiling only, not CI
 #   fetch         the VM's armv7 repository to OUT (for tools/s3ve3g-deploy.sh: REPO=OUT)
 #   key           install the VM's package signing key on the phone (once: apk trusts the packages)
 #   ssh [CMD]     a shell or command in the VM
@@ -73,6 +78,8 @@ sync)
 	# shellcheck disable=SC2086
 	rsync -a --delete --exclude .git --exclude out -e "ssh $vm_opts" "$here/" user@127.0.0.1:/home/user/nura-builds/
 	vm "PMAPORTS=$pmaports WORKTREE=$pmaports /home/user/nura-builds/tools/s3ve3g-pmaports.sh $commit"
+	# nura-builds' own recipes (aports/: plugins, engines) in pmaports, as scripts/setup.sh links them
+	vm "ln -sfn /home/user/nura-builds/aports $pmaports/nura-builds"
 	# the CPU baseline (armv7: NEON, VFPv4) into the build user's abuild.conf
 	vm "[ ! -d $work/config_abuild ] || /home/user/nura-builds/scripts/abuild-cpu.sh $work >/dev/null"
 	;;
@@ -85,6 +92,16 @@ build)
 		# shellcheck disable=SC2086
 		rsync -a --ignore-existing --chown=12345:12345 --rsync-path="sudo rsync" -e "ssh $vm_opts" \
 			"$dist/" "user@127.0.0.1:$work/cache_distfiles/"
+	fi
+	if [ -n "${CFLAGS_EXTRA:-}" ] || [ -n "${DBG:-}" ]; then
+		# the build's extra flags and -dbg subpackages in the build user's abuild.conf; the
+		# baseline alone again afterwards (also when the build fails)
+		vm "DBG='${DBG:-}' /home/user/nura-builds/scripts/abuild-cpu.sh $work '${CFLAGS_EXTRA:-}'"
+		set +e
+		vm "pmbootstrap -c $cfg build --force $*"
+		rc=$?
+		vm "/home/user/nura-builds/scripts/abuild-cpu.sh $work >/dev/null"
+		exit $rc
 	fi
 	vm "pmbootstrap -c $cfg build --force $*"
 	;;
