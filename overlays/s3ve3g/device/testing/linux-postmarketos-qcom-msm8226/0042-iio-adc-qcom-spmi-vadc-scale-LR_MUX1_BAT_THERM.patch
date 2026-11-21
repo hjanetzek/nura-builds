@@ -1,0 +1,30 @@
+From 227ca02e03ba415aca612838453bfaa73d7cb574 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Sat, 21 Nov 2026 15:50:29 +0100
+Subject: [PATCH] iio: adc: qcom-spmi-vadc: scale LR_MUX1_BAT_THERM
+
+The battery thermistor channel had only a raw value: the default voltage
+scaling (with qcom,ratiometric: millivolts of the 1.8 V reference), so a
+thermal sensor (generic-adc-thermal) can map it to a temperature.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/iio/adc/qcom-spmi-vadc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iio/adc/qcom-spmi-vadc.c b/drivers/iio/adc/qcom-spmi-vadc.c
+index 0e800d089215..6c2467bca583 100644
+--- a/drivers/iio/adc/qcom-spmi-vadc.c
++++ b/drivers/iio/adc/qcom-spmi-vadc.c
+@@ -608,7 +608,7 @@ static const struct vadc_channels vadc_chans[] = {
+ 	VADC_CHAN_NO_SCALE(P_MUX15_1_3, 1)
+ 	VADC_CHAN_NO_SCALE(P_MUX16_1_3, 1)
+ 
+-	VADC_CHAN_NO_SCALE(LR_MUX1_BAT_THERM, 0)
++	VADC_CHAN_VOLT(LR_MUX1_BAT_THERM, 0, SCALE_DEFAULT)
+ 	VADC_CHAN_VOLT(LR_MUX2_BAT_ID, 0, SCALE_DEFAULT)
+ 	VADC_CHAN_NO_SCALE(LR_MUX3_XO_THERM, 0)
+ 	VADC_CHAN_NO_SCALE(LR_MUX4_AMUX_THM1, 0)
+-- 
+2.56.0
+

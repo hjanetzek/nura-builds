@@ -1,0 +1,140 @@
+From 4dfb9543cc273e49271a217fb2ad2d83f8dfbb43 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Sat, 21 Nov 2026 15:50:30 +0100
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: a battery thermal
+ zone
+
+Nothing watched the battery's temperature while it discharged: the charger
+only stops charging when its comparators find the battery hot. The battery
+thermistor (VADC LR_MUX1_BATT_THERM, ratiometric) as a generic-adc-thermal
+sensor with downstream's table for the S III Neo (qpnp-adc-common.c
+adcmap_btm_threshold), and a thermal zone: the CPU throttled from 45 degrees
+C (downstream's warm battery threshold), shut down at 60.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../dts/qcom/qcom-msm8226-samsung-s3ve3g.dts  | 97 +++++++++++++++++++
+ 1 file changed, 97 insertions(+)
+
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index 457f67d3a608..0faea9591c5c 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -13,6 +13,7 @@
+ 
+ #include <dt-bindings/iio/qcom,spmi-vadc.h>
+ #include <dt-bindings/input/input.h>
++#include <dt-bindings/thermal/thermal.h>
+ #include <dt-bindings/leds/common.h>
+ #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+ #include <dt-bindings/soc/qcom,apr.h>
+@@ -151,6 +152,53 @@ muic: usb-switch@25 {
+ 	 * downstream's bms-batterydata-samsung-2100mah.c (the capacity is estimated from the voltage:
+ 	 * there is no fuel gauge driver)
+ 	 */
++	/*
++	 * The battery's thermistor (PM8226 VADC LR_MUX1_BATT_THERM, ratiometric: millivolts of the 1.8 V
++	 * reference), by downstream's table for the S III Neo (qpnp-adc-common.c adcmap_btm_threshold,
++	 * CONFIG_MACH_S3VE3G_EUR), for the battery thermal zone
++	 */
++	battery_thermal: battery-thermal-sensor {
++		compatible = "generic-adc-thermal";
++		#thermal-sensor-cells = <0>;
++		io-channels = <&pm8226_vadc VADC_LR_MUX1_BAT_THERM>;
++		io-channel-names = "sensor-channel";
++		temperature-lookup-table = <
++			(-22000) 1673
++			(-20000) 1658
++			(-17000) 1630
++			(-15000) 1616
++			(-10000) 1544
++			(-7000) 1501
++			(-5000) 1468
++			(-2000) 1430
++			0 1394
++			2000 1351
++			5000 1305
++			10000 1188
++			15000 1077
++			20000 974
++			25000 865
++			30000 759
++			32000 733
++			35000 675
++			37000 629
++			40000 578
++			42000 547
++			45000 508
++			47000 478
++			50000 442
++			52000 409
++			55000 376
++			57000 347
++			60000 319
++			62000 295
++			65000 269
++			70000 231
++			80000 177
++			82000 171
++			85000 151>;
++	};
++
+ 	battery: battery {
+ 		compatible = "simple-battery";
+ 		device-chemistry = "lithium-ion";
+@@ -1303,3 +1351,52 @@ &cpu_alert0 {
+ &cpu_alert1 {
+ 	temperature = <60000>;
+ };
++
++&pm8226_vadc {
++	channel@30 {
++		reg = <VADC_LR_MUX1_BAT_THERM>;
++		qcom,ratiometric;
++		qcom,hw-settle-time = <200>;
++		label = "batt_therm";
++	};
++};
++
++/*
++ * The battery thermal zone: the CPU throttled from 45 degrees C (downstream's warm battery threshold,
++ * where it charges with 350 mA only), shut down at 60. Before, nothing watched the battery's
++ * temperature while it discharged (the charger stops charging when it's hot, by its comparators).
++ */
++/ {
++	thermal-zones {
++		battery-thermal {
++			polling-delay-passive = <1000>;
++			polling-delay = <5000>;
++
++			thermal-sensors = <&battery_thermal>;
++
++			trips {
++				battery_warm: trip0 {
++					temperature = <45000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++
++				battery_crit: trip1 {
++					temperature = <60000>;
++					hysteresis = <2000>;
++					type = "critical";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					trip = <&battery_warm>;
++					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
++							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
++							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
++							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++				};
++			};
++		};
++	};
++};
+-- 
+2.56.0
+

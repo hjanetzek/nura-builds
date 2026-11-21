@@ -94,6 +94,9 @@ source="
 	0039-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-current.patch
 	0040-power-supply-qcom_smbb-latch-the-end-of-charge.patch
 	0041-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-throttling-from-60-degrees-C.patch
+	0042-iio-adc-qcom-spmi-vadc-scale-LR_MUX1_BAT_THERM.patch
+	0043-ARM-dts-qcom-msm8226-samsung-s3ve3g-a-battery-thermal-zone.patch
+	0044-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-comparators-extended-range.patch
 	mkqcdt-v1.py
 "
 builddir="$srcdir/linux-$pkgver"
@@ -144,7 +147,7 @@ package() {
 
 sha512sums="
 db5508c3cf8b613b4680022eb785c036bcf8a5c952f8d0b2f3c2c7dc16779cf8bd954e0bca0b0b52451bac61430a687ae73205574f002f3b60de886640ebb9b0  linux-7.3.4.tar.xz
-8ba33bf6148285fa2444902ec75bdb758919ec3906913ac60f76eae6deba2b914626a9534d6f4f8d0783bd57363ddf3c4500d7594633cfadf7bbdcae7010f29c  config-postmarketos-qcom-msm8226.armv7
+331cb1630c279f74bfc740182eb09b621925542c421250e8baa191e5ba96e1fab62f52690f6901eb7213b5791bb08edcf8591b2e4420a13765c778431d503550  config-postmarketos-qcom-msm8226.armv7
 685d26394e13c2b88ae18671c89fe6dcb1db3809fbd6734700dedc6d467e746784743c3b94ffdc67cd31c3a023e0f816e90ec748028dbea27baa378f2561feac  0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.4.patch
 6d332d7e93027c5aee62b6497bd15be1cd20e38dbae884dc28f81b1f1983f818bc07c8751c1a8d2e2acdbbc790179e9f48e02a9fe15db9c6a0480f4a54dda736  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 54a64cacb2e06014f207bc824ae9731e5416e3ad594179f09721219567066140fc3feee7fd5e56926964164b8b9fb6ce593e1198b8b40d97aba9f69272d499dc  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
@@ -186,5 +189,8 @@ f2d7517a31949a832045d947c3debe5e355ff5c89ea8520a88b017ea7bafe966447051989872f14a
 15cdffa5baa6d89fd09c6b68937ee04f8e7f3d6dc38140b806c0468c1cd3d4220b934ef571b929e2934722e3e18e44959b92c67f0c7ea359a14fcfb5a42378d2  0039-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-voltage-and-current.patch
 b99cdb48c1f04368119daff0a4a4fe198796184283923807e5d32bd300f933da70e2a3b0b09df8729907ed62fba18ff92672b2ae490b95a335c017b8cb2a662c  0040-power-supply-qcom_smbb-latch-the-end-of-charge.patch
 1e98e7580b031ffd7c74c7502739fd35c1a6a6899d03c9b8c4a9b780c8772bbc281a758219fb81057c84dfb51f4f7dc2bd3393ca07657552afe9806311b8665c  0041-ARM-dts-qcom-msm8226-samsung-s3ve3g-CPU-throttling-from-60-degrees-C.patch
+fef4c0d0474bdbb8d15cf256ca985baae41653f9807add7f5fcb4950db37b5b7be00b59f4d0177b56d3ccf5ef1ff36279c3f80fadb7ea9cd59f5c52664bc562c  0042-iio-adc-qcom-spmi-vadc-scale-LR_MUX1_BAT_THERM.patch
+16903ddaded46b5e2d9f5f9ff2736b163ebea92628aae637758bcea38261700dfe664b41368818032c8ccf0bdebdae41a514097761a821e0aaf176cb030d93bd  0043-ARM-dts-qcom-msm8226-samsung-s3ve3g-a-battery-thermal-zone.patch
+1acd631284566e598cb7ed7a7ee925250bc56e5d69955c2660eba5c6a3636af3deef207669b51c0c68de669db826e1dcdf7b23f038bc96d9e533e825a54fd9af  0044-ARM-dts-qcom-msm8226-samsung-s3ve3g-battery-comparators-extended-range.patch
 c7d62c94326e266ced08e0093f20d2ec18681501b79c6f232a79af045706737e9212c58de1b5e3cd2e66b37ead3946fdd1ebca425f5d6efae6808b54d6d5073f  mkqcdt-v1.py
 "

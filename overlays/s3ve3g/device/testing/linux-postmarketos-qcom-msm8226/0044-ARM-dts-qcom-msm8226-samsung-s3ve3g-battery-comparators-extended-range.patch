@@ -1,0 +1,38 @@
+From e5c45a008aaf20c11bb03ae648c5d09c693b96f4 Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Sat, 21 Nov 2026 15:56:47 +0100
+Subject: [PATCH] ARM: dts: qcom: msm8226-samsung-s3ve3g: battery comparators'
+ extended range
+
+The charger's battery temperature comparators default to [35%:70%] of the
+reference; with the S III Neo's thermistor divider 35% (630 mV) is about 36
+degrees C by downstream's table, so the charger found a battery at room
+temperature hot and stopped charging ("Overheat"). [25%:80%]
+(qcom,jeita-extended-temp-range): hot at about 50 degrees C (450 mV), cold
+at about -3 (1440 mV).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+index 0faea9591c5c..44bc16e81eff 100644
+--- a/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
++++ b/arch/arm/boot/dts/qcom/qcom-msm8226-samsung-s3ve3g.dts
+@@ -1316,6 +1316,12 @@ &smbb {
+ 	io-channels = <&pm8226_vadc VADC_VBAT_SNS>, <&pm8226_iadc 0>;
+ 	io-channel-names = "vbat", "ibat";
+ 	monitored-battery = <&battery>;
++	/*
++	 * The battery temperature comparators' range [25%:80%] of the reference: with the S III Neo's
++	 * thermistor divider that's hot at about 50 degrees C, cold at about -3 (downstream's table);
++	 * the default [35%:70%] is hot at 36 degrees already, and charging stopped at room temperature
++	 */
++	qcom,jeita-extended-temp-range;
+ 
+ 	qcom,fast-charge-safe-current = <1500000>;
+ 	qcom,fast-charge-current-limit = <1500000>;
+-- 
+2.56.0
+
