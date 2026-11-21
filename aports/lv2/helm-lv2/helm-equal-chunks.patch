@@ -1,0 +1,18 @@
+--- a/src/plugin/helm_plugin.cpp
++++ b/src/plugin/helm_plugin.cpp
+@@ -176,8 +176,14 @@
+   MidiBuffer keyboard_messages = midi_messages;
+   processKeyboardEvents(keyboard_messages, total_samples);
+ 
++  // Chunks of equal size (at most MAX_BUFFER_PROCESS): the engine walks its whole processor graph
++  // (setBufferSize) whenever the chunk size changes, twice per block for blocks that aren't a
++  // multiple of MAX_BUFFER_PROCESS (480 or 960 frames: 256 + 224 or 3 * 256 + 192). 960 frames are
++  // 4 * 240 now; Helm took 9 times as long per sample on a Cortex-A7.
++  int num_chunks = (total_samples + MAX_BUFFER_PROCESS - 1) / MAX_BUFFER_PROCESS;
++  int chunk_size = num_chunks ? (total_samples + num_chunks - 1) / num_chunks : MAX_BUFFER_PROCESS;
+   for (int sample_offset = 0; sample_offset < total_samples;) {
+-    int num_samples = std::min<int>(total_samples - sample_offset, MAX_BUFFER_PROCESS);
++    int num_samples = std::min<int>(total_samples - sample_offset, chunk_size);
+ 
+     processMidi(midi_messages, sample_offset, sample_offset + num_samples);
+     processAudio(&buffer, num_channels, num_samples, sample_offset);
