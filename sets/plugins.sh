@@ -23,4 +23,10 @@ PACKAGES_armv7="zynthian-jalv drivenbymoss zynaddsubfx aeolus sooperlooper libgi
 	pd-freeverb pd-ggee pd-grids pd-hcs pd-iemlib pd-midifile pd-osc pd-plaits pd-tb-peakcomp
 	pd-unauthorized pd-cyclone mod-mda-lv2 geonkick-lv2 mod-utilities-lv2 guitarix-lv2
 	mod-pitchshifter-lv2 helm-lv2 distrho-ports-lv2"
+# armv7 is a playground (what the old phone can do): -funsafe-math-optimizations lets GCC vectorise
+# float code with armv7 NEON (NEON flushes denormals); -O3 because many plugin builds end up with
+# abuild's -Os (DPF with NOOPT=true, meson's plain build type, Makefiles that append $(CFLAGS) after
+# their own -O3). Measured on the S III Neo (lv2bench): artyfx 1.22x (up to 3.1x), String Machine's
+# chorus 1.5x, Helm 1.3x, OB-Xd 1.35x
+CFLAGS_armv7="-funsafe-math-optimizations -O3"
 ADD_ARCH_armv7="aports/lv2/helm-lv2 aports/lv2/aida-x-lv2 aports/lv2/chow-centaur-lv2 aports/lv2/neural-amp-modeler-lv2 aports/lv2/ratatouille-lv2"
