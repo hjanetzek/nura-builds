@@ -179,4 +179,8 @@ jobs:
 
       - name: Build log
         if: failure()
-        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true
+        run: |
+          # apk's errors (failed install scripts) are often further up than the tail
+          sudo grep -nE "ERROR|error:|script exited|failed" "$NURA_WORK/log.txt" | tail -n 60 || true
+          echo "---"
+          sudo tail -n 200 "$NURA_WORK/log.txt" || true
