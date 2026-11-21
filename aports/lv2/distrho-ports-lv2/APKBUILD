@@ -11,7 +11,7 @@ pkgname=distrho-ports-lv2
 _commit=d3b62da2e83c69b0866af5bb2e29ac78dc8014cf
 _juce5=d1a2d5908202f2529886e07c3e65118c821cba98
 pkgver=0_git20250914
-pkgrel=4
+pkgrel=5
 pkgdesc="DISTRHO-Ports JUCE plugins as on ZynthianOS (LV2, no GUIs)"
 url="https://github.com/DISTRHO/DISTRHO-Ports"
 arch="all"
@@ -45,14 +45,29 @@ prepare() {
 	# reports armv8l or aarch64 and runs 32-bit ARM binaries itself
 	sed -i 's/\[ "$(uname -m)" != "armv7l" \]/& \&\& [ "$(uname -m)" != "armv8l" ] \&\& [ "$(uname -m)" != "aarch64" ]/' \
 		scripts/generate-lv2.sh
-	# TAL's delay lines call floorf() per sample (reverb, delay, chorus): on armv7 a function call
-	# into musl (no rounding instruction before ARMv8; 10 % of TAL-Reverb-2 on the Galaxy S III
-	# Neo's Cortex-A7). An inline exact floor instead (nura-floorf.h, forced in by -include)
-	cat > "$srcdir"/nura-floorf.h <<-'EOF'
+	# Inline replacements for musl libm calls in hot loops (on armv7 each one a function call; x86
+	# and aarch64 have instructions or fast paths), nura-fastmath.h, forced in by -include:
+	# - TAL's delay lines call floorf() per sample (reverbs, delay, chorus; 10 % of TAL-Reverb-2 on
+	#   the Galaxy S III Neo's Cortex-A7): an exact inline floor
+	# - OB-Xd's getPitch() (440 * expf(), "SSE should be on") per sample and voice, three times:
+	#   2^x by its series (0.008 cent at most; expf was 13 % of a playing OB-Xd)
+	cat > "$srcdir"/nura-fastmath.h <<-'EOF'
 	#pragma once
 	static inline float nura_floorf(float x) { int i = (int) x; return (float) (i - (x < (float) i)); }
+	static inline float nura_exp2f(float x)
+	{
+		if (x > 127.0f) x = 127.0f; else if (x < -126.0f) x = -126.0f;
+		int i = (int) (x + (x >= 0.0f ? 0.5f : -0.5f));
+		float f = x - (float) i;
+		float p = 1.0f + f * (0.693147181f + f * (0.240226507f + f * (0.0555041087f + f * (0.00961812911f + f * 0.00133335581f))));
+		union { float f; int i; } u = { p };
+		u.i += i << 23;
+		return u.f;
+	}
 	EOF
 	grep -rlE 'floorf ?\(' ports-juce5/tal-* | xargs sed -i -E 's/std::floorf ?\(/nura_floorf(/g; s/(^|[^A-Za-z0-9_:])floorf ?\(/\1nura_floorf(/g'
+	sed -i 's|return 440 \* expf(mult \* index);|return 440 * nura_exp2f(index * (1.0f / 12.0f));|' ports-juce5/obxd/source/Engine/AudioUtils.h
+	grep -q 'nura_exp2f(index' ports-juce5/obxd/source/Engine/AudioUtils.h
 }
 
 _plugins="arctican-function,arctican-pilgrim,drowaudio-distortion,drowaudio-distortionshaper,drowaudio-flanger,drowaudio-reverb,drowaudio-tremolo,easySSP,eqinox,LUFSMeter,LUFSMeter-Multi,luftikus,obxd,pitchedDelay,refine,stereosourceseparation,tal-dub-3,tal-filter,tal-filter-2,tal-noisemaker,tal-reverb,tal-reverb-2,tal-reverb-3,tal-vocoder-2,temper,vex,wolpertinger"
@@ -61,7 +76,7 @@ build() {
 	# musl: stat64 and friends only with _LARGEFILE64_SOURCE; _NL_IDENTIFICATION_* are glibc
 	# locale items, here items of a category musl doesn't have (nl_langinfo() returns ""), so
 	# getUserLanguage()/getUserRegion() are empty
-	export CXXFLAGS="$CXXFLAGS -include $srcdir/nura-floorf.h -D_LARGEFILE64_SOURCE \
+	export CXXFLAGS="$CXXFLAGS -include $srcdir/nura-fastmath.h -D_LARGEFILE64_SOURCE \
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001"
 	abuild-meson \
 		-Dlinux-headless=true \
