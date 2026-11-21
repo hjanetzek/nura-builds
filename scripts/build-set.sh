@@ -15,7 +15,15 @@ setfile="$here/sets/$set.sh"
 # Only the set's ADD_ARCH_<arch>, not the target file's (common.sh sources it: recipes of other
 # repositories, not checked out for sets)
 unset "ADD_ARCH_$ARCH"
-KEEPGOING= ; eval "$(sed -n 's/^\(KEEPGOING\|ADD_ARCH_[a-z0-9_]*\)=/\1=/p' "$setfile")"
+KEEPGOING= ; eval "$(sed -n 's/^\(KEEPGOING\|ADD_ARCH_[a-z0-9_]*\|CFLAGS_[a-z0-9_]*\)=/\1=/p' "$setfile")"
+# The set's extra compiler flags (CFLAGS_<arch> in the set file; plan-packages.py hashes them with
+# the recipes) into abuild.conf for its builds, the baseline alone again afterwards
+eval "cflags=\${CFLAGS_$ARCH:-}"
+if [ -n "$cflags" ]; then
+	"$here/scripts/abuild-cpu.sh" "$NURA_WORK" "$cflags"
+	trap '"$here/scripts/abuild-cpu.sh" "$NURA_WORK" >/dev/null' EXIT
+	echo "$set: CFLAGS/CXXFLAGS +$cflags"
+fi
 eval "add_arch=\${ADD_ARCH_$ARCH:-}"
 for p in $add_arch; do
 	f=$here/$p/APKBUILD

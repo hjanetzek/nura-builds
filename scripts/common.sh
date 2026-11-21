@@ -46,14 +46,20 @@ stage_builds() {
 
 # Hash of a stage's inputs, for the package cache key: what it builds (STAGE_<stage>, so adding a
 # package to the list invalidates the cache) and its recipe directories (INPUTS_<stage>)
+# The CPU baseline's hash when scripts/abuild-cpu.conf has flags for $ARCH (a "<arch>)" branch),
+# nothing otherwise: a change rebuilds only that architecture's packages (plan-packages.py likewise)
+cpu_baseline_hash() {
+	! grep -q "^[[:space:]]*$ARCH)" "$here/scripts/abuild-cpu.conf" || sha256sum < "$here/scripts/abuild-cpu.conf"
+}
+
 stage_hash() {
 	builds=$(stage_builds "$1")
 	eval "inputs=\${INPUTS_$1:-}"
 	# shellcheck disable=SC2154 # set by eval
 	{
 		echo "$builds"
-		# the compiler flags of every package
-		sha256sum < "$here/scripts/abuild-cpu.conf"
+		# the CPU baseline, for the architectures it has flags for (scripts/abuild-cpu.conf)
+		cpu_baseline_hash
 		for p in $inputs; do
 			d=$(resolve "$p")
 			(cd "$d" && find . -type f ! -path "*/.git/*" | LC_ALL=C sort | xargs sha256sum)
@@ -68,6 +74,9 @@ packages_dir() {
 }
 save_packages() {
 	mkdir -p "$NURA_OUT"
+	# a stage whose packages are all up to date in the binary repositories builds nothing:
+	# pmbootstrap then has made no local repository
+	sudo mkdir -p "$NURA_WORK/packages"
 	sudo tar -C "$NURA_WORK" -cf "$NURA_OUT/packages.tar" packages
 	sudo chown "$(id -u):$(id -g)" "$NURA_OUT/packages.tar"
 }

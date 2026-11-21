@@ -20,6 +20,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -62,6 +63,25 @@ def recipe_hash(path):
     return h.hexdigest()[:16]
 
 
+def flags_extra(arch, set_cflags):
+    """What the compiler flags add to a recipe's hash on an architecture: the CPU baseline when
+    scripts/abuild-cpu.conf has flags for it (an "<arch>)" branch), and the set's CFLAGS_<arch>;
+    empty otherwise, so the other architectures' hashes stay as they were"""
+    with open(os.path.join(here, "scripts", "abuild-cpu.conf")) as f:
+        conf = f.read()
+    extra = conf if re.search(rf"^\s*{re.escape(arch)}\)", conf, re.M) else ""
+    if set_cflags:
+        extra += "\0cflags: " + set_cflags
+    return extra
+
+
+def package_hash(path, extra):
+    h = recipe_hash(path)
+    if not extra:
+        return h
+    return hashlib.sha256((h + "\0" + extra).encode()).hexdigest()[:16]
+
+
 def arch_ok(arch_field, arch, add_arch):
     archs = arch_field.split()
     if add_arch or "noarch" in archs:
@@ -75,7 +95,7 @@ def set_packages(name, arch, recipe_dirs):
     """The set's packages for an architecture, as groups (lists), and its settings"""
     path = os.path.join(here, "sets", f"{name}.sh")
     v = shell_vars(path, ["ARCHES", "PACKAGES", "DIRS", f"PACKAGES_{arch}", f"EXCLUDE_{arch}",
-                          "FORCE_AFTER", "KEEPGOING", f"ADD_ARCH_{arch}"])
+                          "FORCE_AFTER", "KEEPGOING", f"ADD_ARCH_{arch}", f"CFLAGS_{arch}"])
     if arch not in v["ARCHES"].split():
         return None, v
     spec = v[f"PACKAGES_{arch}"] or v["PACKAGES"]
@@ -134,6 +154,7 @@ def main():
             continue
         add_arch = {os.path.basename(p) for p in v[f"ADD_ARCH_{a.arch}"].split()}
         forced_by = [d for d in v["FORCE_AFTER"].split() if d in building]
+        extra = flags_extra(a.arch, v[f"CFLAGS_{a.arch}"])
         todo = []
         for g in groups:
             for pkg in g:
@@ -147,7 +168,7 @@ def main():
                 if not arch_ok(r["arch"], a.arch, pkg in add_arch):
                     continue
                 version = f'{r["pkgver"]}-r{r["pkgrel"]}'
-                entry = {"version": version, "hash": recipe_hash(path), "set": s}
+                entry = {"version": version, "hash": package_hash(path, extra), "set": s}
                 hashes[pkg] = entry
                 pub, known = published.get(pkg), manifest.get(pkg)
                 if only:
