@@ -11,7 +11,7 @@ pkgname=distrho-ports-lv2
 _commit=d3b62da2e83c69b0866af5bb2e29ac78dc8014cf
 _juce5=d1a2d5908202f2529886e07c3e65118c821cba98
 pkgver=0_git20250914
-pkgrel=3
+pkgrel=4
 pkgdesc="DISTRHO-Ports JUCE plugins as on ZynthianOS (LV2, no GUIs)"
 url="https://github.com/DISTRHO/DISTRHO-Ports"
 arch="all"
@@ -45,6 +45,14 @@ prepare() {
 	# reports armv8l or aarch64 and runs 32-bit ARM binaries itself
 	sed -i 's/\[ "$(uname -m)" != "armv7l" \]/& \&\& [ "$(uname -m)" != "armv8l" ] \&\& [ "$(uname -m)" != "aarch64" ]/' \
 		scripts/generate-lv2.sh
+	# TAL's delay lines call floorf() per sample (reverb, delay, chorus): on armv7 a function call
+	# into musl (no rounding instruction before ARMv8; 10 % of TAL-Reverb-2 on the Galaxy S III
+	# Neo's Cortex-A7). An inline exact floor instead (nura-floorf.h, forced in by -include)
+	cat > "$srcdir"/nura-floorf.h <<-'EOF'
+	#pragma once
+	static inline float nura_floorf(float x) { int i = (int) x; return (float) (i - (x < (float) i)); }
+	EOF
+	grep -rlE 'floorf ?\(' ports-juce5/tal-* | xargs sed -i -E 's/std::floorf ?\(/nura_floorf(/g; s/(^|[^A-Za-z0-9_:])floorf ?\(/\1nura_floorf(/g'
 }
 
 _plugins="arctican-function,arctican-pilgrim,drowaudio-distortion,drowaudio-distortionshaper,drowaudio-flanger,drowaudio-reverb,drowaudio-tremolo,easySSP,eqinox,LUFSMeter,LUFSMeter-Multi,luftikus,obxd,pitchedDelay,refine,stereosourceseparation,tal-dub-3,tal-filter,tal-filter-2,tal-noisemaker,tal-reverb,tal-reverb-2,tal-reverb-3,tal-vocoder-2,temper,vex,wolpertinger"
@@ -53,7 +61,7 @@ build() {
 	# musl: stat64 and friends only with _LARGEFILE64_SOURCE; _NL_IDENTIFICATION_* are glibc
 	# locale items, here items of a category musl doesn't have (nl_langinfo() returns ""), so
 	# getUserLanguage()/getUserRegion() are empty
-	export CXXFLAGS="$CXXFLAGS -D_LARGEFILE64_SOURCE \
+	export CXXFLAGS="$CXXFLAGS -include $srcdir/nura-floorf.h -D_LARGEFILE64_SOURCE \
 		-D_NL_IDENTIFICATION_LANGUAGE=0x60000 -D_NL_IDENTIFICATION_TERRITORY=0x60001"
 	abuild-meson \
 		-Dlinux-headless=true \
