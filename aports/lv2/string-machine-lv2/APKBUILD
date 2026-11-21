@@ -7,15 +7,19 @@ pkgname=string-machine-lv2
 _commit=7050cb1516fbaf5aaaa2c6cc9999fe5ac100d746
 _dpf=f24e5317cd7b57c8ab36b0987ec29a5579cd5dd2
 pkgver=0_git20220219
-pkgrel=1
+pkgrel=2
 pkgdesc="String machine synthesizer and chorus LV2 plugins"
 url="https://github.com/jpcima/string-machine"
 arch="all"
 license="BSL-1.0"
 # bash: DPF's utils/generate-ttl.sh is a bash script
 makedepends="bash lv2-dev"
+# bbd-line-clear-used-terms.patch: the BBD line cleared complex arrays per sample and per tick
+# (memsets, 13 % on a Cortex-A7): without them (bit-identical output)
 source="$pkgname-$_commit.tar.gz::https://github.com/jpcima/string-machine/archive/$_commit.tar.gz
-	dpf-$_dpf.tar.gz::https://github.com/DISTRHO/DPF/archive/$_dpf.tar.gz"
+	dpf-$_dpf.tar.gz::https://github.com/DISTRHO/DPF/archive/$_dpf.tar.gz
+	bbd-line-clear-used-terms.patch
+	"
 builddir="$srcdir/string-machine-$_commit"
 options="!check" # no tests
 
@@ -45,4 +49,5 @@ package() {
 sha512sums="
 3c3bc9057e35f86953d84ef1573e4a4246d55fb81ad182ba0aaaf6f9b500fca4b0ec0fdfb85c6966f6529181ee9f6af2e40f862caeace3fcff2144e2bf66fdc5  string-machine-lv2-7050cb1516fbaf5aaaa2c6cc9999fe5ac100d746.tar.gz
 1d2c4cc69d40d50f8a4b9cf11bcaec1cd7bcc8ec4462094fed35dd29d288b41f1deccf873924bbba51456745191b2a3f924cf5929c4c007b11eebf80c5c22250  dpf-f24e5317cd7b57c8ab36b0987ec29a5579cd5dd2.tar.gz
+c30da99dfecdab199a572bb86634b5e0a12256ec1c4960e2e6fd93de0b94006098af37557578a950b4854a6468c0e177f344013abbcafecdef2ba3b7c4d0b03a  bbd-line-clear-used-terms.patch
 "
