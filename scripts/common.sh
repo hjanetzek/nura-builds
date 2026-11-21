@@ -20,6 +20,8 @@ eval "DEVICES=\${DEVICES_$ARCH:-\${DEVICES:-}}"
 # Other settings of the architecture (<VAR>_<arch> in the target file, e.g. STAGES_armv7)
 eval "STAGES=\${STAGES_$ARCH:-\$STAGES} UI=\${UI_$ARCH:-\$UI}"
 eval "IMAGE_PACKAGES=\${IMAGE_PACKAGES_$ARCH:-\${IMAGE_PACKAGES:-}} ADD_ARCH=\${ADD_ARCH_$ARCH:-}"
+# pmbootstrap's service manager (SERVICE_MANAGER[_<arch>]; the channel: systemd-edge or edge)
+eval "SERVICE_MANAGER=\${SERVICE_MANAGER_$ARCH:-\${SERVICE_MANAGER:-systemd}}"
 # Target name in cache keys: as before for aarch64, <target>_<arch> for the others (no "-":
 # prune-cache.sh splits keys at "-")
 KEY_TARGET=$TARGET
@@ -65,6 +67,8 @@ stage_hash() {
 		*) sha256sum < "$here/scripts/abuild-cpu.conf" ;;
 		esac
 		c=$(stage_cflags "$1"); [ -z "$c" ] || echo "cflags: $c"
+		# the channel the packages are built for
+		[ "$SERVICE_MANAGER" = systemd ] || echo "service manager: $SERVICE_MANAGER"
 		for p in $inputs; do
 			d=$(resolve "$p")
 			(cd "$d" && find . -type f ! -path "*/.git/*" | LC_ALL=C sort | xargs sha256sum)

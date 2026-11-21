@@ -92,6 +92,9 @@ CFLAGS_plugins_armv7="-funsafe-math-optimizations"
 INPUTS_engines="aports/zynthian-jalv aports/engines/aeolus aports/engines/sooperlooper"
 STAGE_zynthian_armv7="--src=@drivenbymoss-rust drivenbymoss; --src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none
+# OpenRC (channel edge), as on the S III Neo: in systemd-edge the armv7 build chroot fails to
+# install systemd 262 ("failed to commit usr/sbin/init", 2026-11-21)
+SERVICE_MANAGER_armv7=openrc
 IMAGE_PACKAGES_armv7="zynthian-ui"
 # Device: the generic mainline MSM8226 port (pmaports device/testing, linux-postmarketos-qcom-msm8226
 # with the s3ve3g's device tree; booted by lk2nd, flashed once with heimdall). The S III Neo's own
