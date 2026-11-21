@@ -69,6 +69,9 @@ DEVICES_x86_64="qemu-amd64"
 STAGES_armv7="zynthian"
 STAGE_zynthian_armv7="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none
+# OpenRC (channel edge), as on the S III Neo: in systemd-edge the armv7 build chroot fails to install
+# systemd 262 ("failed to commit usr/sbin/init", 2026-11-21; zynthian-arm7's CI and main's qt-base)
+SERVICE_MANAGER_armv7=openrc
 IMAGE_PACKAGES_armv7="zynthian-ui"
 # Device: the generic mainline MSM8226 port (pmaports device/testing, linux-postmarketos-qcom-msm8226
 # with the s3ve3g's device tree; booted by lk2nd, flashed once with heimdall). The S III Neo's own

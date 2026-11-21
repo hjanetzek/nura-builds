@@ -70,6 +70,11 @@ def flags_extra(arch, set_cflags):
     with open(os.path.join(here, "scripts", "abuild-cpu.conf")) as f:
         conf = f.read()
     extra = conf if re.search(rf"^\s*{re.escape(arch)}\)", conf, re.M) else ""
+    # the service manager the packages are built for, when it isn't systemd (as stage_hash)
+    target = os.path.join(here, "targets", os.environ.get("TARGET", "zynthian") + ".sh")
+    sm = shell_vars(target, [f"SERVICE_MANAGER_{arch}"])[f"SERVICE_MANAGER_{arch}"]
+    if sm and sm != "systemd":
+        extra += "\0service manager: " + sm
     if set_cflags:
         extra += "\0cflags: " + set_cflags
     return extra
