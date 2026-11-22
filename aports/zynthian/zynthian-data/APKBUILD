@@ -5,11 +5,12 @@
 # install/upgrade and, by the trigger, whenever a plugin package changes its bundle.
 pkgname=zynthian-data
 pkgver=2610_git20261030
-pkgrel=2
+pkgrel=3
 pkgdesc="zynthian factory data: presets, soundfonts, snapshots, sample files"
 url="https://github.com/zynthian/zynthian-data"
 arch="noarch"
 license="GPL-3.0-or-later AND custom"
+makedepends="python3"
 options="!check"
 # TimGM6mb (Alpine's soundfont-timgm, also pulled in by fluidsynth-libs): linked below
 depends="soundfont-timgm python3 py3-rdflib"
@@ -24,6 +25,7 @@ source="
 	zynthian-help-$_help_commit.tar.gz::https://github.com/zynthian/zynthian-help/archive/$_help_commit.tar.gz
 	zynthian-sys-$_sys_commit.tar.gz::https://github.com/zynthian/zynthian-sys/archive/$_sys_commit.tar.gz
 	zynthian-lv2-custom
+	nura-engine-config.json
 	"
 builddir="$srcdir"
 
@@ -63,6 +65,18 @@ _sys_config() {
 	license="GPL-3.0-or-later"
 	mkdir -p "$subpkgdir"/usr/share/zynthian/zynthian-sys
 	cp -a "$srcdir"/zynthian-sys-$_sys_commit/config "$subpkgdir"/usr/share/zynthian/zynthian-sys/config
+	# nura's own engines' defaults (nura-engine-config.json: e.g. eDrumSynth enabled), added to
+	# zynthian-sys' engine_config.json without changing its entries; zynthian merges them at its
+	# engine rescan
+	python3 - "$srcdir"/nura-engine-config.json \
+		"$subpkgdir"/usr/share/zynthian/zynthian-sys/config/engine_config.json <<-'EOF'
+	import json, sys
+	add = json.load(open(sys.argv[1]))
+	cfg = json.load(open(sys.argv[2]))
+	for k, v in add.items():
+	    cfg.setdefault(k, v)
+	json.dump(cfg, open(sys.argv[2], "w"), indent=4)
+	EOF
 }
 
 sha512sums="
@@ -70,4 +84,5 @@ sha512sums="
 d6d8ad9dbac17d3db09aac14e9d62bfbc0a0a300b80aca878b6f576406e5cf317bf322ee28d5f595c30a55ddf0c2eb5547b0c9afd0a8255f9f45d49141f3edd8  zynthian-help-510e768852648f1ea11d5f2d3a94a3c818f6368d.tar.gz
 687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
 7a73440c1f4ca21d22f9d1444facd89f8232800fa8eb3983a7bdb2fd80928a084694a01b2be928d2144029f20617a85b1518e8e1de363c29188740aa8168854f  zynthian-lv2-custom
+1176863881cf616f7b31449538869445533322a763c44faa016413a77a1d4461a84304ee68aa4f958817a03b523081d81b7d28d8b834e7176ae1d69f22ed3074  nura-engine-config.json
 "

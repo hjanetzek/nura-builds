@@ -1,0 +1,17 @@
+{
+	"JV/eDrumSynth": {
+		"ID": "8c0517a01b",
+		"NAME": "eDrumSynth",
+		"TITLE": "eDrumSynth",
+		"TYPE": "MIDI Synth",
+		"CAT": "Percussion",
+		"ENABLED": true,
+		"INDEX": 9999,
+		"URL": "https://github.com/hjanetzek/mdt-lv2/edrumsynth",
+		"UI": null,
+		"DESCR": "MicroDexed-touch's drum engine (LXR): 7 voices on the GM drum notes.",
+		"QUALITY": 0,
+		"COMPLEX": 0,
+		"EDIT": 0
+	}
+}
