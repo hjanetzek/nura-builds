@@ -13,6 +13,7 @@ KEEPGOING=1
 # mod-utilities, guitarix, pd-cyclone, mod-pitchshifter, and zynaddsubfx (one of zynthian's own
 # engines). Also Helm and DISTRHO's ports (OB-Xd, TAL, ...), JUCE builds but used by many factory
 # snapshots (a try: heavy on the S III's CPU).
+# 2026-11-23: eDrumSynth (MicroDexed-touch's drum engine; 12 % of the S III's CPU, idle or playing).
 PACKAGES_armv7="zynthian-jalv drivenbymoss zynaddsubfx aeolus sooperlooper libgig puredata fluid-soundfont linuxsampler setbfree
 	abgate-lv2 aether-lv2 aida-x-lv2 ams-lv2 artyfx-lv2 avldrums-lv2 bolliedelay-lv2 chow-centaur-lv2
 	dexed-lv2 dpf-plugins-lv2 dragonfly-reverb-lv2 eq10q-lv2 fabla-lv2 foo-yc20-lv2 granulator-lv2
@@ -22,7 +23,8 @@ PACKAGES_armv7="zynthian-jalv drivenbymoss zynaddsubfx aeolus sooperlooper libgi
 	synthv1-lv2 talentedhack-lv2 triceratops-lv2 ykchorus-lv2 zynmi-lv2 pd-abl-link pd-clocker
 	pd-freeverb pd-ggee pd-grids pd-hcs pd-iemlib pd-midifile pd-osc pd-plaits pd-tb-peakcomp
 	pd-unauthorized pd-cyclone mod-mda-lv2 geonkick-lv2 mod-utilities-lv2 guitarix-lv2
-	mod-pitchshifter-lv2 helm-lv2 distrho-ports-lv2"
+	mod-pitchshifter-lv2 helm-lv2 distrho-ports-lv2
+	edrumsynth-lv2"
 # armv7 is a playground (what the old phone can do): -funsafe-math-optimizations lets GCC vectorise
 # float code with armv7 NEON (NEON flushes denormals); -O3 because many plugin builds end up with
 # abuild's -Os (DPF with NOOPT=true, meson's plain build type, Makefiles that append $(CFLAGS) after
