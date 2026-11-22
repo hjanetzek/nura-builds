@@ -4,7 +4,7 @@
 # Zynthian engine key "JV/eDrumSynth". The plugin is lxrdrums/ in the mdt-lv2
 # repository. No ARM flags here: they come from the build.
 pkgname=edrumsynth-lv2
-_commit=1da1ea7eae395dbf9020f7b8c2170cc28299f4ee
+_commit=fc5053ee4f7211c4aaed34160b6a233348a39394
 pkgver=0.0.1_git20261123
 pkgrel=0
 pkgdesc="eDrumSynth: synthesized drums (MicroDexed-touch's drum engine) as an LV2 instrument"
@@ -32,5 +32,5 @@ package() {
 	DESTDIR="$pkgdir" cmake --install build
 }
 sha512sums="
-ac55d75459707b190c16b014ff8f86e83d159d963807c2e439d0c9b04d71d4f4255a04b15694afaa9f6d27a0ab3912870e0798c8b2560cf25229dc58491bdd0d  edrumsynth-lv2-1da1ea7eae395dbf9020f7b8c2170cc28299f4ee.tar.gz
+b56a73172d0ff4075b4e841896fdb9a4ba971f55c459baed17a4c16b7092b800151f90358c91ff691b6aaa44beb51c8c6a55d838aac642b56d331495213f54fa  edrumsynth-lv2-fc5053ee4f7211c4aaed34160b6a233348a39394.tar.gz
 "
