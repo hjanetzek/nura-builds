@@ -1,0 +1,36 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# eDrumSynth: MicroDexed-touch's drum engine (the voices of the OpenElixir-02
+# firmware) as an LV2 instrument (URI https://github.com/hjanetzek/mdt-lv2/edrumsynth);
+# Zynthian engine key "JV/eDrumSynth". The plugin is lxrdrums/ in the mdt-lv2
+# repository. No ARM flags here: they come from the build.
+pkgname=edrumsynth-lv2
+_commit=1da1ea7eae395dbf9020f7b8c2170cc28299f4ee
+pkgver=0.0.1_git20261123
+pkgrel=0
+pkgdesc="eDrumSynth: synthesized drums (MicroDexed-touch's drum engine) as an LV2 instrument"
+url="https://github.com/hjanetzek/mdt-lv2"
+arch="all"
+license="GPL-3.0-only"
+makedepends="cmake samurai lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/hjanetzek/mdt-lv2/archive/$_commit.tar.gz"
+builddir="$srcdir/mdt-lv2-$_commit/lxrdrums"
+
+build() {
+	cmake -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=None \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+check() {
+	# the generator, render and resampler tests; the TTL validators
+	# (lv2lint, sord_validate, lv2_validate) run only where installed
+	ctest --test-dir build --output-on-failure
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+sha512sums="
+ac55d75459707b190c16b014ff8f86e83d159d963807c2e439d0c9b04d71d4f4255a04b15694afaa9f6d27a0ab3912870e0798c8b2560cf25229dc58491bdd0d  edrumsynth-lv2-1da1ea7eae395dbf9020f7b8c2170cc28299f4ee.tar.gz
+"
