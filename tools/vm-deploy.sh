@@ -19,9 +19,14 @@
 #   -i           install only: the packages built last for the architecture
 #   -R           don't restart zynthian afterwards
 #   -t SECONDS   timeout of each step of the checked restart (default 120)
+#   -K           keep the builder VM running afterwards (see below)
 #   PACKAGE      default zynthian-ui; zynthian-ui, zyncoder(-hw), zynthian-webconf and zynthian-jalv
 #                come from their checkouts (--src), anything else from this repository's recipes
-# Environment: PORT (the VM's SSH port, default 2240).
+# Environment: PORT (the VM's SSH port, default 2240), VM_DIR (its directory, default
+# /mnt/ssd860/qemu/nura-builds-builder).
+#
+# The builder VM is started when it isn't running and powered off again after the build when
+# this script started it (idle VMs only cost resources); one that was running already stays on.
 #
 # After installing zynthian-ui, zynthian restarts checked (zynthian-ui's tools/restart_ui.py on the
 # device: waits until it is idle, RESTART_UI, a new process that answers idle); if zynthian
@@ -50,11 +55,24 @@ vm_rsync() {
 }
 usage() { sed -n '2,/^set -eu/{/^set -eu/d;s/^# \{0,1\}//;p}' "$0"; exit "${1:-0}"; }
 
-device='' host='' user='' dport='' arch='' build=1 install=1 restart=1 timeout=120
+device='' host='' user='' dport='' arch='' build=1 install=1 restart=1 timeout=120 keep=0 started=0
+VM_DIR=${VM_DIR:-/mnt/ssd860/qemu/nura-builds-builder}
+tmp=''
+# At the end (also after a failure): the temporary directory, and the builder VM powered off
+# again if this script started it
+cleanup() {
+	[ -n "$tmp" ] && rm -rf "$tmp"
+	if [ "$started" = 1 ] && [ "$keep" = 0 ]; then
+		echo "== powering the builder VM off"
+		vm "sudo poweroff" >/dev/null 2>&1 ||
+			{ [ -f "$VM_DIR/qemu.pid" ] && kill "$(cat "$VM_DIR/qemu.pid")" 2>/dev/null; } || true
+	fi
+}
+trap cleanup EXIT
 ui=$parent/zynthian-ui zyncoder=$parent/zyncoder jalv=$parent/jalv
 webconf=$parent/zynthian-webconf-nura
 [ -d "$webconf" ] || webconf=$parent/zynthian-webconf
-while getopts d:H:u:P:a:U:z:W:j:biRt:h opt; do
+while getopts d:H:u:P:a:U:z:W:j:biRt:Kh opt; do
 	case $opt in
 		d) device=$OPTARG ;;
 		H) host=$OPTARG ;;
@@ -69,6 +87,7 @@ while getopts d:H:u:P:a:U:z:W:j:biRt:h opt; do
 		i) build=0 ;;
 		R) restart=0 ;;
 		t) timeout=$OPTARG ;;
+		K) keep=1 ;;
 		h) usage ;;
 		*) usage 1 ;;
 	esac
@@ -115,7 +134,22 @@ src_of() {	# package -> checkout for --src (empty: from the recipe)
 }
 
 if [ $build = 1 ]; then
-	vm true 2>/dev/null || { echo "builder VM not reachable on port $PORT (see the header)" >&2; exit 1; }
+	if ! vm true 2>/dev/null; then
+		# Start it (headless, own ports; zynthian-ui's run_qemu.sh) and wait for SSH
+		[ -x "$ui/tools/run_qemu.sh" ] && [ -f "$VM_DIR/zynthian-qemu-amd64.img" ] ||
+			{ echo "builder VM not reachable on port $PORT and can't be started ($ui/tools/run_qemu.sh, $VM_DIR)" >&2; exit 1; }
+		echo "== starting the builder VM ($VM_DIR, port $PORT)"
+		# -n: no OpenGL (a build VM doesn't need it; egl-headless fails without a render node)
+		(cd "$ui" && setsid tools/run_qemu.sh -d "$VM_DIR" -s 32G -m 8G -c 16 -D none -A none -n \
+			-p "$PORT" -w 8100 < /dev/null > "$VM_DIR/run.log" 2>&1 &)
+		started=1
+		i=0
+		until vm true 2>/dev/null; do
+			i=$((i + 1))
+			[ $i -le 60 ] || { echo "builder VM didn't come up (see $VM_DIR/serial.log)" >&2; exit 1; }
+			sleep 5
+		done
+	fi
 	# the image has neither: CI's scripts (pin-binary.sh) and the release download need curl
 	vm "command -v curl >/dev/null && command -v rsync >/dev/null || sudo apk add -q curl rsync"
 	vm_rsync "$here/" "user@127.0.0.1:$vrepo/"
@@ -165,7 +199,6 @@ fi
 
 # The packages to install: built in this run (or with -i the newest of each name), without -dbg
 tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
 if [ $build = 1 ]; then
 	files=$(vm "cd $pkgdir && find . -maxdepth 1 -name '*.apk' -newer /tmp/vm-deploy-mark-$arch | sed 's|^\./||'")
 else
