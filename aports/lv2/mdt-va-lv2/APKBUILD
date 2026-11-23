@@ -1,0 +1,37 @@
+# Contributor: Hannes Janetzek <hannes.janetzek@gmail.com>
+# mTrio and mAnalog: MicroDexed-touch's Trio and Analog synths as LV2
+# instruments (URIs https://github.com/hjanetzek/mdt-lv2/mtrio, .../manalog);
+# Zynthian engine keys "JV/mTrio", "JV/mAnalog". The plugins are va/ in the
+# mdt-lv2 repository (it uses ../common).
+# No ARM flags here: they come from the build.
+pkgname=mdt-va-lv2
+_commit=ebd2cf81510443018e78ccece2d9ef904c58b5fa
+pkgver=0.0.1_git20261123
+pkgrel=0
+pkgdesc="mTrio and mAnalog: MicroDexed-touch's Trio and Analog synths as LV2 instruments"
+url="https://github.com/hjanetzek/mdt-lv2"
+arch="all"
+license="GPL-3.0-only"
+makedepends="cmake samurai lv2-dev"
+source="$pkgname-$_commit.tar.gz::https://github.com/hjanetzek/mdt-lv2/archive/$_commit.tar.gz"
+builddir="$srcdir/mdt-lv2-$_commit/va"
+
+build() {
+	cmake -B build -G Ninja \
+		-DCMAKE_BUILD_TYPE=None \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+check() {
+	# the generator, render and import tests; the TTL validators
+	# (lv2lint, sord_validate, lv2_validate) run only where installed
+	ctest --test-dir build --output-on-failure
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+sha512sums="
+4f3672a787084a7b2b2a033a280afe230775d75db1edb7582c7f71022f058bd50d20911ffc7dfe655300b8b0efb0ecab38f011bf7879e524110ccb46be9c1230  mdt-va-lv2-ebd2cf81510443018e78ccece2d9ef904c58b5fa.tar.gz
+"
