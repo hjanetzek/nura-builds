@@ -5,7 +5,7 @@
 # mdt-lv2 repository (it uses ../common).
 # No ARM flags here: they come from the build.
 pkgname=mdt-va-lv2
-_commit=ebd2cf81510443018e78ccece2d9ef904c58b5fa
+_commit=c25cd617ecbf4d72d15358a3a4d4b28a2830fd9b
 pkgver=0.0.1_git20261123
 pkgrel=0
 pkgdesc="mTrio and mAnalog: MicroDexed-touch's Trio and Analog synths as LV2 instruments"
@@ -33,5 +33,5 @@ package() {
 	DESTDIR="$pkgdir" cmake --install build
 }
 sha512sums="
-4f3672a787084a7b2b2a033a280afe230775d75db1edb7582c7f71022f058bd50d20911ffc7dfe655300b8b0efb0ecab38f011bf7879e524110ccb46be9c1230  mdt-va-lv2-ebd2cf81510443018e78ccece2d9ef904c58b5fa.tar.gz
+c7806ce5ec9ccd586af2292203996dd2f7a93591d56ca7689f20b81f73b539f0582dd7aced3310facee5f0eaffe052bb1c409d3b920ae15d822089d50af16630  mdt-va-lv2-c25cd617ecbf4d72d15358a3a4d4b28a2830fd9b.tar.gz
 "
