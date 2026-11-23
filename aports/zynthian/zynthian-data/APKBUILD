@@ -5,7 +5,7 @@
 # install/upgrade and, by the trigger, whenever a plugin package changes its bundle.
 pkgname=zynthian-data
 pkgver=2610_git20261030
-pkgrel=3
+pkgrel=4
 pkgdesc="zynthian factory data: presets, soundfonts, snapshots, sample files"
 url="https://github.com/zynthian/zynthian-data"
 arch="noarch"
@@ -84,5 +84,5 @@ sha512sums="
 d6d8ad9dbac17d3db09aac14e9d62bfbc0a0a300b80aca878b6f576406e5cf317bf322ee28d5f595c30a55ddf0c2eb5547b0c9afd0a8255f9f45d49141f3edd8  zynthian-help-510e768852648f1ea11d5f2d3a94a3c818f6368d.tar.gz
 687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
 7a73440c1f4ca21d22f9d1444facd89f8232800fa8eb3983a7bdb2fd80928a084694a01b2be928d2144029f20617a85b1518e8e1de363c29188740aa8168854f  zynthian-lv2-custom
-1176863881cf616f7b31449538869445533322a763c44faa016413a77a1d4461a84304ee68aa4f958817a03b523081d81b7d28d8b834e7176ae1d69f22ed3074  nura-engine-config.json
+da0d1777ef16fcb9f79f8f44e25a5d2482a72346feaca64895134da14b35ad7aab4ede32480cba6423fac18ec14de9d314ac5dc26cf0f30b22c544b7469f3864  nura-engine-config.json
 "

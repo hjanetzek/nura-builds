@@ -13,5 +13,35 @@
 		"QUALITY": 0,
 		"COMPLEX": 0,
 		"EDIT": 0
+	},
+	"JV/mTrio": {
+		"ID": "ca4851645b",
+		"NAME": "mTrio",
+		"TITLE": "mTrio",
+		"TYPE": "MIDI Synth",
+		"CAT": "Synth",
+		"ENABLED": true,
+		"INDEX": 9999,
+		"URL": "https://github.com/hjanetzek/mdt-lv2/mtrio",
+		"UI": null,
+		"DESCR": "mTrio: three-oscillator synth (MicroDexed-touch Trio)",
+		"QUALITY": 0,
+		"COMPLEX": 0,
+		"EDIT": 0
+	},
+	"JV/mAnalog": {
+		"ID": "b7ac4cf220",
+		"NAME": "mAnalog",
+		"TITLE": "mAnalog",
+		"TYPE": "MIDI Synth",
+		"CAT": "Synth",
+		"ENABLED": true,
+		"INDEX": 9999,
+		"URL": "https://github.com/hjanetzek/mdt-lv2/manalog",
+		"UI": null,
+		"DESCR": "mAnalog: two-oscillator analog-style synth (MicroDexed-touch Analog)",
+		"QUALITY": 0,
+		"COMPLEX": 0,
+		"EDIT": 0
 	}
 }
