@@ -1,5 +1,5 @@
 # DrivenByMoss (Rust port) for zynthian on postmarketOS/Nura: the core library, its Python
-# binding and reference host, and the zynthian controller drivers (doc/ZYNTHIAN_PLAN.md §5), with
+# binding and reference host (the zynthian controller drivers are in zynthian-ui), with
 # libdbm_nihost.so and its udev rule: the Maschine Mk2 and JAM drivers drive the devices over
 # hidraw in zynthian's process (support/linux/ni_host, doc/ZYNTHIAN_INTEGRATION.md §10); the
 # dbm-nihost daemon (support/linux/ni_host, no package; Bitwig and the like) is not needed.
@@ -11,10 +11,10 @@
 # A local checkout: pmbootstrap build --src=/path/to/drivenbymoss-rust drivenbymoss.
 # prepare() fetches the crates of Cargo.lock (network).
 pkgname=drivenbymoss
-pkgver=26.1.0_p20261118000000
+pkgver=26.1.0_p20261125224147
 pkgrel=0
-_commit=6a14d552514e8b83415094a4684890501e0ce327
-pkgdesc="DrivenByMoss controller support (Rust port) with zynthian controller drivers"
+_commit=d030924f983c9d3add1e4ced481a5bb4fcd142ac
+pkgdesc="DrivenByMoss controller support (Rust port): core library, Python binding"
 url="https://github.com/hjanetzek/drivenbymoss-rust"
 arch="aarch64 armv7 x86_64"
 license="LGPL-3.0-only AND GPL-2.0-or-later"
@@ -61,7 +61,9 @@ build() {
 package() {
 	install -Dm755 target/release/libdrivenbymoss.so -t "$pkgdir"/usr/lib/drivenbymoss/
 	install -Dm755 build-nihost/libdbm_nihost.so -t "$pkgdir"/usr/lib/drivenbymoss/
-	# hidraw access to the Maschines for the group audio (and uaccess). In /etc, not
+	# hidraw access to the Maschines and usbdevfs access to the Push 2/3 displays (the Python
+	# writer drivenbymoss/usb.py, zynthian's Push drivers) for the group audio (and uaccess;
+	# the file name stays for the upgrade). In /etc, not
 	# /usr/lib/udev/rules.d: postmarketOS' mkinitfs has an apk trigger on /usr/lib/udev and would
 	# rebuild the initramfs at every install (the rule isn't needed there); the post-install
 	# script reloads udev instead. Not 70-dbm-nihost.rules: that name belongs to the former
@@ -74,19 +76,12 @@ package() {
 	mkdir -p "$py"
 	cp -r bindings/python/drivenbymoss bindings/python/dbm_host "$py"/
 
-	# The drivers into zynthian's own driver folder (the user's folder is in the home directory,
-	# which a package can't fill; see the plan §5)
-	local ctrldev="$pkgdir"/usr/share/zynthian/zynthian-ui/zyngine/ctrldev
-	mkdir -p "$ctrldev"
-	cp -r backends/zynthian/ctrldev/. "$ctrldev"/
-
 	find "$pkgdir" -type d -name __pycache__ -prune -exec rm -rf {} +
 	python3 -m compileall -q -d /usr/share/drivenbymoss/python "$py"
-	python3 -m compileall -q -d /usr/share/zynthian/zynthian-ui/zyngine/ctrldev "$ctrldev"
 }
 
 sha512sums="
-a08a6c53b8602649cc6b6f25dad03995cb085fc7f23a485be4b13900cd0847422c686dbc81953e90a9e778a166937d0f72e32d9ba9716e1e4df248bdc31e0c50  drivenbymoss-rust-6a14d552514e8b83415094a4684890501e0ce327.tar.gz
+d2804c13fbc25491e918ecbfb2cf7036f621cb2229eb0fbc849f01efb924d26bcecf86dff677bb278b7d81373ec0bab0190d5770f60deb8fee0fa3207e848bb8  drivenbymoss-rust-d030924f983c9d3add1e4ced481a5bb4fcd142ac.tar.gz
 35710f756f26d796cf18f388b268827579dfcdefd0deee0eabe2c283b3f45b8d125d310441acf9e3c9c01dbd9406bffa152c3b197bc7634eac13c3bdf5e0a4e0  drivenbymoss.post-install
 35710f756f26d796cf18f388b268827579dfcdefd0deee0eabe2c283b3f45b8d125d310441acf9e3c9c01dbd9406bffa152c3b197bc7634eac13c3bdf5e0a4e0  drivenbymoss.post-upgrade
 "
