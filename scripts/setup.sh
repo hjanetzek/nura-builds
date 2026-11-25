@@ -74,24 +74,37 @@ if [ -n "${GITHUB_ACTIONS:-}" ] && { [ -z "${NURA_ABUILD_KEY:-}" ] || [ -z "${NU
 	echo "::error::NURA_ABUILD_KEY and NURA_ABUILD_KEY_NAME secrets are not set (see README: Secrets)"
 	exit 1
 fi
+# The work dir belongs to the user (pmbootstrap writes its log there), config_abuild to
+# pmbootstrap's build user (12345), as pmbootstrap sets them up itself
+keys="$NURA_WORK/config_abuild"
+key_name=
 if [ -n "${NURA_ABUILD_KEY:-}" ] && [ -n "${NURA_ABUILD_KEY_NAME:-}" ]; then
-	keys="$NURA_WORK/config_abuild"
-	# The work dir belongs to the user (pmbootstrap writes its log there), config_abuild to
-	# pmbootstrap's build user (12345), as pmbootstrap sets them up itself
+	key_name=$NURA_ABUILD_KEY_NAME
 	mkdir -p "$NURA_WORK"
 	sudo mkdir -p "$keys"
-	printf '%s\n' "$NURA_ABUILD_KEY" | sudo tee "$keys/$NURA_ABUILD_KEY_NAME" >/dev/null
-	sudo openssl rsa -in "$keys/$NURA_ABUILD_KEY_NAME" -pubout -out "$keys/$NURA_ABUILD_KEY_NAME.pub" 2>/dev/null
-	echo "PACKAGER_PRIVKEY=\"/home/pmos/.abuild/$NURA_ABUILD_KEY_NAME\"" | sudo tee "$keys/abuild.conf" >/dev/null
+	printf '%s\n' "$NURA_ABUILD_KEY" | sudo tee "$keys/$key_name" >/dev/null
+elif ! sudo grep -qs '^PACKAGER_PRIVKEY=' "$keys/abuild.conf"; then
+	# Locally (no CI key): a key of the work dir's own, as pmbootstrap's abuild-keygen makes
+	# one. pmbootstrap only does that itself when there is no abuild.conf yet, and the CPU
+	# baseline below writes one: a fresh work dir (e.g. tools/vm-deploy.sh's per service
+	# manager) had no key, and pmbootstrap index failed ("No private key found").
+	key_name="pmos@local-$(openssl rand -hex 4).rsa"
+	mkdir -p "$NURA_WORK"
+	sudo mkdir -p "$keys"
+	sudo openssl genrsa -out "$keys/$key_name" 4096 2>/dev/null
+fi
+if [ -n "$key_name" ]; then
+	sudo openssl rsa -in "$keys/$key_name" -pubout -out "$keys/$key_name.pub" 2>/dev/null
+	echo "PACKAGER_PRIVKEY=\"/home/pmos/.abuild/$key_name\"" | sudo tee "$keys/abuild.conf" >/dev/null
 	sudo chown -R 12345:12345 "$keys"
-	sudo chmod 600 "$keys/$NURA_ABUILD_KEY_NAME"
+	sudo chmod 600 "$keys/$key_name"
 	# Trusted in the chroots: config_apk_keys is mounted as their /etc/apk/keys. pmbootstrap only
 	# copies a key there when it generates one itself (no abuild.conf yet); root-owned like the
 	# repository keys it adds
 	sudo mkdir -p "$NURA_WORK/config_apk_keys"
-	sudo cp "$keys/$NURA_ABUILD_KEY_NAME.pub" "$NURA_WORK/config_apk_keys/"
-	sudo chown root:root "$NURA_WORK/config_apk_keys/$NURA_ABUILD_KEY_NAME.pub"
-	echo "signing key: $NURA_ABUILD_KEY_NAME"
+	sudo cp "$keys/$key_name.pub" "$NURA_WORK/config_apk_keys/"
+	sudo chown root:root "$NURA_WORK/config_apk_keys/$key_name.pub"
+	echo "signing key: $key_name"
 fi
 
 # CI: pmaports from the Actions cache, brought up to date with origin and without the changes of
