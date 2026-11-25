@@ -36,7 +36,7 @@ subpackages="
 	$pkgname-kernel-rpi-rt:kernel_rpi_rt
 	"
 install="$pkgname.post-install $pkgname.post-upgrade"
-# zynthian-sys (the boot animation zynloganim), at the commit zynthian-ui's zynthian-data uses
+# zynthian-sys (the boot animation zynloganim), at the commit of zynthian-sys-config
 _sys_commit=c2eea576e528e451270b829aa114f504bd34ee90
 source="
 	zynthian-sys-$_sys_commit.tar.gz::https://github.com/zynthian/zynthian-sys/archive/$_sys_commit.tar.gz

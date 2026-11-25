@@ -1,0 +1,41 @@
+# zynthian's configuration templates (zynthian-sys config/) with nura's engine defaults merged in.
+# A recipe of its own, not a zynthian-data subpackage as up to r4: a change of
+# nura-engine-config.json then doesn't bump zynthian-data (330 MB on every device).
+# Keep _sys_commit at the commit zynthian-data's comment names (the same zynthian-sys).
+pkgname=zynthian-sys-config
+pkgver=2610_git20261030
+pkgrel=5
+pkgdesc="zynthian configuration templates (from zynthian-sys)"
+url="https://github.com/zynthian/zynthian-sys"
+arch="noarch"
+license="GPL-3.0-or-later"
+makedepends="python3"
+options="!check"
+_sys_commit=c2eea576e528e451270b829aa114f504bd34ee90
+source="
+	zynthian-sys-$_sys_commit.tar.gz::https://github.com/zynthian/zynthian-sys/archive/$_sys_commit.tar.gz
+	nura-engine-config.json
+	"
+builddir="$srcdir/zynthian-sys-$_sys_commit"
+
+package() {
+	mkdir -p "$pkgdir"/usr/share/zynthian/zynthian-sys
+	cp -a config "$pkgdir"/usr/share/zynthian/zynthian-sys/config
+	# nura's own engines' defaults (nura-engine-config.json: e.g. eDrumSynth enabled), added to
+	# zynthian-sys' engine_config.json without changing its entries; zynthian merges them at its
+	# engine rescan
+	python3 - "$srcdir"/nura-engine-config.json \
+		"$pkgdir"/usr/share/zynthian/zynthian-sys/config/engine_config.json <<-'PY'
+	import json, sys
+	add = json.load(open(sys.argv[1]))
+	cfg = json.load(open(sys.argv[2]))
+	for k, v in add.items():
+	    cfg.setdefault(k, v)
+	json.dump(cfg, open(sys.argv[2], "w"), indent=4)
+	PY
+}
+
+sha512sums="
+687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
+da0d1777ef16fcb9f79f8f44e25a5d2482a72346feaca64895134da14b35ad7aab4ede32480cba6423fac18ec14de9d314ac5dc26cf0f30b22c544b7469f3864  nura-engine-config.json
+"

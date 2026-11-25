@@ -9,9 +9,10 @@ zynthian-packages https://github.com/hjanetzek/zynthian-packages nura nura
 zynthian-webconf https://github.com/hjanetzek/zynthian-webconf nura nura
 "
 
-# The recipes of zynthian-ui, zyncoder(-hw), zynthian-data, zynthian-hw and the kiosk package
-# (postmarketos-ui-zynthian) are nura-builds' own (aports/zynthian/, from zynthian-ui's nura/ with
-# its history, 2026-11-19); zynthian-ui and zyncoder are still built from their checkouts (--src).
+# The recipes of zynthian-ui, zyncoder(-hw), zynthian-data, zynthian-sys-config, zynthian-hw and the
+# kiosk package (postmarketos-ui-zynthian) are nura-builds' own (aports/zynthian/, from zynthian-ui's
+# nura/ with its history, 2026-11-19); zynthian-ui and zyncoder are still built from their
+# checkouts (--src).
 
 # Stages, built in this order; each one a list of pmbootstrap build arguments, separated by ";".
 # @<repo> stands for the checkout of a repository (for --src builds). Only the target's own
@@ -28,7 +29,7 @@ STAGES="zynthian upstream"
 # the distfiles cache first. DrivenByMoss (its zynthian controller drivers, the NI Maschine Mk2/JAM
 # support in zynthian's process included) from its checkout too, first (no dependency on the others;
 # the Rust build fails early); its recipe fetches the Rust crates itself. The kiosk package depends on it.
-STAGE_zynthian="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
+STAGE_zynthian="--src=@zyncoder zyncoder; zynthian-data; zynthian-sys-config; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf; postmarketos-ui-zynthian"
 SEED_zynthian="aports/zynthian/seed-distfiles.sh"
 # aarch64: also the zynthian kits' hardware (Raspberry Pi 4, docs/zynthian-rpi.md): zyncoder-hw (the
 # kits' builds of zyncore, from the zyncoder checkout) and zynthian-hw (zynthian-kit, the kit setup)
@@ -67,7 +68,7 @@ DEVICES_x86_64="qemu-amd64"
 # zynthian-ui installed, for bringing up the device.
 # Overrides: <VAR>_<arch> (common.sh: STAGES, UI, IMAGE_PACKAGES; STAGE_<stage>_<arch>).
 STAGES_armv7="zynthian"
-STAGE_zynthian_armv7="--src=@zyncoder zyncoder; zynthian-data; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
+STAGE_zynthian_armv7="--src=@zyncoder zyncoder; zynthian-data; zynthian-sys-config; --src=@zynthian-ui zynthian-ui; --src=@zynthian-packages zynthian-packages; --src=@zynthian-webconf zynthian-webconf"
 UI_armv7=none
 # OpenRC (channel edge), as on the S III Neo: in systemd-edge the armv7 build chroot fails to install
 # systemd 262 ("failed to commit usr/sbin/init", 2026-11-21; zynthian-arm7's CI and main's qt-base)
