@@ -76,8 +76,12 @@ for d in /usr/lib/lv2 "${XDG_DATA_HOME:-$HOME/.local/share}/zynthian/plugins/lv2
 done
 if [ -n "$rescan" ]; then
 	echo "rescanning zynthian's engines (LV2 plugins changed)" >&2
+	# with zynthian's environment (ZYNTHIAN_CONFIG_DIR, ZYNTHIAN_SYS_DIR, ...: zynthian-ui's
+	# desktop/zynthian_desktop_env.sh, as zynthian_desktop.sh sets it; bash): without it
+	# zynthian_lv2.py looks in /zynthian/... and writes no engine list
 	(cd "$zdir/zynthian-ui" && PYTHONPATH="$zdir/python${PYTHONPATH:+:$PYTHONPATH}" \
-		python3 zyngine/zynthian_lv2.py engines > /tmp/zyn-rescan.log 2>&1) ||
+		bash -c '. desktop/zynthian_desktop_env.sh && exec python3 zyngine/zynthian_lv2.py engines' \
+		> /tmp/zyn-rescan.log 2>&1) ||
 		echo "rescan failed, see /tmp/zyn-rescan.log" >&2
 fi
 
