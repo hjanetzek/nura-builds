@@ -15,6 +15,7 @@ KEEPGOING=1
 # snapshots (a try: heavy on the S III's CPU).
 # 2026-11-23: eDrumSynth (MicroDexed-touch's drum engine; 12 % of the S III's CPU, idle or playing),
 # mTrio and mAnalog (mdt-va-lv2: MicroDexed-touch's Trio and Analog; about 0.2 % with 8 voices).
+# rt-tests (cyclictest, ...: latency measurements, also of the S III's audio setup).
 PACKAGES_armv7="zynthian-jalv drivenbymoss zynaddsubfx aeolus sooperlooper libgig puredata fluid-soundfont linuxsampler setbfree
 	abgate-lv2 aether-lv2 aida-x-lv2 ams-lv2 artyfx-lv2 avldrums-lv2 bolliedelay-lv2 chow-centaur-lv2
 	dexed-lv2 dpf-plugins-lv2 dragonfly-reverb-lv2 eq10q-lv2 fabla-lv2 foo-yc20-lv2 granulator-lv2
@@ -25,7 +26,7 @@ PACKAGES_armv7="zynthian-jalv drivenbymoss zynaddsubfx aeolus sooperlooper libgi
 	pd-freeverb pd-ggee pd-grids pd-hcs pd-iemlib pd-midifile pd-osc pd-plaits pd-tb-peakcomp
 	pd-unauthorized pd-cyclone mod-mda-lv2 geonkick-lv2 mod-utilities-lv2 guitarix-lv2
 	mod-pitchshifter-lv2 helm-lv2 distrho-ports-lv2
-	edrumsynth-lv2 mdt-va-lv2"
+	edrumsynth-lv2 mdt-va-lv2 rt-tests"
 # armv7 is a playground (what the old phone can do): -funsafe-math-optimizations lets GCC vectorise
 # float code with armv7 NEON (NEON flushes denormals); -O3 because many plugin builds end up with
 # abuild's -Os (DPF with NOOPT=true, meson's plain build type, Makefiles that append $(CFLAGS) after
