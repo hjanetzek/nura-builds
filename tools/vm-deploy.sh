@@ -3,7 +3,8 @@
 # them on a device: no pmbootstrap and no sudo on this machine. The VM (zynthian-ui's
 # tools/run_qemu.sh with the Nura amd64 image, set up with tools/qemu_setup.sh: key login,
 # passwordless sudo) runs this repository's own CI scripts, so builds match CI's:
-# scripts/setup.sh (pmbootstrap config: edge, systemd; the recipes of aports/ linked) once per
+# scripts/setup.sh (pmbootstrap config: edge, the target's service manager: one work dir and config per
+# service manager; the recipes of aports/ linked) once per
 # architecture, the published packages of the architecture's release as the base (only what is
 # missing is downloaded; pmbootstrap then builds just the named packages), and
 # pmbootstrap build --src for the packages built from checkouts.
@@ -15,20 +16,21 @@
 #   -z DIR       zyncoder checkout (zyncoder, zyncoder-hw; default ../zyncoder)
 #   -W DIR       zynthian-webconf checkout, nura branch (default ../zynthian-webconf-nura)
 #   -j DIR       zynthian's jalv checkout (zynthian-jalv; default ../jalv)
+#   -M DIR       drivenbymoss-rust checkout (drivenbymoss; default ../drivenbymoss-rust)
 #   -b           build only, don't install
 #   -i           install only: the packages built last for the architecture
 #   -R           don't restart zynthian afterwards
 #   -t SECONDS   timeout of each step of the checked restart (default 120)
 #   -K           keep the builder VM running afterwards (see below)
-#   PACKAGE      default zynthian-ui; zynthian-ui, zyncoder(-hw), zynthian-webconf and zynthian-jalv
-#                come from their checkouts (--src), anything else from this repository's recipes
+#   PACKAGE      default zynthian-ui; zynthian-ui, zyncoder(-hw), zynthian-webconf, zynthian-jalv and
+#                drivenbymoss come from their checkouts (--src), anything else from this repository's recipes
 # Environment: PORT (the VM's SSH port, default 2240), VM_DIR (its directory, default
 # /mnt/ssd860/qemu/nura-builds-builder).
 #
 # The builder VM is started when it isn't running and powered off again after the build when
 # this script started it (idle VMs only cost resources); one that was running already stays on.
 #
-# After installing zynthian-ui, zynthian restarts checked (zynthian-ui's tools/restart_ui.py on the
+# After installing zynthian-ui (zyncoder, zynthian-jalv, drivenbymoss), zynthian restarts checked (zynthian-ui's tools/restart_ui.py on the
 # device: waits until it is idle, RESTART_UI, a new process that answers idle); if zynthian
 # isn't running, the session restarts. The device must trust the VM's package signing key: it is
 # installed there the first time (/etc/apk/keys). The first build of an architecture sets up
@@ -51,7 +53,9 @@ vm() {
 }
 vm_rsync() {
 	# shellcheck disable=SC2086
-	rsync -a --delete --exclude .git --exclude __pycache__ --exclude out -e "ssh -p $PORT $vm_opts" "$@"
+	# not /target: cargo's build directory of a Rust checkout (drivenbymoss-rust: 9 GB)
+	rsync -a --delete --exclude .git --exclude __pycache__ --exclude out --exclude /target \
+		-e "ssh -p $PORT $vm_opts" "$@"
 }
 usage() { sed -n '2,/^set -eu/{/^set -eu/d;s/^# \{0,1\}//;p}' "$0"; exit "${1:-0}"; }
 
@@ -77,10 +81,10 @@ cleanup() {
 	fi
 }
 trap cleanup EXIT
-ui=$parent/zynthian-ui zyncoder=$parent/zyncoder jalv=$parent/jalv
+ui=$parent/zynthian-ui zyncoder=$parent/zyncoder jalv=$parent/jalv dbm=$parent/drivenbymoss-rust
 webconf=$parent/zynthian-webconf-nura
 [ -d "$webconf" ] || webconf=$parent/zynthian-webconf
-while getopts d:H:u:P:a:U:z:W:j:biRt:Kh opt; do
+while getopts d:H:u:P:a:U:z:W:j:M:biRt:Kh opt; do
 	case $opt in
 		d) device=$OPTARG ;;
 		H) host=$OPTARG ;;
@@ -91,6 +95,7 @@ while getopts d:H:u:P:a:U:z:W:j:biRt:Kh opt; do
 		z) zyncoder=$OPTARG ;;
 		W) webconf=$OPTARG ;;
 		j) jalv=$OPTARG ;;
+		M) dbm=$OPTARG ;;
 		b) install=0 ;;
 		i) build=0 ;;
 		R) restart=0 ;;
@@ -125,12 +130,20 @@ dev() {
 	ssh $dev_opts -p "$dport" "$target" "$@"
 }
 
-# In the VM: this repository, the checkouts for --src, the work dir (shared by the architectures)
+# In the VM: this repository, the checkouts for --src, the work dir
 vrepo=/home/user/nura-builds-vm-deploy
 vsrc=/home/user/vm-deploy-src
-venv="TARGET=zynthian NURA_ARCH=$arch NURA_WORK=/home/user/nura-work NURA_SRC=/home/user/nura-src NURA_OUT=/home/user/nura-out"
-cfg=/home/user/.config/pmbootstrap-nura-zynthian.cfg
-pkgdir=/home/user/nura-work/packages/edge/$arch
+# One pmbootstrap work dir and config per service manager (the target's SERVICE_MANAGER for the
+# architecture, as setup.sh writes it): systemd (aarch64, x86_64) in nura-work as before, openrc
+# (armv7) in nura-work-openrc. One shared config would take the service manager of whichever
+# architecture setup.sh ran for last, and build the others in the wrong channel.
+sm=$(TARGET=zynthian NURA_ARCH=$arch sh "$here/scripts/target-var.sh" SERVICE_MANAGER)
+case $sm in
+	systemd) work=/home/user/nura-work cfg=/home/user/.config/pmbootstrap-nura-zynthian.cfg ;;
+	*) work=/home/user/nura-work-$sm cfg=/home/user/.config/pmbootstrap-nura-zynthian-$sm.cfg ;;
+esac
+venv="TARGET=zynthian NURA_ARCH=$arch NURA_WORK=$work NURA_CFG=$cfg NURA_SRC=/home/user/nura-src NURA_OUT=/home/user/nura-out"
+pkgdir=$work/packages/edge/$arch
 
 src_of() {	# package -> checkout for --src (empty: from the recipe)
 	case $1 in
@@ -138,6 +151,7 @@ src_of() {	# package -> checkout for --src (empty: from the recipe)
 		zyncoder | zyncoder-hw) echo "$zyncoder" ;;
 		zynthian-webconf) echo "$webconf" ;;
 		zynthian-jalv) echo "$jalv" ;;
+		drivenbymoss) echo "$dbm" ;;
 	esac
 }
 
@@ -163,9 +177,9 @@ if [ $build = 1 ]; then
 	vm "command -v curl >/dev/null && command -v rsync >/dev/null || sudo apk add -q curl rsync"
 	vm_rsync "$here/" "user@127.0.0.1:$vrepo/"
 	# pmbootstrap set up for the architecture (once): CI's setup.sh
-	if ! vm "[ -f /home/user/nura-work/.vm-deploy-$arch ]"; then
+	if ! vm "[ -f $work/.vm-deploy-$arch ]"; then
 		echo "== setting up pmbootstrap for $arch in the VM (scripts/setup.sh)"
-		vm "cd $vrepo && $venv scripts/setup.sh && touch /home/user/nura-work/.vm-deploy-$arch"
+		vm "cd $vrepo && $venv scripts/setup.sh && touch $work/.vm-deploy-$arch"
 	fi
 	# The release of the architecture into the local repository: what is missing (public
 	# downloads, no token), signed with CI's key, which the build chroots then trust
@@ -182,10 +196,17 @@ if [ $build = 1 ]; then
 		echo \"\$n downloaded, \$(wc -l < \$t/files) in the release\"
 		# (pmbootstrap creates its own key with the first build; it looks for abuild.conf, so
 		# the directory may exist before)
-		sudo mkdir -p /home/user/nura-work/config_abuild
-		sudo cp $vrepo/keys/nura-builds-ci.rsa.pub /home/user/nura-work/config_abuild/
-		sudo chown -R 12345:12345 /home/user/nura-work/config_abuild
-		sudo chown -R 12345:12345 /home/user/nura-work/packages
+		sudo mkdir -p $work/config_abuild
+		sudo cp $vrepo/keys/nura-builds-ci.rsa.pub $work/config_abuild/
+		sudo chown -R 12345:12345 $work/config_abuild
+		sudo chown -R 12345:12345 $work/packages
+		# trusted in the chroots (config_apk_keys is their /etc/apk/keys), as setup.sh does
+		# with the CI key in CI
+		sudo mkdir -p $work/config_apk_keys
+		sudo cp $vrepo/keys/nura-builds-ci.rsa.pub $work/config_apk_keys/
+		# index signs with the work dir's key from the native chroot's ~/.abuild, which only a
+		# build init sets up: a fresh work dir has had no build yet
+		pmbootstrap -c $cfg -y build_init -b \$(uname -m) >/dev/null
 		pmbootstrap -c $cfg -y index >/dev/null"
 	vm "touch /tmp/vm-deploy-mark-$arch"
 	for p in "$@"; do
@@ -222,9 +243,9 @@ done
 echo "== installing on $target: $(echo $files)"
 
 # The VM's signing key on the device (once)
-key=$(vm "cd /home/user/nura-work/config_abuild && ls *.rsa.pub | grep -v '^nura-builds-ci'" | head -n 1)
+key=$(vm "cd $work/config_abuild && ls *.rsa.pub | grep -v '^nura-builds-ci'" | head -n 1)
 if ! dev "[ -f /etc/apk/keys/$key ]"; then
-	vm "cat /home/user/nura-work/config_abuild/$key" | dev "sudo tee /etc/apk/keys/$key >/dev/null"
+	vm "cat $work/config_abuild/$key" | dev "sudo tee /etc/apk/keys/$key >/dev/null"
 	echo "the device trusts the VM's key now ($key)"
 fi
 dev "rm -rf /tmp/vm-deploy && mkdir -p /tmp/vm-deploy"
@@ -236,7 +257,8 @@ names=$(for f in $files; do echo "$f" | sed -E 's/-[0-9][^-]*-r[0-9]+\.apk$//'; 
 dev "sudo apk add --no-interactive /tmp/vm-deploy/*.apk | grep -E '^\(|^OK|ERROR' ; sudo apk add --no-interactive $names >/dev/null; rm -rf /tmp/vm-deploy"
 
 # zynthian restarted, checked
-if [ $restart = 1 ] && echo " $names " | grep -qE ' (zynthian-ui|zyncoder|zynthian-jalv) '; then
+# (drivenbymoss too: it ships zynthian's DrivenByMoss controller drivers, loaded by zynthian-ui)
+if [ $restart = 1 ] && echo " $names " | grep -qE ' (zynthian-ui|zyncoder|zynthian-jalv|drivenbymoss) '; then
 	restart_py=$ui/tools/restart_ui.py
 	rc=0
 	if [ -f "$restart_py" ]; then
