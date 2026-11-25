@@ -59,10 +59,18 @@ device='' host='' user='' dport='' arch='' build=1 install=1 restart=1 timeout=1
 VM_DIR=${VM_DIR:-/mnt/ssd860/qemu/nura-builds-builder}
 tmp=''
 # At the end (also after a failure): the temporary directory, and the builder VM powered off
-# again if this script started it
+# again if this script started it and no other run of it uses the VM (each run registers in the
+# VM's /tmp/vm-deploy-users; entries older than 3 h count as left over)
+user_mark=/tmp/vm-deploy-users/$(hostname)-$$
 cleanup() {
 	[ -n "$tmp" ] && rm -rf "$tmp"
+	vm "rm -f $user_mark" >/dev/null 2>&1 || true
 	if [ "$started" = 1 ] && [ "$keep" = 0 ]; then
+		others=$(vm "find /tmp/vm-deploy-users -type f -mmin -180 2>/dev/null | wc -l" 2>/dev/null || echo 0)
+		if [ "${others:-0}" -gt 0 ]; then
+			echo "== builder VM left running: $others other vm-deploy run(s) use it"
+			return
+		fi
 		echo "== powering the builder VM off"
 		vm "sudo poweroff" >/dev/null 2>&1 ||
 			{ [ -f "$VM_DIR/qemu.pid" ] && kill "$(cat "$VM_DIR/qemu.pid")" 2>/dev/null; } || true
@@ -150,6 +158,7 @@ if [ $build = 1 ]; then
 			sleep 5
 		done
 	fi
+	vm "mkdir -p /tmp/vm-deploy-users && touch $user_mark"
 	# the image has neither: CI's scripts (pin-binary.sh) and the release download need curl
 	vm "command -v curl >/dev/null && command -v rsync >/dev/null || sudo apk add -q curl rsync"
 	vm_rsync "$here/" "user@127.0.0.1:$vrepo/"
