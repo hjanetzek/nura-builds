@@ -8,7 +8,7 @@ pkgname=device-samsung-s3ve3g
 pkgdesc="Samsung Galaxy S III Neo"
 # nura-builds: pmaports' pkgver 4 + 100
 pkgver=104
-pkgrel=9
+pkgrel=10
 url="https://postmarketos.org"
 license="MIT"
 arch="armv7"
@@ -58,6 +58,7 @@ source="
 	s3ve3g-mdt.confd
 	s3ve3g-session.sh
 	s3ve3g-midi.conf
+	s3ve3g-mdt-keys.py
 "
 
 build() {
@@ -155,6 +156,9 @@ package() {
 	# MicroDexed-touch as the session instead of zynthian (headless with JACK; package
 	# microdexed-touch, not a dependency); s3ve3g-session (OpenRC) switches
 	install -Dm755 "$srcdir"/s3ve3g-mdt.sh "$pkgdir"/usr/bin/s3ve3g-mdt
+	# the phone's keys to MDT's control port (python3, not a dependency: zynthian brings it;
+	# without it s3ve3g-mdt starts no relay)
+	install -Dm755 "$srcdir"/s3ve3g-mdt-keys.py "$pkgdir"/usr/bin/s3ve3g-mdt-keys
 	# the ALSA sequencer (MIDI programs; nothing else loads it here)
 	install -Dm644 "$srcdir"/s3ve3g-midi.conf "$pkgdir"/etc/modules-load.d/s3ve3g-midi.conf
 	install -Dm644 "$srcdir"/s3ve3g-zynthian.service \
@@ -224,9 +228,10 @@ c5815433ce0a04cd243ec6249d94532a3102ed45c2c6687eec37622d36cb88293875777fe8d555d6
 690e5cba0f0cd79ac61a93ad16b6f8989af3aba524985da7541df5be7952c8ee8e8506ff031bb84ef6049de7d89f4c893b6d9919667cda0cb41761dc9642e61d  s3ve3g-zynthian.confd
 8781cb4339dbd32562fd2d5663c08acb2992898809e9f2b1f75cf4e8b8fd4e204596f12a311020beeb4ab330003b3640b12fe0f1aa23f5fb9600b007c8b35325  s3ve3g-zynthian.service
 1a0dc158d134f8541811b17b1a98b742f39ddc3f08a576cb1f4664bb76ea7dae3703c1ed0e0bcb8d346df63fd5bdbd986e2e134ae6946552d7208c1ec0d1326c  s3ve3g-jack.sh
-54ce6f6d6f02c2b6fa69ce75b8f7143cc642923239d61f9d94662a0b232698ac5a22644e04966cdc21d4ab7ea1d74bcadb569244c12d634b8715a1d2090ef254  s3ve3g-mdt.sh
-dadb2e93451502de25307498503cf414bee029d88c8866c9649d3bf3ae5a854bcd160ce68eb70381a3fab049e8c6a9f88716e1324e925eef712d01e23034dfb6  s3ve3g-mdt.initd
+90b2ef398e309c223ef2465bfe14b3f70e743b52f77e69d758f58571832f4339edfde396e055c2fbea6fd035a3839264f0558c39b62fd7e49c8a8aa26ebab6a1  s3ve3g-mdt.sh
+2fc837d31d6d64633821e2bdd5c1220c6b0d5575809f599c7a75a2299cb7d4e8750abb6be43c02cda618a19badf87ddc89d2e3c7303f8902fede6e47db51e412  s3ve3g-mdt.initd
 3773d2e2183f13c0981b38ba35f4ac2c8dd6933eb08456c62c8a6515ab94489eb752c49bb5000ad5d47260ea00f53ed2159501bcd4a9b511faea2e7c8dbb9dd4  s3ve3g-mdt.confd
 e8973ff5145d1fc8b919031cc36170386ecdb8980015eda8dc519057671820b8b7065b72f4476af89ed82281e0db3009dc337c12bc74ec6f2aff21bae55cf3de  s3ve3g-session.sh
 fa4211f166cf10c238d0c6ee14076a9b2455758076edf826a0d2150e8ef6c59d029327e568340df89d07afaf8629cc17d6b3330f90a8e7c8b2e683bc21a6c422  s3ve3g-midi.conf
+2f00eb5507f4d5d7c00e751d072f5880e988b5f06f28aa9e8746aa5a1c5cc5b8df6b9b87d678cf0f8e9241f2b73eeb88f0ee6231771725351451330b0a6674ff  s3ve3g-mdt-keys.py
 "

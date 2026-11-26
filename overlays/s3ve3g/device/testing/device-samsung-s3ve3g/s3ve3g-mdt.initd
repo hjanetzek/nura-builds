@@ -42,9 +42,10 @@ start_pre() {
 }
 
 stop_post() {
-	# what the launcher started besides MDT: jackd (waited for up to 10 s, then killed)
+	# what the launcher started besides MDT: the key relay, jackd (waited for up to 10 s, then
+	# killed)
 	local i=0
-	for p in $(pgrep -x mdt) $(pgrep -x jackd); do kill "$p" 2>/dev/null; done
+	for p in $(pgrep -x s3ve3g-mdt-keys) $(pgrep -x mdt) $(pgrep -x jackd); do kill "$p" 2>/dev/null; done
 	while { pgrep -x mdt || pgrep -x jackd; } >/dev/null && [ $i -lt 20 ]; do
 		sleep 0.5; i=$((i + 1))
 	done

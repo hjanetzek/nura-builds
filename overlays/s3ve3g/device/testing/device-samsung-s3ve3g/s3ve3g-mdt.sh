@@ -7,11 +7,12 @@
 # - headless with audio by default (MDT_ARGS="--headless --audio"): the phone has no compositor, and
 #   its panel is portrait while MDT draws a 480x320 landscape window; the screen stays off
 #   (s3ve3g-screen-off). Played through a controller (Maschine JAM over hidraw), MIDI (ALSA
-#   sequencer) or MDT's control port (127.0.0.1:5000); the phone's keys are to follow
+#   sequencer) or MDT's control port (127.0.0.1:5000); the phone's keys through that port
+#   (s3ve3g-mdt-keys: volume = encoder, home = enter/back, back, menu = S1/sequencer start-stop)
 # - JACK: /usr/share/s3ve3g/jack.sh, as for zynthian (48 kHz, JACK_PERIOD, default 480 frames);
 #   MDT's audio through SDL's JACK driver (microdexed-touch's launcher sets SDL_AUDIODRIVER=jack)
 # - its SD card image in the user's data directory, made on the first start (microdexed-touch)
-# Log: /tmp/mdt.log (jackd: /tmp/jackd.log)
+# Log: /tmp/mdt.log (jackd: /tmp/jackd.log, keys: /tmp/mdt-keys.log)
 
 # The boot splash first (it holds DRM master; MDT may draw later): told to quit, waited for (60 s)
 if pgrep -x plymouthd >/dev/null; then
@@ -22,11 +23,19 @@ while pgrep -x plymouthd >/dev/null && [ $i -lt 600 ]; do
 	sleep 0.1; i=$((i + 1))
 done
 
-# Another MDT (a session started before): stopped
-for p in $(pgrep -x mdt); do kill "$p"; done
+# Another MDT and its key relay (a session started before): stopped
+for p in $(pgrep -x mdt) $(pgrep -x s3ve3g-mdt-keys); do kill "$p"; done
 
 . /usr/share/s3ve3g/jack.sh
 s3ve3g_jack_start || exit 1
+
+# the phone's keys to MDT's control port (stopped by the service's stop, or the next start)
+# (python3, not a dependency of the device package: without it, no relay)
+if command -v python3 >/dev/null; then
+	s3ve3g-mdt-keys > /tmp/mdt-keys.log 2>&1 &
+else
+	echo "no python3: the phone's keys aren't relayed to MDT" >&2
+fi
 
 # shellcheck disable=SC2086 # MDT_ARGS: several options
 exec microdexed-touch ${MDT_ARGS:---headless --audio} > /tmp/mdt.log 2>&1
