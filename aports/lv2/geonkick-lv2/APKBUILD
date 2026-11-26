@@ -3,7 +3,7 @@
 # snapshots use) with its GUI (Redkite, bundled: X11 and cairo). Not in zynthian's engine config:
 # the rescan adds it disabled. No standalone (it would need JACK), no VST.
 pkgname=geonkick-lv2
-pkgver=3.9.0
+pkgver=3.9.1
 pkgrel=0
 pkgdesc="Geonkick percussion synthesizer (LV2, with GUI)"
 url="https://github.com/Geonkick-Synthesizer/geonkick"
@@ -24,5 +24,5 @@ package() {
 	DESTDIR="$pkgdir" cmake --install build
 }
 sha512sums="
-68cb2c8b3515e6deb53e40a4c9e1838bd9f8014ab026b1057d4b67363eebface6ec82682ca3fb996c73a84d14ce916173293beabb8d6630f0b7c2ea1a47101e9  geonkick-3.9.0.tar.gz
+f9ee436df89df6da44664d907c98322d51443451ece794ac1412f5f6563a2e03763f758c7376d4532742e904c588a917509a5a2511d4cb31cc3693670fd4cdf3  geonkick-3.9.1.tar.gz
 "

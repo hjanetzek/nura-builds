@@ -3,7 +3,7 @@
 # synthv1-lv2 on ZynthianOS). LV2 only (no JACK application, NSM or OSC). The plugin links its Qt 6
 # Widgets UI, so it needs Qt 6 development files matching the device's Qt (6.12 on Nura).
 pkgname=synthv1-lv2
-pkgver=1.5.1
+pkgver=1.5.2
 pkgrel=0
 pkgdesc="synthv1 polyphonic subtractive synthesizer (LV2)"
 url="https://synthv1.sourceforge.io"
@@ -40,5 +40,5 @@ package() {
 	rm -rf "$pkgdir"/usr/share "$pkgdir"/usr/bin
 }
 sha512sums="
-7e1e90fee67c3d33252511053f0d52f360609999b94e364c5d0cb2cc16973dec8a82758c3023d4a293f69994548df48c7902c0e04c903a57c2b75db976b31475  synthv1-1.5.1.tar.gz
+30cab1273e6e8003ab5702abd719da5043563dc1fdc0caf5e8bb79c70027ee235d1f6fcdcbc2352af27e6aee5007b8ef9fbcc43371097ee7e7ea8e5e4fbd53a5  synthv1-1.5.2.tar.gz
 "

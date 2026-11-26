@@ -3,7 +3,7 @@
 # samplv1-lv2 on ZynthianOS). LV2 only (no JACK application, NSM or OSC). The plugin links its Qt 6
 # Widgets UI, so it needs Qt 6 development files matching the device's Qt (6.12 on Nura).
 pkgname=samplv1-lv2
-pkgver=1.5.1
+pkgver=1.5.2
 pkgrel=0
 pkgdesc="samplv1 polyphonic sampler synthesizer (LV2)"
 url="https://samplv1.sourceforge.io"
@@ -43,5 +43,5 @@ package() {
 	rm -rf "$pkgdir"/usr/share "$pkgdir"/usr/bin
 }
 sha512sums="
-c7ac48b9abfc1c641652b43a7ceebd216c574cdd69b52ccb45c587274e8e0b1bf9e9651c5bdafd75777a8e53759f074c5f0909d568e380bd5eb043a578693bb9  samplv1-1.5.1.tar.gz
+fc0eceea7d92808c66f6b6afdbab7fe4c725bc7e7c3b3f36a63c47ad2e9c3506b7714d02c7b34160223e9e89eeb350d4cc0e6dd7a204509b25883af5e814357c  samplv1-1.5.2.tar.gz
 "

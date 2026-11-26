@@ -3,7 +3,7 @@
 # padthv1-lv2 on ZynthianOS). LV2 only (no JACK application, NSM or OSC). The plugin links its Qt 6
 # Widgets UI, so it needs Qt 6 development files matching the device's Qt (6.12 on Nura).
 pkgname=padthv1-lv2
-pkgver=1.5.1
+pkgver=1.5.2
 pkgrel=0
 pkgdesc="padthv1 polyphonic additive synthesizer (PADsynth) (LV2)"
 url="https://padthv1.sourceforge.io"
@@ -41,5 +41,5 @@ package() {
 	rm -rf "$pkgdir"/usr/share "$pkgdir"/usr/bin
 }
 sha512sums="
-8148ea06172d797c70bcce87edd670132c94a7597efee09038627c0b5d51d249201ca079b1909d6a2dcb88adf2c6c16c3c762d10f0a2bce7e2f44c9c225564d9  padthv1-1.5.1.tar.gz
+87d45c69eecfaf9801bde19a24b279e947350942b0f0b436807d37b6f3de49f94bfb4c774a85f193c1e677744e151a6b2ee1997300b7fc88fc69351fde09c917  padthv1-1.5.2.tar.gz
 "

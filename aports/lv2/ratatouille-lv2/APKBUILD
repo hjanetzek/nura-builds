@@ -4,7 +4,7 @@
 # (libxputty, RTNeural, NeuralAmpModelerCore with Eigen, FFTConvolver). `make mod`: the plugin
 # without its X11 GUI, with MOD's TTLs; the modgui images left out.
 pkgname=ratatouille-lv2
-pkgver=0.9.11
+pkgver=0.9.12
 pkgrel=0
 pkgdesc="Ratatouille neural amp modeler and IR loader (LV2)"
 url="https://github.com/brummer10/Ratatouille.lv2"
@@ -26,5 +26,5 @@ package() {
 	rm -rf "$pkgdir"/usr/lib/lv2/*/modgui
 }
 sha512sums="
-b108b2a8e36e21c6bc51ef61953e3ea37b438b6a3def3dd52d2de03c94efa6bb9dbf0d92cd17545b2538801f58e2aeade0ce2b934d84e8ba7bc32e2e86373c6d  Ratatouille.lv2-v0.9.11-src.tar.xz
+24d8fd065bd6c3358657f4a7683e108f3029d0712332595ee48a0fb574a953fbf49ebbdf846c0d2152180b56456c2a1bdc46d5ce232a7087e0ce64bda233fa55  Ratatouille.lv2-v0.9.12-src.tar.xz
 "
