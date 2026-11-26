@@ -48,7 +48,7 @@ start_pre() {
 
 zynthian_pids() {
 	local p
-	pgrep -x zynthian_deskto; pgrep -x aeolus; pgrep -x jackd
+	pgrep -x zynthian_deskto; pgrep -x aeolus; pgrep -x jackd; pgrep -x wireplumber; pgrep -x pipewire
 	for p in $(pgrep -x python3); do
 		grep -q zynthian_qt_main "/proc/$p/cmdline" 2>/dev/null && echo "$p"
 	done

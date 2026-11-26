@@ -13,9 +13,10 @@
 #   it), otherwise installed plugins stay disabled; ~10 s
 # - stops a running zynthian first (zynthian_desktop.sh restarts zynthian when it exits, so the
 #   launcher before its zynthian; two instances compete for DRM master and JACK)
-# - JACK: /usr/share/s3ve3g/jack.sh (shared with s3ve3g-mdt): an already running jackd is kept,
-#   otherwise jackd on the card "Neo", 48 kHz, JACK_PERIOD frames (default 480), restarted when its
-#   ALSA driver doesn't come up
+# - JACK: /usr/share/s3ve3g/jack.sh (shared with s3ve3g-mdt), ZYNTHIAN_AUDIO: "jackd" (default):
+#   an already running jackd is kept, otherwise jackd on the card "Neo", 48 kHz, JACK_PERIOD frames
+#   (default 480), restarted when its ALSA driver doesn't come up; "pipewire": PipeWire and
+#   WirePlumber at 48 kHz/JACK_PERIOD, zynthian through pw-jack (package pipewire-jack)
 # - ZYNTHIAN_UI=qt: the Qt UI (without it zynthian_desktop.sh starts the Tk UI through XWayland)
 # - eglfs_kms on the GPU's DRM device (/tmp/kms.json: { "device": "/dev/dri/card1" })
 # - landscape by ZYNTHIAN_UI_ROTATION=90 (zynthian-ui 780cf605: the UI rotated in QML; eglfs doesn't
@@ -77,13 +78,18 @@ if [ -n "$rescan" ]; then
 		echo "rescan failed, see /tmp/zyn-rescan.log" >&2
 fi
 
-# JACK on the phone's card (shared with s3ve3g-mdt)
+# JACK on the phone's card (shared with s3ve3g-mdt): jackd or PipeWire's
 . /usr/share/s3ve3g/jack.sh
-s3ve3g_jack_start || exit 1
+wrap=
+case ${ZYNTHIAN_AUDIO:-jackd} in
+jackd) s3ve3g_jack_start || exit 1 ;;
+pipewire) s3ve3g_pipewire_start || exit 1; wrap=pw-jack ;;
+*) echo "ZYNTHIAN_AUDIO: jackd or pipewire, not $ZYNTHIAN_AUDIO" >&2; exit 1 ;;
+esac
 
 [ -f /tmp/kms.json ] || echo '{ "device": "/dev/dri/card1" }' > /tmp/kms.json
 export ZYNTHIAN_UI=qt ZYNTHIAN_FULLSCREEN=1 ZYNTHIAN_UI_SCALE=auto ZYNTHIAN_UI_ROTATION=${ZYNTHIAN_UI_ROTATION:-90}
 export QT_QPA_PLATFORM=eglfs QT_QPA_EGLFS_INTEGRATION=eglfs_kms QT_QPA_EGLFS_KMS_CONFIG=/tmp/kms.json
 export QT_QPA_EGLFS_NO_LIBINPUT=1 QT_SCALE_FACTOR=${QT_SCALE_FACTOR:-1.5} QT_QPA_EGLFS_HIDECURSOR=1
 export FD_MESA_DEBUG=${FD_MESA_DEBUG-inorder}
-exec zynthian > /tmp/zyn-eglfs.log 2>&1
+exec $wrap zynthian > /tmp/zyn-eglfs.log 2>&1
