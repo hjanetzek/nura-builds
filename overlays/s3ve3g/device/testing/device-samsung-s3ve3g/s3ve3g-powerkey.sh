@@ -1,5 +1,7 @@
 #!/bin/sh
-# Samsung Galaxy S III Neo: the power key switches the screen off and on (device-samsung-s3ve3g).
+# Samsung Galaxy S III Neo: the power key switches the screen off and on (device-samsung-s3ve3g);
+# held for LONG_PRESS seconds (default 3) it powers the phone off (poweroff, the screen switched on
+# first as feedback). Both act at the release: the press's length comes from the events' times.
 # The panel through its backlight device (bl_power: display off and sleep in, without DRM master,
 # so also while a Qt eglfs application owns the display); the touchscreen inhibited while dark.
 # Run as root (OpenRC service / systemd unit s3ve3g-powerkey); logind ignores the key
@@ -26,12 +28,32 @@ screen() {	# on|off
 	logger -t s3ve3g-powerkey "screen $1"
 }
 
-# struct input_event on armv7: 8 bytes time, u16 type, u16 code, s32 value; EV_KEY 1, KEY_POWER 116
+long=${LONG_PRESS:-3}
+
+# struct input_event on armv7: 8 bytes time (32-bit seconds and microseconds), u16 type, u16 code,
+# s32 value; EV_KEY 1, KEY_POWER 116 (value 1 press, 0 release, 2 autorepeat)
 exec 3< "$ev"
+pressed=
 while :; do
 	set -- $(dd bs=16 count=1 <&3 2>/dev/null | od -An -tu2 -w16)
 	[ $# -ge 8 ] || continue
-	# fields (u16): time 1-4, type 5, code 6, value 7 (low half)
-	[ "$5" = 1 ] && [ "$6" = 116 ] && [ "$7" = 1 ] || continue
-	if [ "$(cat "$bl/bl_power")" = 0 ]; then screen off; else screen on; fi
+	# fields (u16): seconds 1-2, microseconds 3-4, type 5, code 6, value 7 (low half)
+	[ "$5" = 1 ] && [ "$6" = 116 ] || continue
+	t=$(( ($1 + $2 * 65536) * 1000 + ($3 + $4 * 65536) / 1000 ))	# ms
+	case $7 in
+	1) pressed=$t ;;
+	0)
+		[ -n "$pressed" ] || continue
+		held=$(( t - pressed )); pressed=
+		if [ $held -ge $(( long * 1000 )) ]; then
+			screen on
+			logger -t s3ve3g-powerkey "held ${held} ms: power off"
+			poweroff
+		elif [ "$(cat "$bl/bl_power")" = 0 ]; then
+			screen off
+		else
+			screen on
+		fi
+		;;
+	esac
 done
