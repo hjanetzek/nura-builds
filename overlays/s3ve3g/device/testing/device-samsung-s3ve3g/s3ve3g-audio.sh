@@ -18,6 +18,29 @@ ucm_device() {	# speaker -> Speaker, headphones -> Headphones
 	esac
 }
 
+# The codec (WCD9306) doesn't bring up a newly routed output while a stream runs: switched during
+# playback, the speaker or the headphones stay silent (all DAPM widgets on) until the next stream
+# start. A running PipeWire (the sessions' audio server: s3ve3g_pipewire_start, as the phone's user
+# in /tmp/runtime-USER) gets its card output node suspended: PipeWire closes the PCM and opens it
+# again for its clients at once (a few xruns). jackd keeps the PCM running: no fix there.
+restart_streams() {
+	command -v pw-cli >/dev/null || return 0
+	local sock dir id
+	# after the codec has settled the new path: right after alsaucm the restart came too early (the
+	# output stayed silent), 0.5 s later it was enough for the speaker but not the headphones (charge
+	# pump, class H, the PA ramp); 2 s (the output is silent meanwhile anyway)
+	sleep 2
+	for sock in /tmp/runtime-*/pipewire-0 /run/user/*/pipewire-0; do
+		[ -S "$sock" ] || continue
+		dir=${sock%/pipewire-0}
+		for id in $(PIPEWIRE_RUNTIME_DIR=$dir timeout 4 pw-cli ls Node </dev/null 2>/dev/null |
+				awk '$1 == "id" { id = $2; sub(",", "", id) } /node.name = "alsa_output/ { print id }'); do
+			PIPEWIRE_RUNTIME_DIR=$dir timeout 4 pw-cli send-command "$id" Suspend '{}' </dev/null >/dev/null 2>&1
+		done
+	done
+	return 0
+}
+
 switch() {
 	new=$(ucm_device "$1") || { echo "unknown output: $1" >&2; exit 1; }
 	case $new in Speaker) old=Headphones ;; *) old=Speaker ;; esac
@@ -25,6 +48,7 @@ switch() {
 	# that its disable sequence runs (only mixer controls; nothing powers up without a stream)
 	alsaucm -c "$card" set _verb HiFi set _enadev "$old" set _disdev "$old" \
 		set _enadev "$new" >/dev/null || exit 1
+	restart_streams
 	mkdir -p "${state%/*}" && echo "$1" > "$state"
 	echo "$1"
 }
