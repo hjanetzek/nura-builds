@@ -1,20 +1,27 @@
-# zynthian's configuration templates (zynthian-sys config/) with nura's engine defaults merged in.
-# A recipe of its own, not a zynthian-data subpackage as up to r4: a change of
-# nura-engine-config.json then doesn't bump zynthian-data (330 MB on every device).
-# Keep _sys_commit at the commit zynthian-data's comment names (the same zynthian-sys).
+# zynthian's configuration templates (zynthian-sys config/) with nura's engine defaults merged in,
+# and zynseq's keymaps (zynthian-data zynseq/keymaps.json) with nura's engines' entries.
+# A recipe of its own, not a zynthian-data subpackage as up to r4: a change of these then doesn't
+# bump zynthian-data (330 MB on every device). Keep _sys_commit at the commit zynthian-data's
+# comment names (the same zynthian-sys), _data_commit at zynthian-data's.
 pkgname=zynthian-sys-config
 pkgver=2610_git20261030
-pkgrel=5
+pkgrel=6
 pkgdesc="zynthian configuration templates (from zynthian-sys)"
 url="https://github.com/zynthian/zynthian-sys"
 arch="noarch"
 license="GPL-3.0-or-later"
 makedepends="python3"
 options="!check"
+# keymaps.json: zynthian-data up to its r4 build of 2026-11-25 has it too (later builds leave it
+# out); zynthian-ui reads it only there
+replaces="zynthian-data"
 _sys_commit=c2eea576e528e451270b829aa114f504bd34ee90
+_data_commit=271e9188cc6bcbd5ff89ba27d1b312a8c68a3417
 source="
 	zynthian-sys-$_sys_commit.tar.gz::https://github.com/zynthian/zynthian-sys/archive/$_sys_commit.tar.gz
 	nura-engine-config.json
+	keymaps-$_data_commit.json::https://raw.githubusercontent.com/zynthian/zynthian-data/$_data_commit/zynseq/keymaps.json
+	nura-keymaps.json
 	"
 builddir="$srcdir/zynthian-sys-$_sys_commit"
 
@@ -33,9 +40,22 @@ package() {
 	    cfg.setdefault(k, v)
 	json.dump(cfg, open(sys.argv[2], "w"), indent=4)
 	PY
+	# zynseq's keymaps: upstream's, nura's entries added after them (the first key found in the
+	# synth's preset path wins)
+	mkdir -p "$pkgdir"/usr/share/zynthian/zynthian-data/zynseq
+	python3 - "$srcdir"/keymaps-$_data_commit.json "$srcdir"/nura-keymaps.json \
+		"$pkgdir"/usr/share/zynthian/zynthian-data/zynseq/keymaps.json <<-'PY'
+	import json, sys
+	maps = json.load(open(sys.argv[1]))
+	for k, v in json.load(open(sys.argv[2])).items():
+	    maps.setdefault(k, v)
+	json.dump(maps, open(sys.argv[3], "w"), indent=1)
+	PY
 }
 
 sha512sums="
 687e0621c56345d4a61c0d27270e1dcab291b5968e800ff2b237b3c5195e0a8d85fe20211a6fbd6f160c0be46a3ed567f0a44edc0c57b44d732cc0f118b2c842  zynthian-sys-c2eea576e528e451270b829aa114f504bd34ee90.tar.gz
 da0d1777ef16fcb9f79f8f44e25a5d2482a72346feaca64895134da14b35ad7aab4ede32480cba6423fac18ec14de9d314ac5dc26cf0f30b22c544b7469f3864  nura-engine-config.json
+11e31087005656f8af568392f84ff6877abaeaadd90cf8f0d4a2028f8c612b5a87ee6f03d81b205c0fe504c6526df7412048905ca8de9d0ea346e2592476eda1  keymaps-271e9188cc6bcbd5ff89ba27d1b312a8c68a3417.json
+e0ba7c3f54f4afc9534a3d062a120ef726678404a956504e513c0e0bb4a1fb452cd9ccf38059f2d8457427fd5923b5fe3d9acd1fca4257b4cd68e8383a840a75  nura-keymaps.json
 "

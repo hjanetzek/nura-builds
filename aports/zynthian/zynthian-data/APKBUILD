@@ -30,6 +30,8 @@ builddir="$srcdir"
 package() {
 	mkdir -p "$pkgdir"/usr/share/zynthian
 	cp -a zynthian-data-$_data_commit "$pkgdir"/usr/share/zynthian/zynthian-data
+	# zynseq's keymaps come with zynthian-sys-config (nura's entries added)
+	rm "$pkgdir"/usr/share/zynthian/zynthian-data/zynseq/keymaps.json
 
 	# Drop the prebuilt binaries (Pure Data externals, a plugin UI): built for ZynthianOS
 	# (glibc, ARM), they can't load here, and they would make this package arch-specific.
