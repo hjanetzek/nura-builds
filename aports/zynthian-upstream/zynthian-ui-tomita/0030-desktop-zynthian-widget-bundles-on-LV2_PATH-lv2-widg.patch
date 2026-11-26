@@ -1,0 +1,72 @@
+From f3703bb9d0c5abaea17a6f8a9540aa6116325b6f Mon Sep 17 00:00:00 2001
+From: Hannes Janetzek <hannes.janetzek@gmail.com>
+Date: Thu, 26 Nov 2026 16:22:52 +0100
+Subject: [PATCH] desktop: zynthian widget bundles on LV2_PATH (lv2-widgets,
+ lv2-presets, zynthian-ui's lv2/)
+
+The Tk UI didn't find user-installed widget bundles ($ZYNTHIAN_PLUGINS_DIR/lv2-widgets, e.g.
+kr106_gui-zyngui.lv2) nor zynthian-ui's own extension bundles (lv2/, upstream a1527c99): neither
+was on LV2_PATH, and install.sh didn't install lv2/. As the Qt UI's desktop scripts do: LV2_PATH in
+ZynthianOS's order, the directories added to an LV2_PATH set before, lv2/ installed,
+zynthian_desktop.sh creates lv2-widgets.
+---
+ desktop/install.sh              |  3 ++-
+ desktop/zynthian_desktop.sh     |  2 ++
+ desktop/zynthian_desktop_env.sh | 16 ++++++++++++++--
+ 3 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/desktop/install.sh b/desktop/install.sh
+index 24c866aca..f5edee2eb 100755
+--- a/desktop/install.sh
++++ b/desktop/install.sh
+@@ -44,7 +44,8 @@ copy_tree() {
+ 
+ install_ui() {
+ 	mkdir -p "$ui_dst" "$lib_dir" "$destdir$PREFIX/bin"
+-	for d in zyngui zyngine zynconf zynautoconnect fonts icons img; do
++	# lv2: zyngui:widget ontology and widget extension bundles (on LV2_PATH: zynthian_desktop_env.sh)
++	for d in zyngui zyngine zynconf zynautoconnect fonts icons img lv2; do
+ 		copy_tree "$ui_src/$d" "$ui_dst/$d"
+ 	done
+ 	# Python modules of the zynlibs, without tests
+diff --git a/desktop/zynthian_desktop.sh b/desktop/zynthian_desktop.sh
+index 7e9684384..6e522f04f 100755
+--- a/desktop/zynthian_desktop.sh
++++ b/desktop/zynthian_desktop.sh
+@@ -13,6 +13,8 @@
+ #******************************************************************************
+ 
+ source "$(dirname "${BASH_SOURCE[0]}")/zynthian_desktop_env.sh"
++# User and external zynthian widgets (LV2 bundles, on LV2_PATH): the directory for them
++mkdir -p "$ZYNTHIAN_PLUGINS_DIR/lv2-widgets" 2>/dev/null
+ 
+ if [ -n "$ZYNTHIAN_LIB_DIR" ]; then
+ 	# Installed (package): libraries and Python packages come with it, only the
+diff --git a/desktop/zynthian_desktop_env.sh b/desktop/zynthian_desktop_env.sh
+index 97d231b92..a9e746f70 100755
+--- a/desktop/zynthian_desktop_env.sh
++++ b/desktop/zynthian_desktop_env.sh
+@@ -58,6 +58,18 @@ _zd_lv2_system="/usr/lib/lv2:/usr/local/lib/lv2"
+ if [ -d "/usr/lib/$(uname -m)-linux-gnu/lv2" ]; then
+ 	_zd_lv2_system="$_zd_lv2_system:/usr/lib/$(uname -m)-linux-gnu/lv2"
+ fi
+-export LV2_PATH="${LV2_PATH:-$_zd_lv2_system:$ZYNTHIAN_LV2_DIR:$ZYNTHIAN_DATA_DIR/presets/lv2:$ZYNTHIAN_MY_DATA_DIR/presets/lv2}"
++# In ZynthianOS's order: the user's plugins, preset bundles (lv2-presets), zynthian widget bundles
++# (lv2-widgets: user and external widgets as zyngui:widget extension bundles, upstream a1527c99);
++# zynthian-ui's own bundles (the zyngui:widget ontology and the extension bundles adding the
++# built-in widgets to plugins); the presets
++export LV2_PATH="${LV2_PATH:-$_zd_lv2_system:$ZYNTHIAN_LV2_DIR:$ZYNTHIAN_PLUGINS_DIR/lv2-presets:$ZYNTHIAN_PLUGINS_DIR/lv2-widgets:$ZYNTHIAN_UI_DIR/lv2:$ZYNTHIAN_DATA_DIR/presets/lv2:$ZYNTHIAN_MY_DATA_DIR/presets/lv2}"
++# The widget directories and zynthian-ui's bundles also when LV2_PATH was set before (the
++# session's environment)
++for _zd_lv2 in "$ZYNTHIAN_PLUGINS_DIR/lv2-presets" "$ZYNTHIAN_PLUGINS_DIR/lv2-widgets" "$ZYNTHIAN_UI_DIR/lv2"; do
++	case ":$LV2_PATH:" in
++		*":$_zd_lv2:"*) ;;
++		*) [ "$_zd_lv2" != "$ZYNTHIAN_UI_DIR/lv2" ] || [ -d "$_zd_lv2" ] && export LV2_PATH="$LV2_PATH:$_zd_lv2" ;;
++	esac
++done
+ 
+-unset _zd_ui_dir _zd_config_home _zd_data_home _zd_lv2_system
++unset _zd_ui_dir _zd_config_home _zd_data_home _zd_lv2_system _zd_lv2
+-- 
+2.56.1
+

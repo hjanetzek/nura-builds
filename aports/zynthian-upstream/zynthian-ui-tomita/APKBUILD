@@ -14,7 +14,7 @@
 pkgname=zynthian-ui-tomita
 _commit=a94037ec6f6a198023dad5141734684542376e12
 pkgver=0_git20261119
-pkgrel=1
+pkgrel=2
 pkgdesc="zynthian synthesizer platform: user interface and engine manager (upstream tomita, Tk UI)"
 url="https://github.com/zynthian/zynthian-ui"
 arch="aarch64 armv7 x86_64"
@@ -142,6 +142,7 @@ source="
 	0027-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
 	0028-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
 	0029-zynlibs-printf-formats-for-32-bit-size_t-uint64_t-th.patch
+	0030-desktop-zynthian-widget-bundles-on-LV2_PATH-lv2-widg.patch
 	"
 builddir="$srcdir/zynthian-ui-$_commit"
 
@@ -233,4 +234,5 @@ fe406a0ec1652f35992772fcbe29445430cc9a8741362277d535b9339f2e2d1e302224278b575a01
 2c688293a99601658f4b4a85ac498dc35eb57e297616c9617b39dea8bdbb620a73acb4b12925cc945a962b8213834f31987411bcf2316b5d714b1418b24a0fa6  0027-Touch-keypad-LEDs-draw-on-show-like-the-LED-strip-AL.patch
 d2b67337b12e7cce3e7bafba13a38e550dc131a8cd47399fe1ed156546de53b2f8a8786ea9cf14d41db44d790013e5ee2a3023c1fd2784ef8923d665f2cda8e3  0028-Update-the-touch-keypad-LEDs-right-after-a-screen-ch.patch
 29630f993725f7084d23ffea703997c9822c7ea40a7a2caf95f4262ccd6d04742088c38b97371036a64a8246dc2cf97d524f251bc672142db52c047e59f0b646  0029-zynlibs-printf-formats-for-32-bit-size_t-uint64_t-th.patch
+bf56b3afb7f0f0817aea377f96f4452cd85478726d1e1b2df78ee0b3355a0776eb7efee9647520b02ee8cf451be71d6fe40030bf61124d11fbaf0e13988b46ab  0030-desktop-zynthian-widget-bundles-on-LV2_PATH-lv2-widg.patch
 "
