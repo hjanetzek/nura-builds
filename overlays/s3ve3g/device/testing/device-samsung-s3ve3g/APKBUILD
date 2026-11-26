@@ -8,7 +8,7 @@ pkgname=device-samsung-s3ve3g
 pkgdesc="Samsung Galaxy S III Neo"
 # nura-builds: pmaports' pkgver 4 + 100
 pkgver=104
-pkgrel=8
+pkgrel=9
 url="https://postmarketos.org"
 license="MIT"
 arch="armv7"
@@ -52,6 +52,12 @@ source="
 	s3ve3g-zynthian.initd
 	s3ve3g-zynthian.confd
 	s3ve3g-zynthian.service
+	s3ve3g-jack.sh
+	s3ve3g-mdt.sh
+	s3ve3g-mdt.initd
+	s3ve3g-mdt.confd
+	s3ve3g-session.sh
+	s3ve3g-midi.conf
 "
 
 build() {
@@ -144,6 +150,13 @@ package() {
 	# on the sound card, as the phone's user (uid 10000); zynthian itself isn't a dependency (not
 	# packaged for armv7 yet): the services don't start without it
 	install -Dm755 "$srcdir"/s3ve3g-zynthian.sh "$pkgdir"/usr/bin/s3ve3g-zynthian
+	# JACK on the sound card, shared by the session launchers (zynthian, MicroDexed-touch)
+	install -Dm644 "$srcdir"/s3ve3g-jack.sh "$pkgdir"/usr/share/s3ve3g/jack.sh
+	# MicroDexed-touch as the session instead of zynthian (headless with JACK; package
+	# microdexed-touch, not a dependency); s3ve3g-session (OpenRC) switches
+	install -Dm755 "$srcdir"/s3ve3g-mdt.sh "$pkgdir"/usr/bin/s3ve3g-mdt
+	# the ALSA sequencer (MIDI programs; nothing else loads it here)
+	install -Dm644 "$srcdir"/s3ve3g-midi.conf "$pkgdir"/etc/modules-load.d/s3ve3g-midi.conf
 	install -Dm644 "$srcdir"/s3ve3g-zynthian.service \
 		"$pkgdir"/usr/lib/systemd/system/s3ve3g-zynthian.service
 	ln -s ../s3ve3g-zynthian.service \
@@ -177,6 +190,10 @@ _openrc() {
 	install -Dm755 "$srcdir"/s3ve3g-powerkey.initd "$subpkgdir"/etc/init.d/s3ve3g-powerkey
 	install -Dm755 "$srcdir"/s3ve3g-zynthian.initd "$subpkgdir"/etc/init.d/s3ve3g-zynthian
 	install -Dm644 "$srcdir"/s3ve3g-zynthian.confd "$subpkgdir"/etc/conf.d/s3ve3g-zynthian
+	# the MicroDexed-touch session, not enabled; s3ve3g-session zynthian|mdt chooses
+	install -Dm755 "$srcdir"/s3ve3g-mdt.initd "$subpkgdir"/etc/init.d/s3ve3g-mdt
+	install -Dm644 "$srcdir"/s3ve3g-mdt.confd "$subpkgdir"/etc/conf.d/s3ve3g-mdt
+	install -Dm755 "$srcdir"/s3ve3g-session.sh "$subpkgdir"/usr/bin/s3ve3g-session
 	# bring-up: a telnet login on the USB network before udev (busybox-extras' telnetd)
 	install -Dm755 "$srcdir"/s3ve3g-debug-telnet.initd "$subpkgdir"/etc/init.d/s3ve3g-debug-telnet
 }
@@ -202,8 +219,14 @@ bccab917b63ed8868d655c1d7141505dad917539c8a28bf774c0483a199b8fb43954c423a61f4149
 bd34eb0dd4383596ee930b23114ce976c47a357c7d216db7ea7cf1420d9c6a92ce49c40949258ddcf8d48b95847e6047bdbbc64c5ede3620831923b1216d2abb  s3ve3g-powerkey.initd
 b8ad7c9037238c6b740ffeb8d34c677d1cc413f43a419e798089d17af493ebe9bffef7912c2e6669bc48ceb3decb5a2f955e05ac4dfd19948156f72a59a98f91  s3ve3g-powerkey.service
 0b5a8e1a3c3b70de174f759879bf3c23e8b753359a6887954ee3bce6418db7e3f87b9def27bc26b4d89a28b0b989806cbf8593d734d0e62c71381c096d5fecd5  s3ve3g-powerkey-logind.conf
-ed17bfabd29f3ff78dcaaa636ee986ace166e21bf6d45638f9b9f69e62504e3e71a6be7fc246b7a5a75711ebbd4717792f3acbd18c48a32a92d83afd6180d16f  s3ve3g-zynthian.sh
-7f26c7cffdca27f268f4d7b85f9eb9b5375567ce74f90caad8293fd118d578649026100906dcae6f9789fa6078904e9bb91562eb5178707867f6bdcebbe992f1  s3ve3g-zynthian.initd
+3d25d24f3f83542e33e8820e2b815ad96960c51d70925b8bd0caba8dd8445639445fc90eb4d4576eb57fd62e2822aff024c89e27ac9a3f646b848d1deb9b068a  s3ve3g-zynthian.sh
+c5815433ce0a04cd243ec6249d94532a3102ed45c2c6687eec37622d36cb88293875777fe8d555d6d786cd2f0a109e8059aa0f191a31c45b411fc50ebf7627ac  s3ve3g-zynthian.initd
 690e5cba0f0cd79ac61a93ad16b6f8989af3aba524985da7541df5be7952c8ee8e8506ff031bb84ef6049de7d89f4c893b6d9919667cda0cb41761dc9642e61d  s3ve3g-zynthian.confd
 8781cb4339dbd32562fd2d5663c08acb2992898809e9f2b1f75cf4e8b8fd4e204596f12a311020beeb4ab330003b3640b12fe0f1aa23f5fb9600b007c8b35325  s3ve3g-zynthian.service
+1a0dc158d134f8541811b17b1a98b742f39ddc3f08a576cb1f4664bb76ea7dae3703c1ed0e0bcb8d346df63fd5bdbd986e2e134ae6946552d7208c1ec0d1326c  s3ve3g-jack.sh
+54ce6f6d6f02c2b6fa69ce75b8f7143cc642923239d61f9d94662a0b232698ac5a22644e04966cdc21d4ab7ea1d74bcadb569244c12d634b8715a1d2090ef254  s3ve3g-mdt.sh
+dadb2e93451502de25307498503cf414bee029d88c8866c9649d3bf3ae5a854bcd160ce68eb70381a3fab049e8c6a9f88716e1324e925eef712d01e23034dfb6  s3ve3g-mdt.initd
+3773d2e2183f13c0981b38ba35f4ac2c8dd6933eb08456c62c8a6515ab94489eb752c49bb5000ad5d47260ea00f53ed2159501bcd4a9b511faea2e7c8dbb9dd4  s3ve3g-mdt.confd
+e8973ff5145d1fc8b919031cc36170386ecdb8980015eda8dc519057671820b8b7065b72f4476af89ed82281e0db3009dc337c12bc74ec6f2aff21bae55cf3de  s3ve3g-session.sh
+fa4211f166cf10c238d0c6ee14076a9b2455758076edf826a0d2150e8ef6c59d029327e568340df89d07afaf8629cc17d6b3330f90a8e7c8b2e683bc21a6c422  s3ve3g-midi.conf
 "

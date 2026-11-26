@@ -13,12 +13,9 @@
 #   it), otherwise installed plugins stay disabled; ~10 s
 # - stops a running zynthian first (zynthian_desktop.sh restarts zynthian when it exits, so the
 #   launcher before its zynthian; two instances compete for DRM master and JACK)
-# - JACK: an already running jackd is kept; otherwise jackd on the card "Neo" (WCD9306), 48 kHz,
-#   JACK_PERIOD frames (default 480: q6asm takes multiples of 480 (10 ms) since 6.18; 256 gave xruns on 6.16), 2 periods, 16 bit,
-#   real-time priority 70; the dummy backend without the card. Alpine's jackd 1.9.22 on armv7 reads
-#   option values only when attached (-r48000; "-r 48000" gives 0 Hz), and needs
-#   JACK_NO_AUDIO_RESERVATION=1 without a D-Bus session. The output (speaker or headphones):
-#   s3ve3g-audio restore, if installed and sudo allows it without a password.
+# - JACK: /usr/share/s3ve3g/jack.sh (shared with s3ve3g-mdt): an already running jackd is kept,
+#   otherwise jackd on the card "Neo", 48 kHz, JACK_PERIOD frames (default 480), restarted when its
+#   ALSA driver doesn't come up
 # - ZYNTHIAN_UI=qt: the Qt UI (without it zynthian_desktop.sh starts the Tk UI through XWayland)
 # - eglfs_kms on the GPU's DRM device (/tmp/kms.json: { "device": "/dev/dri/card1" })
 # - landscape by ZYNTHIAN_UI_ROTATION=90 (zynthian-ui 780cf605: the UI rotated in QML; eglfs doesn't
@@ -29,12 +26,7 @@
 #   Mesa 26.2.6-r1 (the freedreno a3xx flicker fix, nura-builds armv7 repository) zynthian's UI
 #   shows glitches on 6.16.12 and 7.3.4 alike, gone with inorder (no reordering/staging of busy
 #   buffers in freedreno); a Mesa problem, not the kernel's
-# - jackd is checked and started again when its ALSA driver doesn't come up: on 7.3.4 the first
-#   start after boot can fail ("could not start playback (Broken pipe)", q6asm "Error queuing
-#   playback buffer -11"); jackd then keeps running without a driver and refuses clients
 # Logs: /tmp/zyn-eglfs.log, /tmp/jackd.log
-period=${JACK_PERIOD:-480}
-
 # The boot splash first: plymouthd keeps DRM master until it quits. Told to quit (keeping its last
 # picture until zynthian draws) instead of waiting for OpenRC to quit it at the end of the boot
 # (1.6 s on a boot); then waited for, at most 60 s
@@ -85,51 +77,9 @@ if [ -n "$rescan" ]; then
 		echo "rescan failed, see /tmp/zyn-rescan.log" >&2
 fi
 
-# A jackd whose driver failed (see above) is no use: stopped, and started again below
-jack_failed() {
-	grep -qE "could not start playback|Cannot initialize driver|Driver is not running" /tmp/jackd.log 2>/dev/null
-}
-if pgrep -x jackd >/dev/null && jack_failed; then
-	for p in $(pgrep -x jackd); do kill "$p"; done
-	sleep 2
-fi
-
-# Until the new jackd serves clients (its socket in /dev/shm and, with the ALSA driver, the driver
-# configured: "ALSA: use N periods for playback" in its log) or its driver failed, at most 5 s;
-# instead of a fixed 3 s (Alpine's jack has no jack_wait: no example clients)
-jack_wait_ready() {
-	local i=0 sock="/dev/shm/jack_default_$(id -u)_0"
-	while [ $i -lt 50 ]; do
-		jack_failed && return
-		if [ -S "$sock" ] && pgrep -x jackd >/dev/null; then
-			grep -q "ALSA: use .* periods for playback" /tmp/jackd.log 2>/dev/null && return
-			grep -q "creating alsa driver" /tmp/jackd.log 2>/dev/null || return   # the dummy driver
-		fi
-		sleep 0.1
-		i=$((i + 1))
-	done
-}
-
-try=0
-while ! pgrep -x jackd >/dev/null; do
-	try=$((try + 1))
-	[ $try -le 3 ] || { echo "jackd didn't start, see /tmp/jackd.log" >&2; exit 1; }
-	if [ -e /proc/asound/Neo ]; then
-		if command -v s3ve3g-audio >/dev/null; then
-			sudo -n s3ve3g-audio restore >/dev/null 2>&1 || true
-		fi
-		JACK_NO_AUDIO_RESERVATION=1 jackd -R -P70 -d alsa -d hw:CARD=Neo,0 -r48000 "-p$period" -n2 -S -P \
-			> /tmp/jackd.log 2>&1 &
-	else
-		jackd -R -d dummy -r48000 "-p$period" > /tmp/jackd.log 2>&1 &
-	fi
-	jack_wait_ready
-	if jack_failed; then
-		echo "jackd's driver didn't start (try $try), starting it again" >&2
-		for p in $(pgrep -x jackd); do kill "$p"; done
-		sleep 2
-	fi
-done
+# JACK on the phone's card (shared with s3ve3g-mdt)
+. /usr/share/s3ve3g/jack.sh
+s3ve3g_jack_start || exit 1
 
 [ -f /tmp/kms.json ] || echo '{ "device": "/dev/dri/card1" }' > /tmp/kms.json
 export ZYNTHIAN_UI=qt ZYNTHIAN_FULLSCREEN=1 ZYNTHIAN_UI_SCALE=auto ZYNTHIAN_UI_ROTATION=${ZYNTHIAN_UI_ROTATION:-90}

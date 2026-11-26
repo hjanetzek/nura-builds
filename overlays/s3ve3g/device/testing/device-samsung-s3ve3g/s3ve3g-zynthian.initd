@@ -28,6 +28,10 @@ start_pre() {
 		eerror "zynthian isn't installed"
 		return 1
 	fi
+	if service_started s3ve3g-mdt; then
+		eerror "s3ve3g-mdt runs: one session at a time (s3ve3g-session zynthian switches)"
+		return 1
+	fi
 	if [ -z "$ZYNTHIAN_USER" ]; then
 		eerror "no user for zynthian (ZYNTHIAN_USER in /etc/conf.d/s3ve3g-zynthian)"
 		return 1

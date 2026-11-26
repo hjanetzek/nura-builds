@@ -1,0 +1,10 @@
+# Samsung Galaxy S III Neo: MicroDexed-touch as the session (s3ve3g-mdt; "s3ve3g-session mdt" to
+# switch to it, "s3ve3g-session zynthian" back)
+# the user MDT runs as (default: the phone's user, uid 10000)
+#MDT_USER=user
+# JACK and MDT's audio thread: real-time priority and locked memory, as the audio group's limits
+# (/etc/security/limits.d/95-s3ve3g-audio-rt.conf) give a login
+rc_ulimit="-r 95 -l unlimited"
+# settings read by the launcher (see /usr/bin/s3ve3g-mdt)
+#export MDT_ARGS="--headless --audio"
+#export JACK_PERIOD=480

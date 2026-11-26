@@ -1,0 +1,53 @@
+#!/sbin/openrc-run
+# Samsung Galaxy S III Neo: MicroDexed-touch as the session instead of zynthian (/usr/bin/s3ve3g-mdt,
+# headless with JACK; settings in /etc/conf.d/s3ve3g-mdt). Not started by default: "s3ve3g-session
+# mdt" switches to it (and "s3ve3g-session zynthian" back); one session at a time, both need the
+# sound card and jackd.
+
+description="MicroDexed-touch session (headless, JACK)"
+supervisor=supervise-daemon
+command=/usr/bin/s3ve3g-mdt
+respawn_delay=5
+respawn_max=5
+
+# the phone's user (postmarketOS: uid 10000), with its groups (audio, input)
+: "${MDT_USER:=$(getent passwd 10000 | cut -d: -f1)}"
+command_user="$MDT_USER"
+
+depend() {
+	after s3ve3g-screen-off s3ve3g-audio s3ve3g-powerkey udev-settle
+	# as s3ve3g-zynthian: the session before the services it doesn't need
+	before networkmanager wpa_supplicant unudhcpd unudhcpd.usb0 routewrangler chronyd sshd haveged rfkill
+	before sleep-inhibitor postmarketos-zram-swap swapfile zynthian-webconf
+}
+
+start_pre() {
+	if ! command -v microdexed-touch >/dev/null; then
+		eerror "microdexed-touch isn't installed"
+		return 1
+	fi
+	if service_started s3ve3g-zynthian; then
+		eerror "s3ve3g-zynthian runs: one session at a time (s3ve3g-session mdt switches)"
+		return 1
+	fi
+	if [ -z "$MDT_USER" ]; then
+		eerror "no user for MicroDexed-touch (MDT_USER in /etc/conf.d/s3ve3g-mdt)"
+		return 1
+	fi
+	local home
+	home=$(getent passwd "$MDT_USER" | cut -d: -f6)
+	export HOME="$home" USER="$MDT_USER" LOGNAME="$MDT_USER"
+	export XDG_RUNTIME_DIR="/tmp/runtime-$MDT_USER"
+	checkpath -d -m 0700 -o "$MDT_USER" "$XDG_RUNTIME_DIR"
+}
+
+stop_post() {
+	# what the launcher started besides MDT: jackd (waited for up to 10 s, then killed)
+	local i=0
+	for p in $(pgrep -x mdt) $(pgrep -x jackd); do kill "$p" 2>/dev/null; done
+	while { pgrep -x mdt || pgrep -x jackd; } >/dev/null && [ $i -lt 20 ]; do
+		sleep 0.5; i=$((i + 1))
+	done
+	for p in $(pgrep -x mdt) $(pgrep -x jackd); do kill -9 "$p" 2>/dev/null; done
+	return 0
+}
