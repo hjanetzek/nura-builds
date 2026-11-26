@@ -162,8 +162,10 @@ if [ $build = 1 ]; then
 			{ echo "builder VM not reachable on port $PORT and can't be started ($ui/tools/run_qemu.sh, $VM_DIR)" >&2; exit 1; }
 		echo "== starting the builder VM ($VM_DIR, port $PORT)"
 		# -n: no OpenGL (a build VM doesn't need it; egl-headless fails without a render node)
+		# (the whole subshell redirected: it stays qemu's parent, and with this script's stdout
+		# open a pipe reading this script, "vm-deploy.sh | tail", wouldn't end while the VM runs)
 		(cd "$ui" && setsid tools/run_qemu.sh -d "$VM_DIR" -s 32G -m 8G -c 16 -D none -A none -n \
-			-p "$PORT" -w 8100 < /dev/null > "$VM_DIR/run.log" 2>&1 &)
+			-p "$PORT" -w 8100 &) < /dev/null > "$VM_DIR/run.log" 2>&1
 		started=1
 		i=0
 		until vm true 2>/dev/null; do
