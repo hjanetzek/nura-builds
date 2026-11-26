@@ -11,9 +11,9 @@
 # A local checkout: pmbootstrap build --src=/path/to/drivenbymoss-rust drivenbymoss.
 # prepare() fetches the crates of Cargo.lock (network).
 pkgname=drivenbymoss
-pkgver=26.1.0_p20261125224147
+pkgver=26.1.0_p20261126114152
 pkgrel=0
-_commit=d030924f983c9d3add1e4ced481a5bb4fcd142ac
+_commit=a696beb44b2190a2b13486f4c231e8882a7282b1
 pkgdesc="DrivenByMoss controller support (Rust port): core library, Python binding"
 url="https://github.com/hjanetzek/drivenbymoss-rust"
 arch="aarch64 armv7 x86_64"
@@ -81,7 +81,7 @@ package() {
 }
 
 sha512sums="
-d2804c13fbc25491e918ecbfb2cf7036f621cb2229eb0fbc849f01efb924d26bcecf86dff677bb278b7d81373ec0bab0190d5770f60deb8fee0fa3207e848bb8  drivenbymoss-rust-d030924f983c9d3add1e4ced481a5bb4fcd142ac.tar.gz
+f56fc4760b252e81f3828a655b82e1214006307dd7d316279dba61862c54c67922361d7aaa8579bdb95df4522e36496487c214e83fafa642548699af0636d0d7  drivenbymoss-rust-a696beb44b2190a2b13486f4c231e8882a7282b1.tar.gz
 35710f756f26d796cf18f388b268827579dfcdefd0deee0eabe2c283b3f45b8d125d310441acf9e3c9c01dbd9406bffa152c3b197bc7634eac13c3bdf5e0a4e0  drivenbymoss.post-install
 35710f756f26d796cf18f388b268827579dfcdefd0deee0eabe2c283b3f45b8d125d310441acf9e3c9c01dbd9406bffa152c3b197bc7634eac13c3bdf5e0a4e0  drivenbymoss.post-upgrade
 "
