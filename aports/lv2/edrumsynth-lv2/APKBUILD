@@ -4,14 +4,16 @@
 # Zynthian engine key "JV/eDrumSynth". The plugin is lxrdrums/ in the mdt-lv2
 # repository. No ARM flags here: they come from the build.
 pkgname=edrumsynth-lv2
-_commit=72c7049ba712a8528f95fe42bf6a4bf32ca37629
-pkgver=0.1.0
+_commit=85cf382d41a62805cdf586a9497b83c4ead941b0
+pkgver=0.2.0
 pkgrel=0
 pkgdesc="eDrumSynth: synthesized drums (MicroDexed-touch's drum engine) as an LV2 instrument"
 url="https://github.com/hjanetzek/mdt-lv2"
 arch="all"
 license="GPL-3.0-only"
 makedepends="cmake samurai lv2-dev"
+# the LXR converter test (python3)
+checkdepends="python3"
 source="$pkgname-$_commit.tar.gz::https://github.com/hjanetzek/mdt-lv2/archive/$_commit.tar.gz"
 builddir="$srcdir/mdt-lv2-$_commit/lxrdrums"
 
@@ -23,7 +25,7 @@ build() {
 }
 
 check() {
-	# the generator, render and resampler tests; the TTL validators
+	# the generator, render, resampler and LXR converter tests; the TTL validators
 	# (lv2lint, sord_validate, lv2_validate) run only where installed
 	ctest --test-dir build --output-on-failure
 }
@@ -32,5 +34,5 @@ package() {
 	DESTDIR="$pkgdir" cmake --install build
 }
 sha512sums="
-c2cb1f4051bf2660920b49d8ce31ef878b9d34218495647202ba4d1a86b9b60f6d329a06692cc30763eaa13190da36fce231a842bfad921e59eee51b217d468d  edrumsynth-lv2-72c7049ba712a8528f95fe42bf6a4bf32ca37629.tar.gz
+80959d1b78c31bd7854ed5db6f6eae09f0d9e785503eef02247440634a598a4a95013acc2e943aac61c1d655f7030334373809c0c31ecd44ef9231d49ed3479f  edrumsynth-lv2-85cf382d41a62805cdf586a9497b83c4ead941b0.tar.gz
 "
