@@ -4,10 +4,12 @@
 # /usr/bin/s3ve3g-mdt by device-samsung-s3ve3g, started by its service s3ve3g-mdt (OpenRC); the
 # session is chosen with s3ve3g-session (zynthian or mdt).
 #
-# - headless with audio by default (MDT_ARGS="--headless --audio"): the phone has no compositor, and
-#   its panel is portrait while MDT draws a 480x320 landscape window; the screen stays off
-#   (s3ve3g-screen-off). Played through a controller (Maschine JAM over hidraw), MIDI (ALSA
-#   sequencer) or MDT's control port (127.0.0.1:5000); the phone's keys through that port
+# - with its display by default: SDL's kmsdrm driver straight on the GPU's DRM device (no compositor
+#   here), the landscape UI rotated onto the portrait panel (MDT_ROTATE, default 90: MDT's --rotate),
+#   with MDT's on-screen controls (touch); the service switches the screen and the touchscreen on.
+#   MDT_ARGS replaces the options ("--headless --audio": no display, the screen stays off). Played
+#   also through a controller (Maschine JAM over hidraw), MIDI (ALSA sequencer) or MDT's control
+#   port (127.0.0.1:5000); the phone's keys through that port
 #   (s3ve3g-mdt-keys: volume = encoder, home = enter/back, back, menu = S1/sequencer start-stop)
 # - audio (MDT_AUDIO, /usr/share/s3ve3g/jack.sh): "pipewire" by default: PipeWire and WirePlumber,
 #   MDT through PipeWire's JACK (pw-jack; package pipewire-jack). "jackd": jackd as for zynthian; MDT's SDL JACK output fails on jackd 1.9.22 (it
@@ -52,5 +54,10 @@ else
 	echo "no python3: the phone's keys aren't relayed to MDT" >&2
 fi
 
-# shellcheck disable=SC2086 # MDT_ARGS: several options
-exec $wrap microdexed-touch ${MDT_ARGS:---headless --audio} > /tmp/mdt.log 2>&1
+args=${MDT_ARGS:---audio --rotate ${MDT_ROTATE:-90}}
+case " $args " in
+*" --headless "*) ;;
+*) export SDL_VIDEODRIVER=${SDL_VIDEODRIVER:-kmsdrm} ;;
+esac
+# shellcheck disable=SC2086 # several options
+exec $wrap microdexed-touch $args > /tmp/mdt.log 2>&1

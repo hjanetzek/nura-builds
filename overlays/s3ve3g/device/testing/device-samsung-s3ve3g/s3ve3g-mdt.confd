@@ -6,7 +6,10 @@
 # (/etc/security/limits.d/95-s3ve3g-audio-rt.conf) give a login
 rc_ulimit="-r 95 -l unlimited"
 # settings read by the launcher (see /usr/bin/s3ve3g-mdt)
-#export MDT_ARGS="--headless --audio"
+# the options (default "--audio --rotate $MDT_ROTATE"; "--headless --audio": no display)
+#export MDT_ARGS="--audio --rotate 90"
+# the panel rotation of MDT's landscape UI (90: upright as tested; 270, 0, 180)
+#export MDT_ROTATE=90
 # pipewire (default: PipeWire + WirePlumber, MDT through pw-jack) or jackd (needs Alpine's jack
 # instead of pipewire-jack)
 #export MDT_AUDIO=pipewire
