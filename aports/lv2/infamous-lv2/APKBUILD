@@ -4,7 +4,7 @@
 # without it only the plugins are built.
 pkgname=infamous-lv2
 _commit=8c0e11ecac624e014caba00e5cf4fb0ca2faa806
-pkgver=0.3.0_git20230321
+pkgver=0.3.2
 pkgrel=0
 pkgdesc="The infamous LV2 plugins"
 url="https://github.com/ssj71/infamousPlugins"

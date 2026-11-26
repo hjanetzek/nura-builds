@@ -28,8 +28,8 @@
 #   pmbootstrap build --src=/path/to/jalv zynthian-jalv
 pkgname=zynthian-jalv
 _commit=0f93f91525efb0e4a81b338fd186b62c92bd0532
-pkgver=1.12.1_git20260330
-pkgrel=6
+pkgver=1.12.1_git20261118
+pkgrel=0
 pkgdesc="zynthian's jalv: LV2 host with the asynchronous command line zynthian uses"
 url="https://github.com/hjanetzek/jalv"
 arch="aarch64 armv7 x86_64"

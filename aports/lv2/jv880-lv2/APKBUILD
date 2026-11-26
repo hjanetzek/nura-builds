@@ -5,7 +5,7 @@
 # zynthian's config, its preset generator and shared snapshots use it; the .jucer has another).
 # Needs the user's JV-880 ROMs in ~/.config/JV880 (not packaged). Disabled in zynthian's config.
 pkgname=jv880-lv2
-pkgver=1.0.1_git20250904
+pkgver=1.0.1_git20260904
 pkgrel=0
 _commit=bc141fc8b7a5039e909807e85ff1070d5727584b
 _juce=8.0.7
