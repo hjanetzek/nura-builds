@@ -28,13 +28,20 @@ an ALSA UCM profile and JACK. Branch `s3ve3g-audio` of nura-builds (worktree
   when a plug goes in and to the speaker when it comes out.
 - Without an audio server: play on `plughw:CARD=Neo` (any rate and format) or
   `hw:CARD=Neo,0` (48 kHz stereo, 16 bit). The ALSA `default` device points to PipeWire
-  (`99-pipewire-default.conf`), which doesn't run on the headless image.
+  (`99-pipewire-default.conf`): without a running PipeWire it fails with "Host is down".
 - Capture: `hw:CARD=Neo,1` (MultiMedia2; MultiMedia1 can't play and record at once), UCM device
   `Mic`; the ADSP gives the mono mic on both channels.
 - UCM: `/usr/share/alsa/ucm2/conf.d/apq8096/Samsung Galaxy S III Neo.conf`, verb `HiFi`, devices
   `Speaker`, `Headphones` (JackControl "Headphone Jack" for PipeWire), `Mic`. `alsaucm` forgets
   its state between runs: `s3ve3g-audio` enables and disables the other device first.
-- JACK: `JACK_NO_AUDIO_RESERVATION=1 jackd -R -P 70 -d alsa -d hw:CARD=Neo,0 -r48000 -p256 -n2`
+- PipeWire (the sessions' default since device-samsung-s3ve3g r13, zynthian and MicroDexed-touch):
+  `s3ve3g_pipewire_start` in `/usr/share/s3ve3g/jack.sh` runs PipeWire and WirePlumber as the
+  user without a D-Bus session, WirePlumber sets the card's Pro Audio profile
+  (`wireplumber.conf.d/50-s3ve3g.conf`; it left it off), 48 kHz and a quantum of `JACK_PERIOD`
+  (`pipewire.conf.d/50-s3ve3g.conf`, plus `clock.force-quantum`: WirePlumber's sink otherwise ran
+  at 256). The JACK programs through `pw-jack` (pipewire-jack, which replaces Alpine's jack).
+  Against jackd for zynthian at 960 frames: the same DSP load (18-22 %), no xruns either way.
+- JACK (`ZYNTHIAN_AUDIO=jackd`, needs Alpine's jack): `JACK_NO_AUDIO_RESERVATION=1 jackd -R -P 70 -d alsa -d hw:CARD=Neo,0 -r48000 -p256 -n2`
   runs realtime as a user in the audio group (`/etc/security/limits.d/95-s3ve3g-audio-rt.conf`:
   rtprio 95, memlock unlimited). jackd's driver options take optional arguments: `-r 48000` (with a
   space) arrives as 0, write `-r48000` or `--rate=48000`. `alsa-plugins-jack` for `aplay -D jack`.

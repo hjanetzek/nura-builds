@@ -9,8 +9,9 @@
 rc_ulimit="-r 95 -l unlimited"
 
 # settings read by the launcher (see /usr/bin/s3ve3g-zynthian)
-# jackd (default) or pipewire (PipeWire + WirePlumber, zynthian through pw-jack)
-#export ZYNTHIAN_AUDIO=jackd
+# pipewire (default: PipeWire + WirePlumber, zynthian through pw-jack) or jackd (needs Alpine's
+# jack instead of pipewire-jack)
+#export ZYNTHIAN_AUDIO=pipewire
 #export JACK_PERIOD=480
 #export ZYNTHIAN_UI_ROTATION=90
 #export QT_SCALE_FACTOR=1.5

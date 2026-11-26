@@ -13,10 +13,11 @@
 #   it), otherwise installed plugins stay disabled; ~10 s
 # - stops a running zynthian first (zynthian_desktop.sh restarts zynthian when it exits, so the
 #   launcher before its zynthian; two instances compete for DRM master and JACK)
-# - JACK: /usr/share/s3ve3g/jack.sh (shared with s3ve3g-mdt), ZYNTHIAN_AUDIO: "jackd" (default):
-#   an already running jackd is kept, otherwise jackd on the card "Neo", 48 kHz, JACK_PERIOD frames
-#   (default 480), restarted when its ALSA driver doesn't come up; "pipewire": PipeWire and
-#   WirePlumber at 48 kHz/JACK_PERIOD, zynthian through pw-jack (package pipewire-jack)
+# - JACK: /usr/share/s3ve3g/jack.sh (shared with s3ve3g-mdt), ZYNTHIAN_AUDIO: "pipewire" (default):
+#   PipeWire and WirePlumber at 48 kHz/JACK_PERIOD (default 480), zynthian through pw-jack
+#   (pipewire-jack); measured against jackd on 2026-11-26: the same DSP load at 960 frames, no
+#   xruns either way. "jackd": jackd on the card "Neo" (needs Alpine's jack instead of
+#   pipewire-jack: the two exclude each other), restarted when its ALSA driver doesn't come up
 # - ZYNTHIAN_UI=qt: the Qt UI (without it zynthian_desktop.sh starts the Tk UI through XWayland)
 # - eglfs_kms on the GPU's DRM device (/tmp/kms.json: { "device": "/dev/dri/card1" })
 # - landscape by ZYNTHIAN_UI_ROTATION=90 (zynthian-ui 780cf605: the UI rotated in QML; eglfs doesn't
@@ -81,7 +82,7 @@ fi
 # JACK on the phone's card (shared with s3ve3g-mdt): jackd or PipeWire's
 . /usr/share/s3ve3g/jack.sh
 wrap=
-case ${ZYNTHIAN_AUDIO:-jackd} in
+case ${ZYNTHIAN_AUDIO:-pipewire} in
 jackd) s3ve3g_jack_start || exit 1 ;;
 pipewire) s3ve3g_pipewire_start || exit 1; wrap=pw-jack ;;
 *) echo "ZYNTHIAN_AUDIO: jackd or pipewire, not $ZYNTHIAN_AUDIO" >&2; exit 1 ;;
