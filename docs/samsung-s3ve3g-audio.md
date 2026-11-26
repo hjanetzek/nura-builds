@@ -41,6 +41,8 @@ an ALSA UCM profile and JACK. Branch `s3ve3g-audio` of nura-builds (worktree
   (`pipewire.conf.d/50-s3ve3g.conf`, plus `clock.force-quantum`: WirePlumber's sink otherwise ran
   at 256). The JACK programs through `pw-jack` (pipewire-jack, which replaces Alpine's jack).
   Against jackd for zynthian at 960 frames: the same DSP load (18-22 %), no xruns either way.
+  `JACK_PERIOD` defaults to 960 (20 ms) since r16: at 480, MicroDexed-touch had 33 xruns a minute
+  under load (B/Q 0.60), at 960 none (B/Q 0.63); Linux doesn't need to match the Teensy's latency.
 - JACK (`ZYNTHIAN_AUDIO=jackd`, needs Alpine's jack): `JACK_NO_AUDIO_RESERVATION=1 jackd -R -P 70 -d alsa -d hw:CARD=Neo,0 -r48000 -p256 -n2`
   runs realtime as a user in the audio group (`/etc/security/limits.d/95-s3ve3g-audio-rt.conf`:
   rtprio 95, memlock unlimited). jackd's driver options take optional arguments: `-r 48000` (with a

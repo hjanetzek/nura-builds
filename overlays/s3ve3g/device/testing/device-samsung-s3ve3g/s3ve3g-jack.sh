@@ -4,7 +4,8 @@
 # Installed as /usr/share/s3ve3g/jack.sh by device-samsung-s3ve3g.
 #
 # An already running jackd is kept; otherwise jackd on the card "Neo" (WCD9306), 48 kHz, JACK_PERIOD
-# frames (default 480: q6asm takes multiples of 480 (10 ms) since 6.18; 256 gave xruns on 6.16),
+# frames (default 960, 20 ms: q6asm takes multiples of 480 (10 ms) since 6.18, 256 gave xruns on
+# 6.16; 480 gave MicroDexed-touch 33 xruns a minute at the same load where 960 gave none),
 # 2 periods, 16 bit, real-time priority 70; the dummy backend without the card. Alpine's jackd
 # 1.9.22 on armv7 reads option values only when attached (-r48000; "-r 48000" gives 0 Hz), and needs
 # JACK_NO_AUDIO_RESERVATION=1 without a D-Bus session. The output (speaker or headphones):
@@ -36,7 +37,7 @@ jack_wait_ready() {
 }
 
 s3ve3g_jack_start() {
-	local period=${JACK_PERIOD:-480} try=0 p
+	local period=${JACK_PERIOD:-960} try=0 p
 	# PipeWire (s3ve3g_pipewire_start, an earlier session) holds the card: stopped
 	if pgrep -x pipewire >/dev/null; then
 		for p in $(pgrep -x wireplumber) $(pgrep -x pipewire); do kill "$p"; done
@@ -70,11 +71,11 @@ s3ve3g_jack_start() {
 # PipeWire instead of jackd (s3ve3g_pipewire_start; the clients then through pw-jack, package
 # pipewire-jack): PipeWire and WirePlumber as the user, without a D-Bus session (their D-Bus errors
 # are harmless), the card's Pro Audio profile (/usr/share/wireplumber/wireplumber.conf.d/
-# 50-s3ve3g.conf), 48 kHz with a quantum of JACK_PERIOD (480; 50-s3ve3g.conf in pipewire.conf.d,
+# 50-s3ve3g.conf), 48 kHz with a quantum of JACK_PERIOD (960; 50-s3ve3g.conf in pipewire.conf.d,
 # and forced: WirePlumber's sink otherwise runs at 256). A running jackd is stopped.
 # Logs: /tmp/pipewire.log, /tmp/wireplumber.log
 s3ve3g_pipewire_start() {
-	local period=${JACK_PERIOD:-480} i p
+	local period=${JACK_PERIOD:-960} i p
 	command -v pw-jack >/dev/null || { echo "pw-jack missing (apk add pipewire-jack)" >&2; return 1; }
 	# jackd (zynthian's session) and an earlier PipeWire of this session: stopped
 	for p in $(pgrep -x jackd) $(pgrep -x wireplumber) $(pgrep -x pipewire); do kill "$p"; done

@@ -14,4 +14,4 @@ rc_ulimit="-r 95 -l unlimited"
 # instead of pipewire-jack)
 #export MDT_AUDIO=pipewire
 # the period/quantum in frames (both)
-#export JACK_PERIOD=480
+#export JACK_PERIOD=960

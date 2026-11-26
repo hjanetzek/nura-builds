@@ -14,7 +14,7 @@
 # - stops a running zynthian first (zynthian_desktop.sh restarts zynthian when it exits, so the
 #   launcher before its zynthian; two instances compete for DRM master and JACK)
 # - JACK: /usr/share/s3ve3g/jack.sh (shared with s3ve3g-mdt), ZYNTHIAN_AUDIO: "pipewire" (default):
-#   PipeWire and WirePlumber at 48 kHz/JACK_PERIOD (default 480), zynthian through pw-jack
+#   PipeWire and WirePlumber at 48 kHz/JACK_PERIOD (default 960), zynthian through pw-jack
 #   (pipewire-jack); measured against jackd on 2026-11-26: the same DSP load at 960 frames, no
 #   xruns either way. "jackd": jackd on the card "Neo" (needs Alpine's jack instead of
 #   pipewire-jack: the two exclude each other), restarted when its ALSA driver doesn't come up

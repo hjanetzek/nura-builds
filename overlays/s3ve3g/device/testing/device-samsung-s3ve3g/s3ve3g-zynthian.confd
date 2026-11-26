@@ -12,7 +12,7 @@ rc_ulimit="-r 95 -l unlimited"
 # pipewire (default: PipeWire + WirePlumber, zynthian through pw-jack) or jackd (needs Alpine's
 # jack instead of pipewire-jack)
 #export ZYNTHIAN_AUDIO=pipewire
-#export JACK_PERIOD=480
+#export JACK_PERIOD=960
 #export ZYNTHIAN_UI_ROTATION=90
 #export QT_SCALE_FACTOR=1.5
 #export FD_MESA_DEBUG=inorder
