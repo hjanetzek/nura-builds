@@ -1,0 +1,81 @@
+# zynthian-ui-testing: zynthian's Qt UI from zynthian-ui's `testing` branch (work in progress) as
+# its own package (targets/zynthian-testing.sh), on top of the published package repository, for
+# the chosen architectures; merged into the same releases as everything else ("<arch>"). A device
+# installs it instead of zynthian-ui (both provide zynthian-ui; zynthian-ui's tools/switch_ui.sh).
+# Run by hand (Actions > zynthian-testing > Run workflow) after pushing the branch, or:
+#   gh workflow run zynthian-testing.yml [-f arch=armv7] [-f branch=testing]
+name: zynthian-testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch: { description: "architectures", type: choice, options: [all, aarch64, x86_64, armv7], default: all }
+      branch: { description: "zynthian-ui branch", default: testing }
+
+# One run at a time; a new one replaces a running one (the branch moved on)
+concurrency:
+  group: zynthian-testing-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: { contents: read }
+
+jobs:
+  arches:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.a.outputs.list }}
+      refs: ${{ steps.a.outputs.refs }}
+    steps:
+      - id: a
+        env:
+          ARCH: ${{ inputs.arch }}
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          case $ARCH in
+            all) echo 'list=["aarch64","x86_64","armv7"]' ;;
+            *) echo "list=[\"$ARCH\"]" ;;
+          esac >> "$GITHUB_OUTPUT"
+          echo "refs=ZYNTHIAN_UI_REF=$BRANCH" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: arches
+    strategy:
+      fail-fast: false
+      matrix: { arch: "${{ fromJSON(needs.arches.outputs.list) }}" }
+    uses: ./.github/workflows/build-target.yml
+    with:
+      target: zynthian-testing
+      arch: ${{ matrix.arch }}
+      refs: ${{ needs.arches.outputs.refs }}
+    secrets:
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+      NURA_IMAGE_PASSWORD: ${{ secrets.NURA_IMAGE_PASSWORD }}
+
+  # main only: merged into the release "<arch>", serialized per architecture with every other
+  # publishing workflow (scripts/publish.sh)
+  publish:
+    needs: [arches, build]
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+    strategy:
+      fail-fast: false
+      matrix: { arch: "${{ fromJSON(needs.arches.outputs.list) }}" }
+    concurrency: { group: "publish-${{ matrix.arch }}", cancel-in-progress: false }
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    env:
+      NURA_ARCH: ${{ matrix.arch }}
+      GH_TOKEN: ${{ github.token }}
+      NURA_ABUILD_KEY: ${{ secrets.NURA_ABUILD_KEY }}
+      NURA_ABUILD_KEY_NAME: ${{ secrets.NURA_ABUILD_KEY_NAME }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { persist-credentials: false }
+      # (an architecture whose build failed has no artifact: skipped)
+      - id: dl
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: "new-zynthian-testing-${{ matrix.arch }}", path: new }
+      - name: Publish
+        if: steps.dl.outcome == 'success'
+        run: scripts/publish.sh zynthian-testing new
