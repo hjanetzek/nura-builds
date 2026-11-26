@@ -85,4 +85,4 @@ jobs:
 
       - name: Build log
         if: failure()
-        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true
+        run: scripts/show-log.sh 200

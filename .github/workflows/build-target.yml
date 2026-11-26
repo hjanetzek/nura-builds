@@ -90,7 +90,7 @@ jobs:
           echo "devices=$d" >> "$GITHUB_OUTPUT"
       - name: Build log
         if: failure()
-        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true
+        run: scripts/show-log.sh 200
 
   image:
     needs: build
@@ -143,4 +143,4 @@ jobs:
           compression-level: 0
       - name: Build log
         if: failure()
-        run: sudo tail -n 200 "$NURA_WORK/log.txt" || true
+        run: scripts/show-log.sh 200
