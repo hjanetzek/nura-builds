@@ -1,4 +1,4 @@
-From 7a8fe91f19f8a95eca2f4df92477ea631d0b9ec0 Mon Sep 17 00:00:00 2001
+From 4f5fdfa0c3fea39be6f142a38f30ba1c0938cd61 Mon Sep 17 00:00:00 2001
 From: Yassine Oudjana <y.oudjana@protonmail.com>
 Date: Sun, 6 Apr 2025 14:07:43 +0000
 Subject: [PATCH 01/43] FROMLIST v1 net: qrtr: Turn QRTR into a bus
@@ -109,10 +109,10 @@ index 000000000000..860cf55f0de9
 +
 +#endif /* __QCOM_QRTR_H__ */
 diff --git a/net/qrtr/af_qrtr.c b/net/qrtr/af_qrtr.c
-index e7b3647424b8..20460489f217 100644
+index 45cb8e8c36ca..e7f01454f8ea 100644
 --- a/net/qrtr/af_qrtr.c
 +++ b/net/qrtr/af_qrtr.c
-@@ -452,6 +452,7 @@ static void qrtr_node_assign(struct qrtr_node *node, unsigned int nid)
+@@ -454,6 +454,7 @@ static void qrtr_node_assign(struct qrtr_node *node, unsigned int nid)
  int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
  {
  	struct qrtr_node *node = ep->node;
@@ -120,7 +120,7 @@ index e7b3647424b8..20460489f217 100644
  	const struct qrtr_hdr_v1 *v1;
  	const struct qrtr_hdr_v2 *v2;
  	struct qrtr_sock *ipc;
-@@ -460,6 +461,7 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
+@@ -462,6 +463,7 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
  	size_t size;
  	unsigned int ver;
  	size_t hdrlen;
@@ -128,7 +128,7 @@ index e7b3647424b8..20460489f217 100644
  
  	if (len == 0 || len & 3)
  		return -EINVAL;
-@@ -533,12 +535,24 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
+@@ -535,12 +537,24 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
  
  	qrtr_node_assign(node, cb->src_node);
  
@@ -155,8 +155,8 @@ index e7b3647424b8..20460489f217 100644
 +			goto err;
  	}
  
- 	if (cb->type == QRTR_TYPE_RESUME_TX) {
-@@ -560,8 +574,7 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
+ 	if (cb->type == QRTR_TYPE_HELLO) {
+@@ -567,8 +581,7 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
  
  err:
  	kfree_skb(skb);
@@ -542,8 +542,11 @@ index 8d36c74dec2d..614c095a2f76 100644
  };
  
  /* Create MODULE_ALIAS() statements.
+-- 
+2.56.1
 
-From 831b945945a547f23c86e72f68f4c64f08dc7e86 Mon Sep 17 00:00:00 2001
+
+From 508f35ed12f684d03f5930f7f518420fe28b476b Mon Sep 17 00:00:00 2001
 From: Yassine Oudjana <y.oudjana@protonmail.com>
 Date: Sun, 6 Apr 2025 14:07:52 +0000
 Subject: [PATCH 02/43] FROMLIST v1 net: qrtr: Define macro to convert QMI
@@ -602,8 +605,11 @@ index 860cf55f0de9..f5939e16e150 100644
  struct qrtr_driver {
  	int (*probe)(struct qrtr_device *qdev);
  	void (*remove)(struct qrtr_device *qdev);
+-- 
+2.56.1
 
-From cfa56c1daa98a86b7ac7273c55d6b12be4b045c8 Mon Sep 17 00:00:00 2001
+
+From a7b3395b814c063f929455ed9080b4e72e2d1539 Mon Sep 17 00:00:00 2001
 From: Yassine Oudjana <y.oudjana@protonmail.com>
 Date: Sun, 6 Apr 2025 14:08:03 +0000
 Subject: [PATCH 03/43] FROMLIST v1 iio: Add Qualcomm Sensor Manager drivers
@@ -3125,8 +3131,11 @@ index 000000000000..756cb83e26ec
 +extern const struct iio_chan_spec_ext_info qcom_smgr_iio_ext_info[];
 +
 +#endif /* __QCOM_SMGR_H__ */
+-- 
+2.56.1
 
-From 4ac4ebff7816a40182e6e92544375b93ce900daf Mon Sep 17 00:00:00 2001
+
+From 0a380f28a6ba5d74beb01fd243ce3a706d4dcdf7 Mon Sep 17 00:00:00 2001
 From: Alexey Minnekhanov <alexeymin@postmarketos.org>
 Date: Thu, 1 May 2025 16:19:10 +0300
 Subject: [PATCH 04/43] DEBUG iio: smgr: Always print discovered sensors
@@ -3150,8 +3159,11 @@ index 8d46be11d5b6..b0a27f3bf679 100644
  				smgr->sensors[i].id, j,
  				smgr->sensors[i].data_types[j].vendor,
  				smgr->sensors[i].data_types[j].name);
+-- 
+2.56.1
 
-From 75095aab8db5d154d3d09d6278c84f5b328c14be Mon Sep 17 00:00:00 2001
+
+From 3b280886d4e57e28cd669d525f70be624acd6037 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@lucaweiss.eu>
 Date: Wed, 28 May 2025 00:10:30 +0200
 Subject: [PATCH 05/43] sns_smgr: qrtr instance id 0 for 8226/8974
@@ -3174,8 +3186,11 @@ index a741dfd87452..3c6d9749b6bb 100644
  
  #define SNS_SMGR_ALL_SENSOR_INFO_MSG_ID		0x05
  #define SNS_SMGR_SINGLE_SENSOR_INFO_MSG_ID	0x06
+-- 
+2.56.1
 
-From 700ada38f5669a31d55cfde240047e8ee614d1e1 Mon Sep 17 00:00:00 2001
+
+From 0bcac727badedb3e15c851a1fab9c8c9895040f7 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@lucaweiss.eu>
 Date: Wed, 28 May 2025 00:10:52 +0200
 Subject: [PATCH 06/43] qcom_smgr: avoid null pointer for sensor->type=0, skip
@@ -3201,8 +3216,11 @@ index b0a27f3bf679..219243a51f21 100644
  
  	pdev = platform_device_register_data(smgr->dev, name, sensor->id,
  					     &sensor, sizeof(sensor));
+-- 
+2.56.1
 
-From 01c1e7fc53ff06a7ad2f43d1bc3e61bf06879003 Mon Sep 17 00:00:00 2001
+
+From 1f4324b76acc6d4fdde6c2b8a5ef73c1b7e18cb1 Mon Sep 17 00:00:00 2001
 From: Alexey Minnekhanov <alexeymin@postmarketos.org>
 Date: Tue, 25 Feb 2025 00:24:31 +0300
 Subject: [PATCH 07/43] remoteproc: qcom: Save and export last known subsystem
@@ -3353,8 +3371,11 @@ index 82b211518136..d608ae2c255a 100644
  #endif
  
  #endif
+-- 
+2.56.1
 
-From 4ee93f02c4fb9ceb3849972bd60f0e3a767c1e16 Mon Sep 17 00:00:00 2001
+
+From dc4894c50c1e4a63f278eecb6da6f66572eec49e Mon Sep 17 00:00:00 2001
 From: Alexey Minnekhanov <alexeymin@postmarketos.org>
 Date: Fri, 7 Mar 2025 02:49:08 +0300
 Subject: [PATCH 08/43] soc: qcom: Add in-kernel sensors registry
@@ -4054,8 +4075,11 @@ index 000000000000..d23f42a2b49b
 +
 +MODULE_DESCRIPTION("Qualcomm Sensors Registry");
 +MODULE_LICENSE("GPL");
+-- 
+2.56.1
 
-From 91851de620e0a86c1bc2fd83d003c14188b3d29a Mon Sep 17 00:00:00 2001
+
+From b3c8c5265d63fb7cb602e502029384bc4af7d5dd Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@lucaweiss.eu>
 Date: Wed, 28 May 2025 00:10:18 +0200
 Subject: [PATCH 09/43] FIXUP soc: qcom: Add in-kernel sensors registry
@@ -4087,8 +4111,11 @@ index d23f42a2b49b..13cddd8ca384 100644
  	{ .compatible = "qcom,msm8996", .data = &sns_reg_target_slpi, },
  	{ .compatible = "qcom,msm8998", .data = &sns_reg_target_slpi, }, /* untested */
  	{ .compatible = "qcom,sda660", .data = &sns_reg_target_adsp, },
+-- 
+2.56.1
 
-From ebc3b10cd3187a791f85a62618b07af77036026d Mon Sep 17 00:00:00 2001
+
+From 049744ec0c0d35165bb7ed1c7432e79ff0022ed6 Mon Sep 17 00:00:00 2001
 From: Alexey Minnekhanov <alexeymin@postmarketos.org>
 Date: Fri, 7 Mar 2025 03:01:07 +0300
 Subject: [PATCH 10/43] remoteproc: qcom: Enable in-kernel sns-reg
@@ -4265,8 +4292,11 @@ index a005546c265d..e8468b7ab80e 100644
  	qcom_remove_ssr_subdev(pas->rproc, &pas->ssr_subdev);
  	qcom_pas_pds_detach(pas, pas->proxy_pds, pas->proxy_pd_count);
  	device_init_wakeup(pas->dev, false);
+-- 
+2.56.1
 
-From fa542d044bbaf15d57e79ce0b14fdd468f3a3d7f Mon Sep 17 00:00:00 2001
+
+From d9184c0c6556330e64f6d907abb1532f65075948 Mon Sep 17 00:00:00 2001
 From: David Lang <david.lang@gmx.de>
 Date: Wed, 14 May 2025 22:24:40 +0100
 Subject: [PATCH 11/43] qcom_sns_reg: rest of group_map_entry
@@ -4358,8 +4388,11 @@ index 13cddd8ca384..29e00f9b46a1 100644
  	{ /* sentinel */}
  };
  
+-- 
+2.56.1
 
-From e49d521fcfcde3d5deb76edfe939e2638d131c10 Mon Sep 17 00:00:00 2001
+
+From 3b53939f7d93a8c23bc63be1f4666d74fc031abc Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Sun, 26 Nov 2023 21:55:07 +0100
 Subject: [PATCH 12/43] HACK clk: qcom: smd-rpm: re-add OCMEMGX_CLK &
@@ -4389,8 +4422,11 @@ index 487d715ed5d2..bb38ce4a2c48 100644
  	[RPM_SMD_QDSS_CLK]		= &clk_smd_rpm_qdss_clk,
  	[RPM_SMD_QDSS_A_CLK]		= &clk_smd_rpm_qdss_a_clk,
  	[RPM_SMD_CXO_D0]		= &clk_smd_rpm_cxo_d0,
+-- 
+2.56.1
 
-From 736f0752d8406a2573e86b6cc166b9ef3b7608ad Mon Sep 17 00:00:00 2001
+
+From 2144ed1e5451289da37e4b68ba3a9aae9e71bf42 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Sat, 29 Apr 2023 16:58:59 +0200
 Subject: [PATCH 13/43] msm8226_defconfig: add
@@ -4756,8 +4792,11 @@ index 000000000000..3d5d462ad3bc
 +CONFIG_DYNAMIC_DEBUG=y
 +CONFIG_MAGIC_SYSRQ=y
 +CONFIG_DEBUG_FS=y
+-- 
+2.56.1
 
-From 8cf7dceb5dd86f61e9f07e81dbca0dc3756776c9 Mon Sep 17 00:00:00 2001
+
+From 1edbcc1d224de050393e43686c8ddb104bd09e08 Mon Sep 17 00:00:00 2001
 From: lmdpdg <lmdpdg@localhost>
 Date: Fri, 26 May 2023 19:05:28 +0200
 Subject: [PATCH 14/43] MSM8226: drm/panel: Generate using
@@ -4780,10 +4819,10 @@ Signed-off-by: lmdpdg <lmdpdg@localhost>
  create mode 100644 drivers/gpu/drm/panel/msm8226-generated/panel-lg-lenok-lg4237.c
 
 diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
-index cbdf7b8f7f7a..8f5ec3eb44d2 100644
+index 67fc67134100..76cf9edd88e6 100644
 --- a/drivers/gpu/drm/panel/Kconfig
 +++ b/drivers/gpu/drm/panel/Kconfig
-@@ -1415,4 +1415,5 @@ config DRM_PANEL_XINPENG_XPP055C272
+@@ -1417,4 +1417,5 @@ config DRM_PANEL_XINPENG_XPP055C272
  	  Say Y here if you want to enable support for the Xinpeng
  	  XPP055C272 controller for 720x1280 LCD panels with MIPI/RGB/SPI
  	  system interfaces.
@@ -5602,8 +5641,11 @@ index 000000000000..3748e192240d
 +MODULE_AUTHOR("linux-mdss-dsi-panel-driver-generator <fix@me>"); // FIXME
 +MODULE_DESCRIPTION("DRM driver for LG4237 320P OLED command mode dsi panel");
 +MODULE_LICENSE("GPL");
+-- 
+2.56.1
 
-From f58ec45ff68c98f0e7b91bf28230b38d8eba8be7 Mon Sep 17 00:00:00 2001
+
+From 891f20f9dc13fe6bd8be58d1cedeefff2de067f6 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Fri, 19 Nov 2021 20:28:26 +0100
 Subject: [PATCH 15/43] Input: IT7260 - import touchscreen driver
@@ -7746,8 +7788,11 @@ index 000000000000..b254e4d79220
 +
 +MODULE_DESCRIPTION("IT7260 Touchscreen Driver");
 +MODULE_LICENSE("GPL");
+-- 
+2.56.1
 
-From 180329d18f440622c38caebb1e433f4758744f1a Mon Sep 17 00:00:00 2001
+
+From cc4a8a78e86ebc55c73a20d620127d9ff98ffc4e Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Fri, 19 Nov 2021 20:29:52 +0100
 Subject: [PATCH 16/43] Input: IT7260 - fix up
@@ -8046,8 +8091,11 @@ index b254e4d79220..6875517d4162 100644
  	if (IT7260_wq)
  		destroy_workqueue(IT7260_wq);
  }
+-- 
+2.56.1
 
-From 9d91ffc721fa4a26e912eba7ef4a7523d6bf8ac0 Mon Sep 17 00:00:00 2001
+
+From a67ad1d05a2a5a2ad502416f022fa7655fbea06c Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Fri, 19 Nov 2021 20:32:36 +0100
 Subject: [PATCH 17/43] ARM: dts: qcom: apq8026-asus-sparrow: add touchscreen
@@ -8082,8 +8130,11 @@ index a2ca456012f1..d66a416ef0fa 100644
  &blsp1_uart1 {
  	status = "okay";
  
+-- 
+2.56.1
 
-From 2f309ecd1896cd6bfa5aa59ca01015031bdb8934 Mon Sep 17 00:00:00 2001
+
+From 9860c13fc62a8aaf90746901f275cc3c89635c97 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Sun, 14 Nov 2021 13:03:34 +0100
 Subject: [PATCH 18/43] ARM: dts: qcom: apq8026-lg-lenok: Enable display
@@ -8138,8 +8189,11 @@ index a70de21bf139..601c851e8e1a 100644
  &rpm_requests {
  	regulators {
  		compatible = "qcom,rpm-pm8226-regulators";
+-- 
+2.56.1
 
-From f28cb8bc633b359e707c7306a738a3fedf1d5f48 Mon Sep 17 00:00:00 2001
+
+From 23721c98b9de0ab82f5fc13af64c21bf3a6de54b Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Thu, 4 May 2023 00:09:43 +0200
 Subject: [PATCH 19/43] ARM: dts: qcom: apq8026-lg-lenok: Enable GPU
@@ -8167,8 +8221,11 @@ index 601c851e8e1a..29af34896a7c 100644
  &mdss {
  	status = "okay";
  };
+-- 
+2.56.1
 
-From 5aaf0818715ef7673a56644810eed90af00bec2e Mon Sep 17 00:00:00 2001
+
+From 5a649761a232f68647a11b133df9899835e6b3d0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Matti=20Lehtim=C3=A4ki?= <matti.lehtimaki@gmail.com>
 Date: Sun, 1 Jan 2023 15:45:36 +0200
 Subject: [PATCH 20/43] dt-bindings: remoteproc: qcom: wcnss: Add qcom,wcn3660a
@@ -8199,8 +8256,11 @@ index a55e55f5f014..3ef24133e2c4 100644
            - qcom,wcn3660b
            - qcom,wcn3680
  
+-- 
+2.56.1
 
-From 48b41b4feacf646e6c1a9189f7122d3c27360c84 Mon Sep 17 00:00:00 2001
+
+From 6410eae36353cb597893837be810b3632631f0c3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Matti=20Lehtim=C3=A4ki?= <matti.lehtimaki@gmail.com>
 Date: Sun, 1 Jan 2023 18:34:46 +0200
 Subject: [PATCH 21/43] remoteproc: qcom_wcnss: Add qcom,wcn3660a compatible
@@ -8235,8 +8295,11 @@ index 2b89b4db6c94..a1442451c7e6 100644
  	{ .compatible = "qcom,wcn3660b", .data = &wcn3680_data },
  	{ .compatible = "qcom,wcn3680", .data = &wcn3680_data },
  	{}
+-- 
+2.56.1
 
-From 777057f1d0d5da904232f4d58e02941f1be29dd2 Mon Sep 17 00:00:00 2001
+
+From d36a789a0394e1a2efe5a84c3f7040517824ab7f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Matti=20Lehtim=C3=A4ki?= <matti.lehtimaki@gmail.com>
 Date: Sun, 1 Jan 2023 18:37:16 +0200
 Subject: [PATCH 22/43] wifi: wcn36xx: Add WCN3660A variant of WCN3660
@@ -8264,8 +8327,11 @@ index ad8a4bd910d2..0bbe8cf06144 100644
  		    of_device_is_compatible(iris_node, "qcom,wcn3660b"))
  			wcn->rf_id = RF_IRIS_WCN3660;
  		if (of_device_is_compatible(iris_node, "qcom,wcn3680"))
+-- 
+2.56.1
 
-From 55fe5543f79693506b1181c1f98bbbf91da748f7 Mon Sep 17 00:00:00 2001
+
+From ec9e47a133a1acbde61a983d20726385de85e8eb Mon Sep 17 00:00:00 2001
 From: Bartosz Dudziak <bartosz.dudziak@snejp.pl>
 Date: Sat, 1 May 2021 15:20:48 +0200
 Subject: [PATCH 23/43] ARM: dts: qcom: msm8226: Add wcnss remoteproc node
@@ -8444,8 +8510,11 @@ index cb571aa13c11..a1330b044f75 100644
  
  / {
  	model = "HTC One Mini 2";
+-- 
+2.56.1
 
-From ff46dffd222f569b304764d67bcd437eeea7c93e Mon Sep 17 00:00:00 2001
+
+From 5e0e8dd9c51478a768bdbce3e6817502f5fa77e6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Matti=20Lehtim=C3=A4ki?= <matti.lehtimaki@gmail.com>
 Date: Fri, 20 May 2022 19:38:41 +0300
 Subject: [PATCH 24/43] ARM: dts: qcom: msm8226-samsung-matisse-common: Enable
@@ -8528,8 +8597,11 @@ index f1544a7e8369..e0e7eafc4dd6 100644
  };
  
  &usb {
+-- 
+2.56.1
 
-From e7b945981a7f14349845a64277565d2cf6bc38ad Mon Sep 17 00:00:00 2001
+
+From b7586eb97e6ff00dcfc755498dc11ce9dd481b66 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Sun, 1 Oct 2023 23:49:41 +0200
 Subject: [PATCH 25/43] dt-bindings: leds: qcom-lpg: Document PM8226 compatible
@@ -8555,8 +8627,11 @@ index 3da0fe532e74..efe53c4e5fe9 100644
            - qcom,pm8350c-pwm
            - qcom,pm8916-pwm
            - qcom,pm8941-lpg
+-- 
+2.56.1
 
-From ecfece5a831f509f1108741c9749e94742d2a734 Mon Sep 17 00:00:00 2001
+
+From ae887cc6bb1a75ae6a371868d72d4127ebd73b78 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Sun, 1 Oct 2023 23:51:07 +0200
 Subject: [PATCH 26/43] leds: qcom-lpg: Add data for PM8226 LPG
@@ -8604,8 +8679,11 @@ index d7d6518de30f..1a1892353e18 100644
  	{ .compatible = "qcom,pm8350c-pwm", .data = &pm8350c_pwm_data },
  	{ .compatible = "qcom,pm8916-pwm", .data = &pm8916_pwm_data },
  	{ .compatible = "qcom,pm8941-lpg", .data = &pm8941_lpg_data },
+-- 
+2.56.1
 
-From cadcd43d93075f737da4e569e501ba0f8c07301c Mon Sep 17 00:00:00 2001
+
+From 3a8efe258a581635d58f4946e90b0a2db5dce453 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Sun, 1 Oct 2023 23:52:32 +0200
 Subject: [PATCH 27/43] ARM: dts: qcom: pm8226: Add LPG node
@@ -8639,8 +8717,11 @@ index 2fd4f135ed84..41b66d15fbb7 100644
  		pm8226_spmi_regulators: regulators {
  			compatible = "qcom,pm8226-regulators";
  		};
+-- 
+2.56.1
 
-From 7d898406694f55ee97f0663c20038ae6d1b955b5 Mon Sep 17 00:00:00 2001
+
+From 464d225284eb7a5b68130ad8c129c38155267d99 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Wed, 11 Oct 2023 19:33:33 +0200
 Subject: [PATCH 28/43] WIP ARM: dts: qcom: msm8926-htc-memul: Add display
@@ -8697,8 +8778,11 @@ index a1330b044f75..1a8a408473a5 100644
  &rpm_requests {
  	regulators {
  		compatible = "qcom,rpm-pm8226-regulators";
+-- 
+2.56.1
 
-From 2a56a3d5fde9846a2471e1a1fd186eb601e5116b Mon Sep 17 00:00:00 2001
+
+From fb6083647f41ed8b9c9d08d88da9208886447713 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Wed, 11 Oct 2023 19:33:53 +0200
 Subject: [PATCH 29/43] WIP ARM: dts: qcom: msm8926-htc-memul: Add notification
@@ -8775,8 +8859,11 @@ index 1a8a408473a5..bb8ecb058c4a 100644
  &rpm_requests {
  	regulators {
  		compatible = "qcom,rpm-pm8226-regulators";
+-- 
+2.56.1
 
-From ffa81d1e8387d09c83ac40bf15392684f5bbab30 Mon Sep 17 00:00:00 2001
+
+From fca4336914d6f2d74b5f6f46140ff8495f6e8f5c Mon Sep 17 00:00:00 2001
 From: Bryant Mairs <bryant@mai.rs>
 Date: Tue, 31 Oct 2023 14:48:37 +0100
 Subject: [PATCH 30/43] HACK drivers: net: wireless: ath: wcn36xx: disable
@@ -8803,8 +8890,11 @@ index 0bbe8cf06144..8f8227552f49 100644
  		/* fallback to mac80211 software scan */
  		return 1;
  	}
+-- 
+2.56.1
 
-From 2ddefea38e4e1b406da64a30e46402277098b755 Mon Sep 17 00:00:00 2001
+
+From d3a934357fee9c2daf715df91cc230bcfd6b8068 Mon Sep 17 00:00:00 2001
 From: Bryant Mairs <bryant@mai.rs>
 Date: Sun, 29 Oct 2023 16:17:06 +0100
 Subject: [PATCH 31/43] ARM: dts: qcom: apq8026-samsung-milletwifi: Enable
@@ -8868,8 +8958,11 @@ index b4fb42be4af6..46a7be9b9eec 100644
  };
  
  &usb {
+-- 
+2.56.1
 
-From 135af5151840371b6efa482596fd44e994bfd58a Mon Sep 17 00:00:00 2001
+
+From 918874b3ec2a3ec93537359beb782d33250e0a7e Mon Sep 17 00:00:00 2001
 From: Bryant Mairs <bryant@mai.rs>
 Date: Tue, 31 Oct 2023 15:41:02 +0100
 Subject: [PATCH 32/43] ARM: dts: qcom: apq8026-samsung-milletwifi: Enable
@@ -8902,8 +8995,11 @@ index 46a7be9b9eec..969b4ccb6292 100644
  &pronto {
  	vddmx-supply = <&pm8226_l3>;
  	vddpx-supply = <&pm8226_l6>;
+-- 
+2.56.1
 
-From 70fc6f0b51534e140dae74f49b5069a1a92e0587 Mon Sep 17 00:00:00 2001
+
+From 2a61d0a1e0c44e9d51b6741756dd7e46a045bb1a Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Sun, 14 Jan 2024 12:32:12 +0100
 Subject: [PATCH 33/43] ARM: dts: qcom: msm8926-htc-memul: Enable GPU
@@ -8929,8 +9025,11 @@ index bb8ecb058c4a..292165fbe723 100644
  &modem {
  	mx-supply = <&pm8226_l3>;
  	pll-supply = <&pm8226_l8>;
+-- 
+2.56.1
 
-From 27c4b8f92f1a79dbc6e0d980285e1879dd1487f6 Mon Sep 17 00:00:00 2001
+
+From 20b73d4fc14169da1297ccecbe0740eea2fabd9d Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Tue, 23 Apr 2024 22:45:45 +0200
 Subject: [PATCH 34/43] HACK soc: qcom: mdt_loader: Make wcnss boot on
@@ -8963,8 +9062,11 @@ index 002100fe2d32..01cd525e49ea 100644
  	data = kmalloc(ehdr_size + hash_size, GFP_KERNEL);
  	if (!data)
  		return ERR_PTR(-ENOMEM);
+-- 
+2.56.1
 
-From 56438b3c0069194d441285eb018c093fb81161b1 Mon Sep 17 00:00:00 2001
+
+From 4f3446123d5589e8cecc23d1c733b67ff0cea6ce Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@z3ntu.xyz>
 Date: Tue, 23 Apr 2024 22:48:31 +0200
 Subject: [PATCH 35/43] WIP ARM: dts: qcom: msm8926-htc-memul: Enable WCNSS
@@ -9032,8 +9134,11 @@ index 292165fbe723..ba0ae8e4cffc 100644
  &usb {
  	extcon = <&smbb>;
  	dr_mode = "peripheral";
+-- 
+2.56.1
 
-From 18d377b7c415a150467a54fbd92371e3468f8894 Mon Sep 17 00:00:00 2001
+
+From 063feea43a8cae6072b4d9d89c5dadc61fa6ba0a Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@lucaweiss.eu>
 Date: Sun, 5 Jan 2025 16:29:42 +0100
 Subject: [PATCH 36/43] Revert "wifi: brcmfmac: of: Support
@@ -9084,8 +9189,11 @@ index 03efae36a0b2..4b52dd3add5c 100644
  	if (!irq) {
  		brcmf_err("interrupt could not be mapped\n");
  		return 0;
+-- 
+2.56.1
 
-From c50456262034377c7c744922c3e15e2bacf29da7 Mon Sep 17 00:00:00 2001
+
+From 86020140f36120098387af52648ea2a63d4b5e62 Mon Sep 17 00:00:00 2001
 From: exkc <exkc@exkc.moe>
 Date: Wed, 29 Oct 2025 20:25:56 +0800
 Subject: [PATCH 37/43] ARM: dts: qcom: msm8226-samsung-matisse-common: Add
@@ -9122,8 +9230,11 @@ index e0e7eafc4dd6..b796ce04ad4b 100644
  		};
  	};
  
+-- 
+2.56.1
 
-From d567ebd37dda182cb0bfb37129c4c22c1a6a128b Mon Sep 17 00:00:00 2001
+
+From 359331cf4db14adc771a89c0af0f7a641d7a1c14 Mon Sep 17 00:00:00 2001
 From: David Wales <daviewales@disroot.org>
 Date: Fri, 13 Mar 2026 07:12:40 +1100
 Subject: [PATCH 38/43] ARM: dts: qcom: Support Motorola Moto G2 (2014)
@@ -9161,8 +9272,11 @@ index 1609fb21c544..9abb4738749d 100644
 +		output-high;
  	};
  };
+-- 
+2.56.1
 
-From 797e3fda9aacca1cb5cbe24b9c5baba64543153b Mon Sep 17 00:00:00 2001
+
+From 3dfa9b7dc85ea74760f0e7736bf7b6a9875b36ab Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@lucaweiss.eu>
 Date: Wed, 1 Apr 2026 18:06:17 +0200
 Subject: [PATCH 39/43] mailbox: Print mbox parse failure details on error
@@ -9195,8 +9309,11 @@ index efacd24a085d..9f217bd1bd3b 100644
  		return ERR_PTR(ret);
  	}
  
+-- 
+2.56.1
 
-From 674a1993597e4fb423a8a84037f36bbaafe79936 Mon Sep 17 00:00:00 2001
+
+From f2b90ac85ca6460f5ea3ec23db2f5cdc00685cd2 Mon Sep 17 00:00:00 2001
 From: David Wales <daviewales@disroot.org>
 Date: Thu, 28 May 2026 07:26:45 +1000
 Subject: [PATCH 40/43] ARM: dts: qcom: msm8226-motorola-titan: Add SD card
@@ -9262,8 +9379,11 @@ index 9abb4738749d..79cc5704aa09 100644
 +		bias-pull-up;
 +	};
  };
+-- 
+2.56.1
 
-From a5c3402d8bfb9ec21a61b868f466010bba63988f Mon Sep 17 00:00:00 2001
+
+From 81b85803a24457c86927e6e9206eca439709e3a3 Mon Sep 17 00:00:00 2001
 From: Luca Weiss <luca@lucaweiss.eu>
 Date: Sat, 15 Aug 2026 23:49:16 +0200
 Subject: [PATCH 41/43] clk: qcom: mmcc-msm8974: Don't park mdp_clk_src at
@@ -9292,8 +9412,11 @@ index f2e802cf6afc..4edc7ddf13e9 100644
  	},
  };
  
+-- 
+2.56.1
 
-From 36d1fe2301157c62347f518058ed5e42496eae97 Mon Sep 17 00:00:00 2001
+
+From 7c56be5e032383d4de2772431a043fb6cfc49cf6 Mon Sep 17 00:00:00 2001
 From: David Wales <daviewales@disroot.org>
 Date: Wed, 22 Jul 2026 00:00:20 +1000
 Subject: [PATCH 42/43] ARM: dts: qcom: msm8226-motorola-titan: Enable WiFi
@@ -9367,8 +9490,11 @@ index 79cc5704aa09..e59e6c73c64c 100644
 +		bias-pull-up;
 +	};
  };
+-- 
+2.56.1
 
-From 0d31a07ebf847f03c33aebb8c043d62202738870 Mon Sep 17 00:00:00 2001
+
+From 49a12dccd1ec3c517fa2508b6e333bb0185f52d1 Mon Sep 17 00:00:00 2001
 From: David Wales <daviewales@disroot.org>
 Date: Sun, 2 Aug 2026 23:05:50 +1000
 Subject: [PATCH 43/43] ARM: dts: qcom: msm8226-motorola-titan: Enable
@@ -9474,3 +9600,6 @@ index e59e6c73c64c..78355f7df367 100644
 +		output-high;
 +	};
  };
+-- 
+2.56.1
+

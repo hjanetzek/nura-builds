@@ -1,7 +1,8 @@
 # nura-builds overlay (targets/s3ve3g.sh): pmaports' recipe at 6b904fc480
 # (6.16.12-r4), copied over the pmaports recipe by scripts/setup.sh. Since 7.3.4: mainline (kernel.org)
 # with msm8226-mainline's patch stack (its 56 commits on top of v6.16.12 in tag v6.16.12-msm8226-u2,
-# ported to v7.3.4: patch 0000, one mbox with the commits), as msm8226-mainline has no newer branch. Changes are marked
+# ported to v7.3.4, rebased onto v7.3.6: patch 0000, one mbox with the commits), as
+# msm8226-mainline has no newer branch. Changes are marked
 # "nura-builds:": the Samsung Galaxy S III Neo's device tree (eMMC, SD card, USB, keys, touch,
 # sensors, Wi-Fi, splash framebuffer; it had the serial port only), the ALSA sequencer, the
 # YAS532 magnetometer and the Terminus 16x32 console font in the config; an early console into
@@ -17,8 +18,8 @@
 maintainer="Stefan Hansson <newbyte@postmarketos.org>"
 _flavor="postmarketos-qcom-msm8226"
 pkgname=linux-$_flavor
-pkgver=7.3.4
-# nura-builds: pkgrel + 100 as for pmaports' 6.16.12 (pmaports has no 7.3.4 yet)
+pkgver=7.3.6
+# nura-builds: pkgrel + 100 as for pmaports' 6.16.12 (pmaports has no 7.3 yet)
 pkgrel=100
 pkgdesc="Mainline Kernel fork for APQ8026/MSM8226/MSM8926 devices"
 arch="armv7"
@@ -53,7 +54,7 @@ _config="config-$_flavor.$arch"
 source="
 	https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/linux-$pkgver.tar.xz
 	$_config
-	0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.4.patch
+	0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.6.patch
 	0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 	0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 	0004-ARM-COMMAND_LINE_SIZE-2048.patch
@@ -146,9 +147,9 @@ package() {
 }
 
 sha512sums="
-db5508c3cf8b613b4680022eb785c036bcf8a5c952f8d0b2f3c2c7dc16779cf8bd954e0bca0b0b52451bac61430a687ae73205574f002f3b60de886640ebb9b0  linux-7.3.4.tar.xz
+2fe38d23748aaf916a15e57b1e3ac44191d70a1cd006dc1a1fc2e2ae4827275bc36cecf2a3d45e11cc979da85ab33cbfbc8d1270da3738929fa8032527a410ff  linux-7.3.6.tar.xz
 331cb1630c279f74bfc740182eb09b621925542c421250e8baa191e5ba96e1fab62f52690f6901eb7213b5791bb08edcf8591b2e4420a13765c778431d503550  config-postmarketos-qcom-msm8226.armv7
-685d26394e13c2b88ae18671c89fe6dcb1db3809fbd6734700dedc6d467e746784743c3b94ffdc67cd31c3a023e0f816e90ec748028dbea27baa378f2561feac  0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.4.patch
+38a3d27963dfa5fb645659b5fbf235394c12dc28d75c6a163d05592d59fc9aa3fa31a96711743e4f2aab4e5343297734200f79fa3d19099a68bf105498df755b  0000-msm8226-mainline-v6.16.12-msm8226-u2-patch-stack-on-v7.3.6.patch
 6d332d7e93027c5aee62b6497bd15be1cd20e38dbae884dc28f81b1f1983f818bc07c8751c1a8d2e2acdbbc790179e9f48e02a9fe15db9c6a0480f4a54dda736  0001-ARM-dts-qcom-msm8226-samsung-s3ve3g-full-device-tree.patch
 54a64cacb2e06014f207bc824ae9731e5416e3ad594179f09721219567066140fc3feee7fd5e56926964164b8b9fb6ce593e1198b8b40d97aba9f69272d499dc  0002-serial-earlycon-ramcon-early-console-into-a-RAM-buffer.patch
 21673d72f7fd6554c7eb6b17c948a85820e4eb25c5165b2f14fcb192c16478f3ffcb85da1daed91ba160ebd779ea390a4bb180765b1fae80b2114c5ac4822a12  0004-ARM-COMMAND_LINE_SIZE-2048.patch
@@ -169,7 +170,7 @@ a34f6bc890a7f5f2009954cd7a15706569f8f07d4ca9466ee73327e76d0c033ae9bfbec31d8acad7
 ec8ec88852aa39031e67c10f642db03d16638a5ad2742596b2141b6a37040b7da273b90b63811490a73cfbc9f116cdf55b4d26790f9e2e51fcfe21b44e9c0124  0019-iommu-qcom-MSM8226-MDP-IOMMU-s3ve3g-display-through-it.patch
 ad9a9ca53e19a380f8336e13fdbfef6238ee62b7d65261c80f56122c7d0d286512971b9405db0918efd5e65f28815db1494550cd7ce4a9482e070b506c336a1e  0020-firmware-qcom-scm-MSM8226-IOMMU-secure-page-tables-at-boot.patch
 7c027f72e1003330216d78cdd304c787b1127dc50b42648b03b4795332255e415de0034261bc063ee610e9ee43146b316f016e204985c0c141de478bfcf72db3  0021-iommu-arm-smmu-MSM8226-GPU-SMMU-s3ve3g-GPU-through-it.patch
-1351333df88ab2dc2b90c22965a89098c37c0dee546e3f22b13938df2bc1b7a9b2be1435f36b8c27338a38a7bc6ad843e9b1c4eb10b5cf98bd907afa4f5bb560  0022-drm-msm-a3xx-VBIF-XIN-halt-of-the-A305B-s-three-clients.patch
+e27756e9e32b11957f859cf9cef23b7c7f90a3ac403b47a416dba29d4a81f78e33a3b8c41177f8237be625bc0786cddd9126fda1da5871f308cc937776e47119  0022-drm-msm-a3xx-VBIF-XIN-halt-of-the-A305B-s-three-clients.patch
 8996476564b5968c22a80f8a76a78068510b9033ad98855f2181edc49167c436205ced9d6cd835649fc6664c972a0d957e0ca11ccb00fb5a530fc3363d6aacff  0023-iommu-arm-smmu-MSM8226-GPU-SMMU-downstream-s-bfb-settings.patch
 6736032b0f04edbddac2b1d0332457dc48e9a762c6e5a82a4d136b76bbecb6e7b8aea02173d3ad154242f9fa23ca5572a528524339ff7161979ec5fb01252c08  0024-ASoC-qcom-q6asm-dai-keep-the-playback-queue-in-step-with-the-stream.patch
 a1be72523650902dc70b3acb11c211ddb2400d1457d8a284d3ef72d5e34854bd1ba58744df0ea21f352bb603bbe3816d0aefe44422c3c64b8b6595e2743dd8a2  0025-ASoC-codecs-wcd9306-keep-the-slave-ports-enabled-across-a-stream-restart.patch
