@@ -7,4 +7,7 @@
 rc_ulimit="-r 95 -l unlimited"
 # settings read by the launcher (see /usr/bin/s3ve3g-mdt)
 #export MDT_ARGS="--headless --audio"
+# pipewire (default: PipeWire + WirePlumber, MDT through pw-jack) or jackd
+#export MDT_AUDIO=pipewire
+# the period/quantum in frames (both)
 #export JACK_PERIOD=480

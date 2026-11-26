@@ -4,7 +4,7 @@
 # mdt" switches to it (and "s3ve3g-session zynthian" back); one session at a time, both need the
 # sound card and jackd.
 
-description="MicroDexed-touch session (headless, JACK)"
+description="MicroDexed-touch session (headless, PipeWire/JACK)"
 supervisor=supervise-daemon
 command=/usr/bin/s3ve3g-mdt
 respawn_delay=5
@@ -42,13 +42,15 @@ start_pre() {
 }
 
 stop_post() {
-	# what the launcher started besides MDT: the key relay, jackd (waited for up to 10 s, then
-	# killed)
-	local i=0
-	for p in $(pgrep -x s3ve3g-mdt-keys) $(pgrep -x mdt) $(pgrep -x jackd); do kill "$p" 2>/dev/null; done
-	while { pgrep -x mdt || pgrep -x jackd; } >/dev/null && [ $i -lt 20 ]; do
+	# what the launcher started besides MDT: the key relay, PipeWire and WirePlumber or jackd
+	# (waited for up to 10 s, then killed; MDT itself ignores SIGTERM)
+	local i=0 p
+	_mdt_pids() { pgrep -x mdt; pgrep -x jackd; pgrep -x wireplumber; pgrep -x pipewire; }
+	for p in $(pgrep -x s3ve3g-mdt-keys) $(pgrep -x mdt); do kill -9 "$p" 2>/dev/null; done
+	for p in $(_mdt_pids); do kill "$p" 2>/dev/null; done
+	while [ -n "$(_mdt_pids)" ] && [ $i -lt 20 ]; do
 		sleep 0.5; i=$((i + 1))
 	done
-	for p in $(pgrep -x mdt) $(pgrep -x jackd); do kill -9 "$p" 2>/dev/null; done
+	for p in $(_mdt_pids); do kill -9 "$p" 2>/dev/null; done
 	return 0
 }
