@@ -127,9 +127,12 @@ build() {
 		[ -e "$(_srcfile $f)" ] || die "$f missing from $SRCDEST: run nura-builds' aports/zynthian/seed-distfiles.sh"
 	done
 
-	# Native libraries, without RPATH: they go to /usr/lib/zynthian and only use system libraries
+	# Native libraries, without RPATH: they go to /usr/lib/zynthian and only use system libraries.
+	# zynaudio2midi (upstream 876d5e2d1, replaces aubionotes; JACK and libm) only in trees that have
+	# it: main is older, testing (rebased on tomita 5b0b69662) has it, and its install.sh installs it
 	local lib
-	for lib in zynsmf zynseq zynaudioplayer zynmixer zynclippy; do
+	for lib in zynsmf zynseq zynaudioplayer zynmixer zynclippy zynaudio2midi; do
+		[ -d zynlibs/$lib ] || continue
 		cmake -S zynlibs/$lib -B zynlibs/$lib/build \
 			-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 			-DCMAKE_SKIP_RPATH=ON \
