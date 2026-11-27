@@ -1,14 +1,14 @@
 # Reference: <https://postmarketos.org/mainline>
 # nura-builds: pmaports' device/testing/linux-postmarketos-amlogic 7.2.14-r0 (pmaports 367abb3e17)
-# with PREEMPT_RT (mainline) and a 1000 Hz timer applied to its config in prepare(), for zynthian
-# on the Hardkernel ODROID N2/N2+ (S922X). Same flavor and paths as linux-postmarketos-amlogic,
+# with PREEMPT_RT (mainline), a 1000 Hz timer and the ALSA sequencer (modules) applied to its config in
+# prepare(), for zynthian and MicroDexed-touch on the Hardkernel ODROID N2/N2+ (S922X). Same flavor and paths as linux-postmarketos-amlogic,
 # which it replaces. Update with pmaports' recipe (copy the directory, keep the RT changes).
 # Kernel config based on: arch/arm64/configs/defconfig
 # Co-Maintainer: exkc <exxxxkc@getgoogleoff.me>
 maintainer="Ferass El Hafidi <funderscore@postmarketos.org>"
 pkgname=linux-postmarketos-amlogic-rt
 pkgver=7.2.14
-pkgrel=0
+pkgrel=1
 pkgdesc="Mainline kernel for Amlogic devices, PREEMPT_RT"
 arch="aarch64"
 _carch="arm64"
@@ -83,9 +83,19 @@ prepare() {
 		--disable HZ_250 \
 		--enable HZ_1000 \
 		--set-val HZ 1000
+	# The ALSA sequencer, as modules: pmaports' config leaves it out (only raw MIDI), but MIDI
+	# programs (MicroDexed-touch, zynthian, a2jmidid) and snd-usb-audio's MIDI ports as sequencer
+	# clients need it. snd-seq-midi exposes raw MIDI devices (e.g. the AMYboard's USB MIDI) to it
+	./scripts/config --file .config \
+		--module SND_SEQUENCER \
+		--module SND_SEQ_DUMMY \
+		--module SND_SEQ_MIDI \
+		--enable SND_SEQ_UMP
 	make ARCH="$_carch" LLVM=1 olddefconfig
 	grep -qx "CONFIG_PREEMPT_RT=y" .config || die "Config: PREEMPT_RT not set"
 	grep -qx "CONFIG_HZ=1000" .config || die "Config: HZ not 1000"
+	grep -qx "CONFIG_SND_SEQUENCER=m" .config || die "Config: SND_SEQUENCER not a module"
+	grep -qx "CONFIG_SND_SEQ_MIDI=m" .config || die "Config: SND_SEQ_MIDI not a module"
 }
 
 build() {
