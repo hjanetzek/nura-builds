@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # 8-channel TDM loopback, long run on the N2 without disk writes in the audio path: the source is
 # generated block by block into aplay's stdin, arecord writes to /tmp (RAM) with a 2 s buffer, and
-# the comparison regenerates the source block by block. Usage: tdm8-long2.py SECONDS
+# the comparison regenerates the source block by block. Usage: tdm8-loopback.py SECONDS (on the N2, with the 8-slot dtb and the loopback jumper)
 import subprocess, sys, time, wave, numpy as np
 fs, secs, ch = 48000, int(sys.argv[1]), 8
 n = fs * secs; B = fs  # 1 s blocks
