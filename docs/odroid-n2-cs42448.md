@@ -147,7 +147,7 @@ CS42448 (step 4): i2c2 on the header pins, the codec, and dai-link-6 as its own 
 		dai-tdm-slot-rx-mask-1 = <1 1 1 1 1 1 0 0>;
 		dai-tdm-slot-num = <8>;
 		dai-tdm-slot-width = <32>;
-		mclk-fs = <256>;
+		mclk-fs = <512>;	/* SCLK = MCLK / 2 at least (step 2b) */
 		codec-0 { sound-dai = <&cs42448>; };
 		/delete-node/ codec-1;
 	};
@@ -192,6 +192,24 @@ CS42448 (step 4): i2c2 on the header pins, the codec, and dai-link-6 as its own 
    to J2 pin 26; the same S32_LE test file as step 0: left to left 143990 of 144000 frames
    identical, right to right 143989 (the rest is the stream's stop), the cross comparisons
    differ throughout (no channel swap, no slot shift).
+2b. 8 slots in each direction, as the CS42448 will run: done 2026-11-28, stable and bit-exact.
+   `tools/odroid-n2/dtb-tdmb-8ch.py` (on step 2's dts) makes dai-link-6 `dsp_a`, 8 x 32-bit slots,
+   tx on lane 0, rx on lane 1, `mclk-fs = <512>`, with stand-in codecs only (linux,spdif-dit for
+   playback, the spdif-dir for capture; the internal DAC and HDMI take only a 2-slot frame, so the
+   line out stays on TDM-C); `/boot/meson-g12b-odroid-n2-tdmb8.dtb`. Both frontends then offer 1-8
+   channels.
+   MCLK must be 512 Fs: the TDM block's SCLK divider is at least 2. With mclk-fs 256 (MCLK
+   12.288 MHz) SCLK reached only 6.144 MHz (a 128-bit frame) and an 8 x 32-bit stream hung (aplay:
+   "write error: I/O error", the clock summary showed aud_mst_b_sclk 6143951). With 512: MCLK
+   24.576 MHz, SCLK 12.288 MHz, LRCLK 48 kHz. The CS42448 takes MCLK = 512 Fs in single-speed
+   mode, so the codec's link uses mclk-fs 512 as well (the sketch above says 256: corrected here).
+   Loopback over the jumper (J7 pin 7 to J2 pin 26) at SCLK 12.288 MHz, S32_LE, every channel its
+   own sine and a marker: 60 s, all 8 channels bit-exact (each in its own slot); 600 s with
+   `tools/odroid-n2/tdm8-loopback.py 600` (the source generated block by block into aplay's stdin,
+   arecord into /tmp with a 2 s buffer, compared block by block): 28,800,000 frames x 8 channels,
+   0 differing samples, no xruns. (A first 600 s run that wrote the 920 MB source and the capture
+   to the SD card lost data in two arecord overruns of 837 and 145 ms, SD write stalls; bit-exact
+   up to them.)
 3. Kernel: `CONFIG_SND_SOC_CS42XX8_I2C=m` (and `CS42XX8`) in linux-postmarketos-amlogic-rt's
    prepare(), and the dts change as a patch in that recipe (durable; a dtb edited on the device
    is lost at the next kernel upgrade, because pmOS copies the package's dtb and rewrites
