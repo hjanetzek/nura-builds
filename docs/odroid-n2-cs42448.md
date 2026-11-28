@@ -135,6 +135,13 @@ CS42448 (step 4): i2c2 on the header pins, the codec, and dai-link-6 as its own 
 0. Internal loopback, no wiring, no dtb change: play on the TDM-B frontend, record through
    `TDMIN_LB` (`TDMIN_LB SRC SEL`, a `TODDR_x` to `IN 6`). Checks the capture path and the
    formats.
+   Done 2026-11-28, bit-exact: mixer `FRDDR_A SRC 1 EN` on, `FRDDR_A SINK 1 SEL` = OUT 1,
+   `TDMOUT_B SRC SEL` = IN 0 (playback frontend device 0 to TDM-B), `TDMIN_LB SRC SEL` = IN 1
+   (TDM_B Loopback), `TODDR_A SRC SEL` = IN 6 (capture frontend device 3). A generated S32_LE
+   stereo file (1 kHz left, 1.5 kHz right, a ramp marker) played with `aplay -D hw:ODROIDN2,0`
+   while `arecord -D hw:ODROIDN2,3 -f S32_LE -c2 -r48000` ran: after aligning on the marker,
+   143989 of 144000 frames identical in both channels (the last 11 are the stream's stop), no
+   channel swap or slot shift.
 1. Pins on TDM-B (dtb change only): `aplay` on the HDMI/line-out frontend; scope or logic
    analyzer on J7: MCLK 12.288 MHz, SCLK 3.072 MHz, FS 48 kHz, data on lane 0.
 2. Digital loopback (dtb change only): with the N2 off, a jumper from lane 0 (GPIOA_3, J7) to
