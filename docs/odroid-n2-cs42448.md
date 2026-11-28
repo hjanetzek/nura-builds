@@ -214,6 +214,25 @@ CS42448 (step 4): i2c2 on the header pins, the codec, and dai-link-6 as its own 
    prepare(), and the dts change as a patch in that recipe (durable; a dtb edited on the device
    is lost at the next kernel upgrade, because pmOS copies the package's dtb and rewrites
    extlinux.conf).
+   Done 2026-11-28: linux-postmarketos-amlogic-rt r2 (0100-nura-arm64-dts-odroid-n2-tdm-b-header-
+   cs42448.patch on meson-g12b-odroid-n2.dtsi, `CONFIG_SND_SOC_CS42XX8_I2C=m`). The patch is step
+   2b's dtb in dts form: &tdmif_b pins and pad clocks; dai-link-6 dsp_a, 8 x 32-bit slots, lane 0
+   out, lane 1 in, mclk-fs 512, with the stand-in codecs (linux,spdif-dit/-dir nodes
+   `tdmb_out_codec`, `tdmb_in_codec`); the route TDMIN_B IN 1 <- TDM_B Capture; dai-link-7 (TDM-C)
+   with the internal DAC only (no HDMI); &i2c2 on GPIOX_17/18 (J2 pins 3/5, `/dev/i2c-2`) with
+   `cs42448: audio-codec@48` (cirrus,cs42448, MCLK from MST_B_MCLK), `status = "disabled"`: the
+   cs42xx8 probe reads the chip ID over I2C, and a codec that doesn't answer would keep the whole
+   card away. Mainline's cs42xx8 takes `dsp_a` as TDM for DAC and ADC, only as clock consumer,
+   MCLK 512 Fs in single-speed mode (2.048-25.6 MHz), and needs MCLK >= 256 Fs in TDM mode; the
+   supplies (VA, VD, VLS, VLC) and `reset-gpios` are optional.
+   On the N2 (installed from the release repo, booted with the package's dtb; extlinux.conf
+   points to it again): pins as in step 1, I2C2 on GPIOX_17/18, the card with 1-8 channels on
+   devices 0 and 3, and the 8-channel loopback over the jumper (tdm8-loopback.py 60) bit-exact.
+   Mixer, stored: device 0 (FRDDR_A) to TDMOUT_B (the header), device 1 (FRDDR_B: `FRDDR_B SINK 1
+   SEL` = OUT 2, `TDMOUT_C SRC SEL` = IN 1) to the line out (`TOACODEC SRC` = I2S C, `TOACODEC OUT
+   EN` on, `ACODEC` 255 = 0 dB; it was 0, i.e. muted), `TOHDMITX` off.
+   With the codec fitted: in the patch, the cs42448 node `status = "okay"`, and dai-link-6's codecs
+   replaced by `codec-0 { sound-dai = <&cs42448>; };`; supplies and reset per the board.
 4. The CS42448: probe over I2C (i2cdetect on i2c2, the driver binding), the 8-slot link, playback
    per channel, capture per channel, then latency (period sizes; whether the axg FIFOs take 64-128
    frames is untested).
