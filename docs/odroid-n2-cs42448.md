@@ -32,15 +32,32 @@ U-Boot through postmarketOS' generated `/boot/extlinux/extlinux.conf`.
 - CPUs 0-1 are Cortex-A53, 2-5 Cortex-A73; `cpufreq.default_governor=performance` is set on the
   kernel command line (device-odroid-n2).
 
-## Open, to check against Hardkernel's N2 schematic before wiring
+## Pinout and I/O voltage (measured with a scope, 2026-11-28)
 
-- The 7-pin header J7 (unpopulated): which pin carries MCLK (GPIOA_0), SCLK (A_1), FS (A_2) and
-  lane 0 (A_3); the notes say pins 4/6/5/7.
-- That the 40-pin header's pin 26 is GPIOA_4, and pins 3/5 are I2C2 (GPIOX_17/18).
-- The I/O voltage of the GPIOA bank (the notes say VDD_AO, which is the AO bank's supply) and
-  whether the CS42448's serial port (VL) matches it.
+The dts names gpiochip0's lines after the header pins (Hardkernel numbers the 7-pin header J7 as
+pins 41-47, after the 40-pin header J2): line 49 GPIOA_0 "PIN_44", 50 GPIOA_1 "PIN_46",
+51 GPIOA_2 "PIN_45", 52 GPIOA_3 "PIN_47", 53 GPIOA_4 "PIN_26", 82 GPIOX_17 "PIN_3",
+83 GPIOX_18 "PIN_5". Checked on the board (J7 header soldered on): each line toggled as a GPIO at
+its own rate (libgpiod's gpioset as transient systemd units; started from an SSH session they die
+at its logout), probed against J2 pin 14 (GND):
+
+| Pin | Measured | GPIO | TDM-B function |
+|---|---|---|---|
+| J7 pin 4 | 470 Hz (500 set) | GPIOA_0 | MCLK (`mclk0_a`) |
+| J7 pin 6 | 242 Hz (250) | GPIOA_1 | SCLK (`tdm_b_sclk`) |
+| J7 pin 5 | 123 Hz (125) | GPIOA_2 | FS (`tdm_b_fs`) |
+| J7 pin 7 | 62 Hz (62.5) | GPIOA_3 | lane 0 out (`tdm_b_dout0`) |
+| J2 pin 26 | 31 Hz (31) | GPIOA_4 | lane 1 in (`tdm_b_din1`) |
+
+High level 3.3 V on all of them: the GPIOA bank runs at 3.3 V, so the CS42448's serial port
+supply (VL) is 3.3 V, without level shifters. (A probe whose ground had no contact showed 50 Hz
+mains hum of several volts on every pin, with negative excursions: a GPIO can't go below 0 V.)
+
+## Open
+
 - The CS42448's TDM requirements: in TDM mode it needs SCLK = 256 Fs; MCLK/LRCK ratio and the
   slot format (DSP_A / left-justified with a one-SCLK FS pulse) from its datasheet.
+- J2 pins 3/5 as I2C2 (GPIOX_17/18): from the dts line names, not yet probed.
 
 ## HDMI audio: off
 
