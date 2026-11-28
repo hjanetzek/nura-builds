@@ -168,6 +168,17 @@ CS42448 (step 4): i2c2 on the header pins, the codec, and dai-link-6 as its own 
    channel swap or slot shift.
 1. Pins on TDM-B (dtb change only): `aplay` on the HDMI/line-out frontend; scope or logic
    analyzer on J7: MCLK 12.288 MHz, SCLK 3.072 MHz, FS 48 kHz, data on lane 0.
+   Done 2026-11-28 with a dtb edited on the N2: `tools/odroid-n2/dtb-tdmb-pins.py` (on a dts
+   decompiled from `/boot/meson-g12b-odroid-n2.dtb`) gives `&tdmif_b` the pins mclk0_a,
+   tdm_b_sclk, tdm_b_fs, tdm_b_dout0, tdm_b_din1 (new phandles for their pinctrl nodes) and the
+   U200's pad clocks (MCLK_PAD0 <- MST_B_MCLK, SCLK_PAD1 <- MST_B_SCLK, LRCLK_PAD1 <-
+   MST_B_LRCLK); installed as `/boot/meson-g12b-odroid-n2-tdmb.dtb` next to the original, with
+   `fdt` in `/boot/extlinux/extlinux.conf` pointing to it (backup `extlinux.conf.orig`; pmOS
+   rewrites extlinux.conf on kernel upgrades, which switches back to the original dtb). After the
+   boot the pinctrl debugfs shows GPIOA_0..4 claimed by audio-controller-1 with those functions.
+   With `speaker-test -D hw:ODROIDN2,0 -F S32_LE -r 48000` (i2s, mclk-fs 256, 2 x 32-bit slots)
+   the scope showed MCLK 12.29 MHz (J7-4), SCLK 3.07 MHz (J7-6), FS 48 kHz (J7-5) and data
+   bursts on DOUT0 (J7-7).
 2. Digital loopback (dtb change only): with the N2 off, a jumper from lane 0 (GPIOA_3, J7) to
    lane 1 (GPIOA_4, header pin 26); record on the TDM-B capture frontend while playing a sine,
    and compare the recording with the source (bit-exact, no slips). nura-builds' audio checks
