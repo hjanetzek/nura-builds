@@ -1,14 +1,16 @@
 # Reference: <https://postmarketos.org/mainline>
 # nura-builds: pmaports' device/testing/linux-postmarketos-amlogic 7.2.14-r0 (pmaports 367abb3e17)
-# with PREEMPT_RT (mainline), a 1000 Hz timer and the ALSA sequencer (modules) applied to its config in
-# prepare(), for zynthian and MicroDexed-touch on the Hardkernel ODROID N2/N2+ (S922X). Same flavor and paths as linux-postmarketos-amlogic,
+# with PREEMPT_RT (mainline), a 1000 Hz timer, the ALSA sequencer and the CS42448 codec driver
+# (modules) applied to its config in prepare(), and TDM-B on the N2's header (0100, for a CS42448;
+# docs/odroid-n2-cs42448.md), for zynthian and MicroDexed-touch on the Hardkernel ODROID N2/N2+
+# (S922X). Same flavor and paths as linux-postmarketos-amlogic,
 # which it replaces. Update with pmaports' recipe (copy the directory, keep the RT changes).
 # Kernel config based on: arch/arm64/configs/defconfig
 # Co-Maintainer: exkc <exxxxkc@getgoogleoff.me>
 maintainer="Ferass El Hafidi <funderscore@postmarketos.org>"
 pkgname=linux-postmarketos-amlogic-rt
 pkgver=7.2.14
-pkgrel=1
+pkgrel=2
 pkgdesc="Mainline kernel for Amlogic devices, PREEMPT_RT"
 arch="aarch64"
 _carch="arm64"
@@ -69,6 +71,7 @@ source="
 	0022-arm64-dts-amlogic-add-zte-b860h-v1v2.patch
 	0023-arm64-dts-amlogic-add-fiberhome-hg680p.patch
 	0024-add-xiaomi-once-support.patch
+	0100-nura-arm64-dts-odroid-n2-tdm-b-header-cs42448.patch
 "
 builddir="$srcdir/linux-$pkgver"
 
@@ -91,11 +94,15 @@ prepare() {
 		--module SND_SEQ_DUMMY \
 		--module SND_SEQ_MIDI \
 		--enable SND_SEQ_UMP
+	# The Cirrus Logic CS42448 (8 out, 6 in over TDM-B on the header: 0100), as a module
+	./scripts/config --file .config \
+		--module SND_SOC_CS42XX8_I2C
 	make ARCH="$_carch" LLVM=1 olddefconfig
 	grep -qx "CONFIG_PREEMPT_RT=y" .config || die "Config: PREEMPT_RT not set"
 	grep -qx "CONFIG_HZ=1000" .config || die "Config: HZ not 1000"
 	grep -qx "CONFIG_SND_SEQUENCER=m" .config || die "Config: SND_SEQUENCER not a module"
 	grep -qx "CONFIG_SND_SEQ_MIDI=m" .config || die "Config: SND_SEQ_MIDI not a module"
+	grep -qx "CONFIG_SND_SOC_CS42XX8_I2C=m" .config || die "Config: SND_SOC_CS42XX8_I2C not a module"
 }
 
 build() {
@@ -146,4 +153,5 @@ f6fb37ac0aa876f8d95ed598be20263417d8522a3c1f48a4ce148f95e6c6774664048064f4a96ff7
 4a8bbd4d3c00e760ceb6e02eedd590b4dc20641276e4f9058c932d1cc0a2bbfa4a1b122296f052b6dfad6d01a155b7dc28a925f9c6982dfc7b9ebf2ea0ad2a86  0022-arm64-dts-amlogic-add-zte-b860h-v1v2.patch
 c85b997a9c6bc9190550a933f0bfd75bb834efc570869e6c6b9d8a2b8f93cf16f5f0bb6672b0451d4f1c7aa7878b32407b2d5007588fb1adeb5432028a6e2c8e  0023-arm64-dts-amlogic-add-fiberhome-hg680p.patch
 f9b4362a5be8655a6027101e2377a4506ba1fb2671534195c3b703df0933e08254ce8852d787c82b173d4917968542264fc849641deb810611cb005f362797db  0024-add-xiaomi-once-support.patch
+0be0c49af4332151dfc699f70e3de5c4d621fd109474d44429296f884f6a92dbc6427bbdfa7c1790a5405b16daa7951e9571eb113597aaa8248b61dcd7799f91  0100-nura-arm64-dts-odroid-n2-tdm-b-header-cs42448.patch
 "
