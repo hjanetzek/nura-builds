@@ -183,6 +183,15 @@ CS42448 (step 4): i2c2 on the header pins, the codec, and dai-link-6 as its own 
    lane 1 (GPIOA_4, header pin 26); record on the TDM-B capture frontend while playing a sine,
    and compare the recording with the source (bit-exact, no slips). nura-builds' audio checks
    (numpy, as for the S3's loopback) do the comparison.
+   Done 2026-11-28, bit-exact. `tools/odroid-n2/dtb-tdmb-capture.py` (on step 1's dts) gives
+   dai-link-6 a capture-capable stand-in codec (a `linux,spdif-dir` node; snd-soc-spdif-rx loads
+   for it), `dai-tdm-slot-rx-mask-1 = <1 1>` and the card the route `"TDMIN_B IN 1", "TDM_B
+   Capture"` (the N2's routing had only the loopback inputs; the U200's has it); installed as
+   `/boot/meson-g12b-odroid-n2-tdmb2.dtb` (extlinux.conf's fdt). Mixer: `TDMIN_B SRC SEL` = IN 1,
+   `TODDR_A SRC SEL` = IN 1 (capture frontend device 3), playback as in step 0. Jumper J7 pin 7
+   to J2 pin 26; the same S32_LE test file as step 0: left to left 143990 of 144000 frames
+   identical, right to right 143989 (the rest is the stream's stop), the cross comparisons
+   differ throughout (no channel swap, no slot shift).
 3. Kernel: `CONFIG_SND_SOC_CS42XX8_I2C=m` (and `CS42XX8`) in linux-postmarketos-amlogic-rt's
    prepare(), and the dts change as a patch in that recipe (durable; a dtb edited on the device
    is lost at the next kernel upgrade, because pmOS copies the package's dtb and rewrites
