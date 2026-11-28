@@ -42,6 +42,13 @@ U-Boot through postmarketOS' generated `/boot/extlinux/extlinux.conf`.
 - The CS42448's TDM requirements: in TDM mode it needs SCLK = 256 Fs; MCLK/LRCK ratio and the
   slot format (DSP_A / left-justified with a one-SCLK FS pulse) from its datasheet.
 
+## HDMI audio: off
+
+The user never uses HDMI audio (2026-11-28): the mixer switch `TOHDMITX` is off on the N2 and
+stored in `/var/lib/alsa/asound.state` (restored at boot by alsa-restore.service). The dts patch
+for the codec (step 3) drops the `tohdmitx` codecs from dai-link-6/7 as well, which leaves TDM-B
+to the header and the CS42448, and TDM-C to the internal DAC (line out).
+
 ## The TDM-B question
 
 TDM-B is the interface on the header pins, and the board's card already drives it for HDMI and
